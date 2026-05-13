@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block title %}{{ staff.name.full }} — AniPulse{% endblock %}
+{% block extra_css %}
+<style>
+.staff-header{display:flex;gap:30px;align-items:flex-start;padding:30px 0;border-bottom:1px solid var(--border);margin-bottom:30px}
+.staff-img{width:200px;height:280px;object-fit:cover;border-radius:14px;flex-shrink:0;border:2px solid var(--border)}
+.staff-meta{flex:1}
+.staff-meta h1{font-weight:700;font-size:1.8rem;margin-bottom:4px}
+.staff-meta .native{font-size:1rem;color:var(--text-muted);margin-bottom:12px}
+.staff-meta .info-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+.staff-meta .info-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px}
+.staff-meta .info-item .label{font-size:0.7rem;text-transform:uppercase;color:var(--text-muted);letter-spacing:0.5px;margin-bottom:2px}
+.staff-meta .info-item .value{font-size:0.9rem;font-weight:500}
+.staff-desc{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:30px;line-height:1.7;font-size:0.9rem}
+.staff-media{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px}
+.section-title{font-weight:700;font-size:1.3rem;margin-bottom:1rem}
+.section-title .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:8px}
+</style>
+{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="staff-header">
+    <img src="{{ staff.image.large|default:staff.image.medium }}" alt="{{ staff.name.full }}" class="staff-img" loading="lazy">
+    <div class="staff-meta">
+      <h1>{{ staff.name.full }}</h1>
+      {% if staff.name.native %}<div class="native">{{ staff.name.native }}</div>{% endif %}
+      {% if staff.name.alternative %}
+      <div class="small text-secondary mb-3">Also known as: {{ staff.name.alternative|join:', ' }}</div>
+      {% endif %}
+      <div class="info-grid">
+        {% if staff.primaryOccupations %}<div class="info-item"><div class="label">Occupation</div><div class="value">{{ staff.primaryOccupations|join:', ' }}</div></div>{% endif %}
+        {% if staff.gender %}<div class="info-item"><div class="label">Gender</div><div class="value">{{ staff.gender }}</div></div>{% endif %}
+        {% if staff.dateOfBirth %}<div class="info-item"><div class="label">Birthday</div><div class="value">{{ staff.dateOfBirth.month }}/{{ staff.dateOfBirth.day }}{% if staff.dateOfBirth.year %}/{{ staff.dateOfBirth.year }}{% endif %}</div></div>{% endif %}
+        {% if staff.age %}<div class="info-item"><div class="label">Age</div><div class="value">{{ staff.age }}</div></div>{% endif %}
+        {% if staff.homeTown %}<div class="info-item"><div class="label">Hometown</div><div class="value">{{ staff.homeTown }}</div></div>{% endif %}
+        {% if staff.favourites %}<div class="info-item"><div class="label">Favorites</div><div class="value">{{ staff.favourites }}</div></div>{% endif %}
+      </div>
+      {% if staff.yearsActive %}
+      <div class="mt-2 small text-secondary">Active: {{ staff.yearsActive|join:' — ' }}</div>
+      {% endif %}
+    </div>
+  </div>
+  {% if staff.description %}
+  <div class="staff-desc">{{ staff.description|safe }}</div>
+  {% endif %}
+  {% if staff.staffMedia.nodes %}
+  <h5 class="section-title"><span class="dot" style="background:var(--primary)"></span>Works</h5>
+  <div class="staff-media">
+    {% for m in staff.staffMedia.nodes %}
+    <a href="{% url 'anime_detail' m.id %}" class="text-decoration-none">
+      <div class="card-anime">
+        <img src="{{ m.coverImage.large }}" alt="{{ m.title.romaji }}" loading="lazy">
+        <div class="p-2">
+          <div class="small fw-medium" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ m.title.english|default:m.title.romaji }}</div>
+          <div class="small text-secondary" style="font-size:0.7rem">{{ m.format|default:'' }}</div>
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% if staff.characters.nodes %}
+  <h5 class="section-title mt-4"><span class="dot" style="background:#f97316"></span>Voiced Characters</h5>
+  <div class="d-flex flex-wrap gap-3">
+    {% for c in staff.characters.nodes %}
+    <a href="{% url 'character' c.id %}" class="text-decoration-none text-center" style="width:100px">
+      <img src="{{ c.image.medium }}" alt="{{ c.name.full }}" class="rounded-3" style="width:80px;height:80px;object-fit:cover;border:2px solid var(--border)" loading="lazy">
+      <div class="small mt-1" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.name.full }}</div>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,500 @@
+{% extends 'base.html' %}
+{% load core_extras %}
+{% block title %}AniPulse — Discover, Track & Watch Anime{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero-section { padding:80px 0 60px; position:relative; overflow:hidden }
+    .hero-section::before { content:''; position:absolute; top:-200px; right:-100px; width:600px; height:600px; background:radial-gradient(circle, rgba(232,54,93,0.08) 0%, transparent 70%) }
+    .hero-section::after { content:''; position:absolute; bottom:-100px; left:-100px; width:400px; height:400px; background:radial-gradient(circle, rgba(162,89,255,0.06) 0%, transparent 70%) }
+    .hero-title { font-size:clamp(2.5rem,6vw,4.5rem); font-weight:800; line-height:1.1; letter-spacing:-0.02em }
+    .hero-title .accent { background:linear-gradient(135deg,var(--primary),#A259FF); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text }
+    .search-box { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:6px; display:flex; align-items:center; max-width:560px }
+    .search-box input { flex:1; background:transparent; border:none; outline:none; color:var(--text); padding:12px 16px; font-size:1rem }
+    .search-box input::placeholder { color:var(--text-muted) }
+    .search-box button { background:var(--primary); border:none; color:#fff; padding:12px 24px; border-radius:10px; font-weight:600; transition:all 0.2s }
+    .search-box button:hover { background:var(--primary-dark) }
+    .stat-pill { display:inline-flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 20px }
+    .stat-pill .num { font-weight:700; font-size:1.1rem; color:var(--text) }
+    .stat-pill .label { color:var(--text-muted); font-size:0.8rem }
+    .section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem }
+    .section-header h2 { font-weight:700; font-size:1.5rem; display:flex; align-items:center; gap:10px }
+    .section-header h2 .icon { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:1rem }
+    .trending-scroll { display:flex; gap:20px; overflow-x:auto; padding-bottom:12px; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch }
+    .trending-scroll::-webkit-scrollbar { height:6px }
+    .trending-scroll::-webkit-scrollbar-track { background:var(--surface-2); border-radius:3px }
+    .trending-scroll::-webkit-scrollbar-thumb { background:var(--primary); border-radius:3px }
+    .trending-item { flex:0 0 200px; scroll-snap-align:start; position:relative }
+    .trending-item .card-anime img { aspect-ratio:2/3; object-fit:cover }
+    .season-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:16px }
+    .genre-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:14px }
+    .genre-card { position:relative; border-radius:14px; overflow:hidden; height:110px; display:flex; align-items:center; justify-content:center; text-decoration:none; color:#fff; font-weight:700; font-size:1rem; transition:all 0.25s; border:1px solid var(--border) }
+    .genre-card:hover { transform:translateY(-4px); filter:brightness(1.3) }
+    .genre-card::before { content:''; position:absolute; inset:0; opacity:0.2; background:linear-gradient(135deg,var(--g1),var(--g2)) }
+    .genre-card span { position:relative; z-index:1 }
+    .airing-now-item { display:flex; align-items:center; gap:14px; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:12px; text-decoration:none; color:inherit; transition:all 0.2s }
+    .airing-now-item:hover { border-color:rgba(232,54,93,0.3) }
+    .airing-now-item img { width:52px; height:72px; object-fit:cover; border-radius:8px; flex-shrink:0 }
+    .airing-live { width:8px; height:8px; border-radius:50%; background:#22c55e; animation:pulse 2s infinite }
+    .upcoming-strip { display:flex; gap:14px; overflow-x:auto; padding-bottom:8px }
+    .upcoming-strip::-webkit-scrollbar { height:4px }
+    .upcoming-strip::-webkit-scrollbar-track { background:var(--surface-2) }
+    .upcoming-strip::-webkit-scrollbar-thumb { background:#A259FF; border-radius:2px }
+    .upcoming-card { flex:0 0 280px; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px; display:flex; gap:14px; text-decoration:none; color:inherit; transition:all 0.2s }
+    .upcoming-card:hover { border-color:rgba(162,89,255,0.3); transform:translateY(-2px) }
+    .upcoming-card img { width:64px; height:90px; object-fit:cover; border-radius:8px; flex-shrink:0 }
+    .cta-section { background:linear-gradient(135deg,rgba(232,54,93,0.15) 0%,rgba(162,89,255,0.15) 100%); border:1px solid rgba(232,54,93,0.2); border-radius:20px; padding:60px 40px; text-align:center }
+    .genre-results-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:18px }
+    .search-results-list { display:flex; flex-direction:column; gap:12px }
+    .search-result-item { display:flex; gap:14px; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:12px; text-decoration:none; color:inherit; transition:all 0.2s }
+    .search-result-item:hover { border-color:rgba(232,54,93,0.3) }
+    .search-result-item img { width:60px; height:85px; object-fit:cover; border-radius:8px; flex-shrink:0 }
+    .feature-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:32px 24px; text-align:center; transition:all 0.3s }
+    .feature-card:hover { transform:translateY(-6px); border-color:rgba(232,54,93,0.2); box-shadow:0 12px 40px rgba(0,0,0,0.2) }
+    .feature-card .icon-box { width:56px; height:56px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:1.5rem; margin:0 auto 16px }
+    .testimonial-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px; position:relative }
+    .testimonial-card::before { content:'"'; font-size:3rem; position:absolute; top:8px; right:20px; color:var(--primary); opacity:0.2; font-family:Georgia,serif }
+    .faq-item { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px 24px; cursor:pointer; transition:all 0.2s }
+    .faq-item:hover { border-color:rgba(232,54,93,0.2) }
+    .faq-item .faq-q { font-weight:600; display:flex; justify-content:space-between; align-items:center }
+    .popularity-badge { display:inline-flex; align-items:center; gap:6px; background:var(--surface-2); border-radius:20px; padding:6px 14px; font-size:0.8rem }
+    .stat-number { font-size:2.5rem; font-weight:800; background:linear-gradient(135deg,var(--primary),#A259FF); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text }
+    .home-divider { border:none; height:1px; background:linear-gradient(90deg,transparent,var(--border),transparent); margin:0 }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- === HERO === -->
+<section class="hero-section">
+    <div class="container position-relative" style="z-index:1">
+        <div class="row align-items-center">
+            <div class="col-lg-7">
+                <div class="d-inline-flex align-items-center gap-2 bg-danger bg-opacity-10 border border-danger border-opacity-20 text-danger rounded-pill px-3 py-1 mb-4" style="font-size:0.8rem">
+                    <span style="width:6px;height:6px;border-radius:50%;background:var(--primary);display:inline-block"></span>
+                    Spring 2026 Season is Live
+                </div>
+                <h1 class="hero-title mb-4">
+                    Discover Your Next<br><span class="accent">Favorite Anime</span>
+                </h1>
+                <p class="text-secondary fs-5 mb-4" style="max-width:480px;line-height:1.7">
+                    Track your watchlist, get episode notifications, and find anime you'll love with the most powerful tracking platform.
+                </p>
+                <form action="{% url 'home' %}" method="get" class="search-box mb-4">
+                    <input type="text" name="search" placeholder="Search 10,000+ anime..." value="{{ search_query|default:'' }}" autocomplete="off">
+                    <button type="submit">Search</button>
+                </form>
+                <div class="d-flex flex-wrap gap-3">
+                    <div class="stat-pill"><span class="num">10K+</span><span class="label">Anime</span></div>
+                    <div class="stat-pill"><span class="num text-danger">Live</span><span class="label">Tracking</span></div>
+                    <div class="stat-pill"><span class="num text-warning">Free</span><span class="label">Forever</span></div>
+                    <div class="stat-pill"><span class="num" style="color:#A259FF">100%</span><span class="label">Uptime</span></div>
+                </div>
+                <div class="mt-4 d-flex gap-3 flex-wrap">
+                    <a href="{% url 'random_anime' %}" class="btn btn-primary-custom px-4 py-2" style="border-radius:12px">🎲 Surprise Me</a>
+                    <a href="{% url 'compare' %}" class="btn btn-outline-light px-4 py-2" style="border-radius:12px">⚖️ Compare Anime</a>
+                    <a href="{% url 'quiz' %}" class="btn btn-outline-light px-4 py-2" style="border-radius:12px">🧠 Take a Quiz</a>
+                </div>
+            </div>
+            <div class="col-lg-5 d-none d-lg-block">
+                {% if trending|slice:":3" %}
+                <div class="position-relative" style="height:420px">
+                    {% for anime in trending|slice:":3" %}
+                    <a href="{% url 'anime_detail' anime.id %}" style="position:absolute;{% if forloop.counter == 1 %}left:0;top:0;{% elif forloop.counter == 2 %}right:0;top:20px;{% else %}left:40px;bottom:0;{% endif %}width:180px;border-radius:14px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.5);{% if forloop.counter == 1 %}transform:rotate(-3deg);z-index:3;{% elif forloop.counter == 2 %}transform:rotate(2deg);z-index:2;{% else %}transform:rotate(-1deg);z-index:1;{% endif %};display:block">
+                        <img src="{{ anime.coverImage.large|default:anime.coverImage.medium }}" style="width:100%;aspect-ratio:2/3;object-fit:cover" alt="" loading="lazy">
+                        <div style="position:absolute;bottom:0;left:0;right:0;padding:10px;background:linear-gradient(transparent,rgba(0,0,0,0.9))">
+                            <div style="font-size:0.7rem;color:#fff;font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,0.5)">{{ anime.title.english|default:anime.title.romaji|truncatechars:18 }}</div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<hr class="home-divider">
+
+<!-- === SEARCH RESULTS === -->
+{% if search_query %}
+<section class="container py-5">
+    <div class="section-header">
+        <h2><span class="icon bg-primary bg-opacity-10 text-primary">🔍</span> Results for "{{ search_query }}"</h2>
+        <span class="text-secondary small">{{ search_results|length }} found</span>
+    </div>
+    {% if search_results %}
+    <div class="search-results-list">
+        {% for anime in search_results %}
+        <a href="{% url 'anime_detail' anime.id %}" class="search-result-item">
+            <img src="{{ anime.coverImage.large|default:anime.coverImage.medium }}" alt="" loading="lazy">
+            <div class="flex-grow-1">
+                <div class="fw-semibold" style="color:var(--text)">{{ anime.title.english|default:anime.title.romaji }}</div>
+                <div class="d-flex gap-2 mt-1 flex-wrap">
+                    {% if anime.averageScore %}<span class="text-warning small">★ {{ anime.averageScore|div:10|floatformat:1 }}</span>{% endif %}
+                    {% if anime.format %}<span class="text-secondary small">{{ anime.format }}</span>{% endif %}
+                    {% if anime.status == 'RELEASING' %}<span class="text-success small">Airing</span>{% endif %}
+                    <span class="text-secondary small">{{ anime.genres|slice:":3"|join:", " }}</span>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-secondary py-4">No results found for "{{ search_query }}". Try browsing by genre instead.</p>
+    {% endif %}
+</section>
+<hr class="home-divider">
+{% endif %}
+
+{% if selected_genre and genre_results %}
+<section class="container py-5">
+    <div class="section-header">
+        <h2><span class="icon" style="background:rgba(162,89,255,0.1);color:#A259FF">🎭</span> {{ selected_genre }} Anime</h2>
+        <a href="{% url 'home' %}" class="text-secondary small text-decoration-none">← Clear filter</a>
+    </div>
+    <div class="genre-results-grid">
+        {% for anime in genre_results %}
+        {% include 'includes/anime_card.html' with anime=anime %}
+        {% endfor %}
+    </div>
+</section>
+<hr class="home-divider">
+{% endif %}
+
+{% if not search_query and not selected_genre %}
+
+<!-- === BROWSE BY MOOD === -->
+<section class="container py-5">
+    <div class="text-center mb-5">
+        <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 mb-3" style="letter-spacing:0.5px">BROWSE BY MOOD</span>
+        <h2 class="fw-bold mb-3" style="font-size:2rem">What are you in the mood for?</h2>
+        <p class="text-secondary" style="max-width:560px;margin:0 auto">Pick a vibe and discover anime that matches your mood.</p>
+    </div>
+    <div class="row g-3">
+        <div class="col-6 col-md-3">
+            <a href="{% url 'home' %}?genre=Action" class="genre-card d-flex flex-column" style="--g1:#ef4444;--g2:#dc2626;height:100px"><span style="font-size:1.5rem">🔥</span><span style="font-size:0.85rem">Action-Packed</span></a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="{% url 'home' %}?genre=Slice of Life" class="genre-card d-flex flex-column" style="--g1:#22c55e;--g2:#16a34a;height:100px"><span style="font-size:1.5rem">🌊</span><span style="font-size:0.85rem">Something Chill</span></a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="{% url 'home' %}?genre=Romance" class="genre-card d-flex flex-column" style="--g1:#ec4899;--g2:#db2777;height:100px"><span style="font-size:1.5rem">💕</span><span style="font-size:0.85rem">In the Mood for Love</span></a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="{% url 'home' %}?genre=Comedy" class="genre-card d-flex flex-column" style="--g1:#eab308;--g2:#ca8a04;height:100px"><span style="font-size:1.5rem">😂</span><span style="font-size:0.85rem">Need a Laugh</span></a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="{% url 'home' %}?genre=Psychological" class="genre-card d-flex flex-column" style="--g1:#6366f1;--g2:#4f46e5;height:100px"><span style="font-size:1.5rem">🧠</span><span style="font-size:0.85rem">Mind-Bending</span></a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="{% url 'home' %}?genre=Sci-Fi" class="genre-card d-flex flex-column" style="--g1:#06b6d4;--g2:#0891b2;height:100px"><span style="font-size:1.5rem">🚀</span><span style="font-size:0.85rem">Sci-Fi Adventure</span></a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="{% url 'home' %}?genre=Horror" class="genre-card d-flex flex-column" style="--g1:#374151;--g2:#1f2937;height:100px"><span style="font-size:1.5rem">🖤</span><span style="font-size:0.85rem">Dark & Spooky</span></a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="{% url 'home' %}?genre=Fantasy" class="genre-card d-flex flex-column" style="--g1:#8b5cf6;--g2:#7c3aed;height:100px"><span style="font-size:1.5rem">✨</span><span style="font-size:0.85rem">Fantasy World</span></a>
+        </div>
+    </div>
+</section>
+
+<hr class="home-divider">
+
+{% if user.is_authenticated and user_streak %}
+<section class="container py-4">
+    <div class="d-flex flex-wrap align-items-center gap-4 justify-content-center">
+        <div class="d-flex align-items-center gap-2 px-4 py-2 rounded-4" style="background:var(--surface);border:1px solid var(--border)">
+            <span style="font-size:1.3rem">🔥</span>
+            <span class="fw-bold" style="font-size:1.1rem">{{ user_streak.current_streak }}</span>
+            <span class="text-secondary small">day streak</span>
+        </div>
+        <div class="d-flex align-items-center gap-2 px-4 py-2 rounded-4" style="background:var(--surface);border:1px solid var(--border)">
+            <span style="font-size:1.3rem">🏆</span>
+            <span class="fw-bold" style="font-size:1.1rem">{{ user_streak.longest_streak }}</span>
+            <span class="text-secondary small">best streak</span>
+        </div>
+        {% if currently_watching %}
+        <a href="{% url 'dashboard' %}" class="d-flex align-items-center gap-2 px-4 py-2 rounded-4 text-decoration-none" style="background:rgba(232,54,93,0.08);border:1px solid rgba(232,54,93,0.15)">
+            <span style="font-size:1.3rem">▶</span>
+            <span class="text-secondary small">{{ currently_watching|length }} watching</span>
+        </a>
+        {% endif %}
+        <a href="{% url 'anime_wrapped' %}" class="d-flex align-items-center gap-2 px-4 py-2 rounded-4 text-decoration-none" style="background:rgba(162,89,255,0.08);border:1px solid rgba(162,89,255,0.15)">
+            <span style="font-size:1.3rem">🎉</span>
+            <span class="text-secondary small">My Wrapped</span>
+        </a>
+        <a href="{% url 'tier_list_list' %}" class="d-flex align-items-center gap-2 px-4 py-2 rounded-4 text-decoration-none" style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.15)">
+            <span style="font-size:1.3rem">🏆</span>
+            <span class="text-secondary small">Tier Lists</span>
+        </a>
+        <a href="{% url 'battle_list' %}" class="d-flex align-items-center gap-2 px-4 py-2 rounded-4 text-decoration-none" style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.15)">
+            <span style="font-size:1.3rem">⚔️</span>
+            <span class="text-secondary small">Battles</span>
+        </a>
+    </div>
+</section>
+<hr class="home-divider">
+{% endif %}
+
+{% if user.is_authenticated and currently_watching %}
+<!-- === CONTINUE WATCHING === -->
+<section class="container py-5">
+    <div class="section-header">
+        <h2><span class="icon bg-danger bg-opacity-10 text-danger">▶</span> Continue Watching</h2>
+        <a href="{% url 'watchlist' %}" class="text-secondary small text-decoration-none">My list →</a>
+    </div>
+    <div class="trending-scroll">
+        {% for entry in currently_watching %}
+        <div class="trending-item">
+            <a href="{% url 'anime_detail' entry.anime.anilist_id %}" class="d-block text-decoration-none">
+                <div class="card-anime position-relative">
+                    <img src="{{ entry.anime.cover_image_large|default:entry.anime.cover_image_medium }}" alt="" loading="lazy">
+                    <span class="badge-score" style="background:rgba(232,54,93,0.9);color:#fff">Ep {{ entry.current_episode }}/{{ entry.anime.episodes|default:'?' }}</span>
+                </div>
+                <div class="mt-2"><div class="fw-medium text-truncate" style="color:var(--text);font-size:0.85rem">{{ entry.anime.display_title }}</div></div>
+                {% if entry.anime.episodes %}
+                <div class="stat-bar mt-1"><div class="fill" style="width:{% widthratio entry.current_episode entry.anime.episodes 100 %}%;background:var(--primary)"></div></div>
+                {% endif %}
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+<hr class="home-divider">
+{% endif %}
+
+<!-- === AIRING RIGHT NOW === -->
+{% if airing %}
+<section class="container py-5">
+    <div class="section-header">
+        <h2><span class="icon bg-success bg-opacity-10 text-success"><span class="airing-live"></span></span> Airing Right Now</h2>
+        <a href="{% url 'calendar' %}" class="text-secondary small text-decoration-none">Full schedule →</a>
+    </div>
+    <div class="airing-now-list" style="max-width:700px">
+        {% for schedule in airing|slice:":5" %}
+        <a href="{% url 'anime_detail' schedule.media.id %}" class="airing-now-item">
+            <img src="{{ schedule.media.coverImage.large|default:schedule.media.coverImage.medium }}" alt="" loading="lazy">
+            <div class="flex-grow-1">
+                <div class="fw-medium text-truncate" style="color:var(--text)">{{ schedule.media.title.english|default:schedule.media.title.romaji }}</div>
+                <div class="text-danger small fw-semibold">Episode {{ schedule.episode }}</div>
+            </div>
+            <div class="text-end">
+                {% if schedule.media.averageScore %}<div class="text-warning fw-bold small">★ {{ schedule.media.averageScore|div:10|floatformat:1 }}</div>{% endif %}
+                <div class="text-secondary" style="font-size:0.75rem">{{ schedule.timeUntilAiring|hours_from_seconds }}h {{ schedule.timeUntilAiring|minutes_remainder }}m</div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+<hr class="home-divider">
+{% endif %}
+
+<!-- === TRENDING === -->
+{% if trending %}
+<section class="container py-5">
+    <div class="section-header">
+        <h2><span class="icon bg-danger bg-opacity-10 text-danger">🔥</span> Trending Now</h2>
+        <a href="{% url 'discover' %}" class="text-secondary small text-decoration-none">Browse all →</a>
+    </div>
+    <div class="trending-scroll">
+        {% for anime in trending|slice:":20" %}
+        <div class="trending-item">
+            <a href="{% url 'anime_detail' anime.id %}" class="d-block text-decoration-none">
+                <div class="card-anime position-relative" style="border-radius:12px">
+                    <img src="{{ anime.coverImage.large|default:anime.coverImage.medium }}" alt="" loading="lazy">
+                    {% if anime.averageScore %}<span class="badge-score">★ {{ anime.averageScore|div:10|floatformat:1 }}</span>{% endif %}
+                    {% if anime.format %}<span class="badge-format">{{ anime.format }}</span>{% endif %}
+                </div>
+                <div class="mt-2"><div class="fw-medium text-truncate" style="color:var(--text);font-size:0.85rem">{{ anime.title.english|default:anime.title.romaji }}</div></div>
+                <div class="d-flex justify-content-between" style="font-size:0.7rem;color:var(--text-muted)">
+                    <span>{{ anime.genres.0|default:"Anime" }}</span>
+                    <span>{% if anime.episodes %}{{ anime.episodes }} ep{% endif %}</span>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+<hr class="home-divider">
+{% endif %}
+
+<!-- === POPULAR THIS SEASON === -->
+{% if popular %}
+<section class="container py-5">
+    <div class="section-header">
+        <h2><span class="icon" style="background:rgba(6,182,212,0.1);color:#06b6d4">📺</span> Popular This Season</h2>
+        <span class="text-secondary small">{{ selected_season|default:"Current"|title }} {{ selected_year|default:"" }}</span>
+    </div>
+    <div class="season-grid">
+        {% for anime in popular %}
+        {% include 'includes/anime_card.html' with anime=anime %}
+        {% endfor %}
+    </div>
+    <div class="text-center mt-4">
+        <a href="{% url 'discover' %}?{% if selected_season %}season={{ selected_season }}{% endif %}" class="btn btn-outline-light px-4" style="border-radius:12px">View All Seasonal →</a>
+    </div>
+</section>
+<hr class="home-divider">
+{% endif %}
+
+<!-- === TOP RATED === -->
+{% if top_rated %}
+<section class="container py-5">
+    <div class="section-header">
+        <h2><span class="icon" style="background:rgba(251,191,36,0.1);color:#fbbf24">🏆</span> Top Rated All Time</h2>
+        <span class="text-secondary small">Community's best</span>
+    </div>
+    <div class="season-grid">
+        {% for anime in top_rated %}
+        {% include 'includes/anime_card.html' with anime=anime %}
+        {% endfor %}
+    </div>
+</section>
+<hr class="home-divider">
+{% endif %}
+
+<!-- === UPCOMING === -->
+{% if upcoming %}
+<section class="container py-5">
+    <div class="section-header">
+        <h2><span class="icon" style="background:rgba(162,89,255,0.1);color:#A259FF">🚀</span> Upcoming Releases</h2>
+        <span class="text-secondary small">Not yet aired</span>
+    </div>
+    <div class="upcoming-strip">
+        {% for anime in upcoming|slice:":8" %}
+        <a href="{% url 'anime_detail' anime.id %}" class="upcoming-card">
+            <img src="{{ anime.coverImage.large|default:anime.coverImage.medium }}" alt="" loading="lazy">
+            <div class="flex-grow-1 min-w-0">
+                <div class="fw-medium text-truncate" style="color:var(--text);font-size:0.85rem">{{ anime.title.english|default:anime.title.romaji }}</div>
+                {% if anime.averageScore %}<span class="text-warning small">★ {{ anime.averageScore|div:10|floatformat:1 }}</span>{% endif %}
+                <div class="text-secondary mt-2" style="font-size:0.7rem">
+                    {% if anime.genres.0 %}{{ anime.genres.0 }}{% endif %}
+                    {% if anime.episodes %} · {{ anime.episodes }} ep{% endif %}
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+<hr class="home-divider">
+{% endif %}
+
+<!-- === BROWSE BY GENRE === -->
+<section class="container py-5">
+    <div class="section-header">
+        <h2><span class="icon" style="background:rgba(34,197,94,0.1);color:#22c55e">🎭</span> Browse by Genre</h2>
+    </div>
+    <div class="genre-grid">
+        {% for g in genre_spotlight %}
+        <a href="?genre={{ g }}" class="genre-card" style="{% cycle '--g1:#ef4444;--g2:#f97316' '--g1:#ec4899;--g2:#f43f5e' '--g1:#eab308;--g2:#f59e0b' '--g1:#8b5cf6;--g2:#a78bfa' '--g1:#06b6d4;--g2:#22d3ee' '--g1:#22c55e;--g2:#4ade80' '--g1:#6366f1;--g2:#818cf8' '--g1:#374151;--g2:#4b5563' '--g1:#f97316;--g2:#fb923c' '--g1:#64748b;--g2:#94a3b8' '--g1:#0ea5e9;--g2:#38bdf8' '--g1:#d946ef;--g2:#e879f9' '--g1:#10b981;--g2:#34d399' '--g1:#64748b;--g2:#6b7280' '--g1:#7c3aed;--g2:#8b5cf6' '--g1:#475569;--g2:#64748b' %}"><span>{{ g }}</span></a>
+        {% endfor %}
+    </div>
+</section>
+
+<hr class="home-divider">
+
+
+
+<!-- === TESTIMONIALS === -->
+<section class="container py-5">
+    <div class="text-center mb-5">
+        <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 mb-3" style="letter-spacing:0.5px">TESTIMONIALS</span>
+        <h2 class="fw-bold mb-3" style="font-size:2rem">Loved by anime fans worldwide</h2>
+    </div>
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="testimonial-card">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width:44px;height:44px;background:var(--primary);color:#fff">K</div>
+                    <div>
+                        <div class="fw-semibold small">Kenji</div>
+                        <div style="color:#fbbf24;font-size:0.75rem">★★★★★</div>
+                    </div>
+                </div>
+                <p class="text-secondary small mb-0" style="line-height:1.7">"I've tried dozens of anime trackers. AniPulse is by far the best — the UI is gorgeous and the episode notifications are a lifesaver."</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="testimonial-card">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width:44px;height:44px;background:#A259FF;color:#fff">M</div>
+                    <div>
+                        <div class="fw-semibold small">Miyuki</div>
+                        <div style="color:#fbbf24;font-size:0.75rem">★★★★★</div>
+                    </div>
+                </div>
+                <p class="text-secondary small mb-0" style="line-height:1.7">"The compare feature is incredible. I can finally settle debates with my friends about which anime is actually better!"</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="testimonial-card">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width:44px;height:44px;background:#22c55e;color:#fff">R</div>
+                    <div>
+                        <div class="fw-semibold small">Ryo</div>
+                        <div style="color:#fbbf24;font-size:0.75rem">★★★★★</div>
+                    </div>
+                </div>
+                <p class="text-secondary small mb-0" style="line-height:1.7">"The watch time tracking and achievement system keeps me motivated. I love seeing my stats grow every season!"</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% if not user.is_authenticated %}
+<hr class="home-divider">
+
+<!-- === FAQ === -->
+<section class="container py-5">
+    <div class="text-center mb-5">
+        <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 mb-3" style="letter-spacing:0.5px">FAQ</span>
+        <h2 class="fw-bold mb-3" style="font-size:2rem">Frequently Asked Questions</h2>
+    </div>
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="d-flex flex-column gap-3">
+                <div class="faq-item">
+                    <div class="faq-q">Is AniPulse free? <span style="color:var(--text-muted)">+</span></div>
+                    <div class="text-secondary small mt-2" style="line-height:1.7">Yes! AniPulse is completely free to use with no premium tiers or hidden costs. All features are available to everyone.</div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-q">How is my data synced? <span style="color:var(--text-muted)">+</span></div>
+                    <div class="text-secondary small mt-2" style="line-height:1.7">AniPulse pulls real-time data from the AniList GraphQL API. Your watchlist and progress are stored securely in our database.</div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-q">Can I track multiple anime at once? <span style="color:var(--text-muted)">+</span></div>
+                    <div class="text-secondary small mt-2" style="line-height:1.7">Absolutely! Add as many anime as you want to your watchlist with different statuses — Watching, Completed, Planned, On Hold, or Dropped.</div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-q">How do episode notifications work? <span style="color:var(--text-muted)">+</span></div>
+                    <div class="text-secondary small mt-2" style="line-height:1.7">Enable notifications in your settings and we'll send you alerts when new episodes of your tracked anime air. You can also get a weekly digest.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<hr class="home-divider">
+
+<!-- === FINAL CTA === -->
+<section class="container py-5">
+    <div class="cta-section">
+        <div style="font-size:3rem" class="mb-3">🎉</div>
+        <h2 class="fw-bold mb-3" style="color:var(--text);font-size:2rem">Ready to start your anime journey?</h2>
+        <p class="text-secondary mb-4" style="max-width:500px;margin:0 auto;font-size:1.05rem;line-height:1.7">Join thousands of anime fans who track their shows, get episode alerts, discover new favorites, and connect with fellow enthusiasts every season.</p>
+        <div class="d-flex justify-content-center gap-3 flex-wrap">
+            <a href="{% url 'register' %}" class="btn btn-primary-custom px-5 py-2" style="border-radius:12px;font-size:1.05rem">Create Free Account</a>
+            <a href="{% url 'login' %}" class="btn btn-outline-light px-5 py-2" style="border-radius:12px;font-size:1.05rem">Sign In</a>
+        </div>
+        <div class="d-flex justify-content-center gap-4 mt-4">
+            <span class="text-secondary small">✓ No credit card</span>
+            <span class="text-secondary small">✓ Free forever</span>
+            <span class="text-secondary small">✓ Cancel anytime</span>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{% endif %}
+{% endblock %}

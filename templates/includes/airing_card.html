@@ -1,0 +1,20 @@
+{% load core_extras %}
+<a href="{% url 'anime_detail' schedule.media.id %}" class="text-decoration-none">
+    <div class="airing-card d-flex gap-3">
+        <div style="width:56px;height:80px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--surface-2)">
+            {% if schedule.media.coverImage.medium %}
+            <img src="{{ schedule.media.coverImage.medium }}" class="w-100 h-100 object-fit-cover" alt="" loading="lazy">
+            {% endif %}
+        </div>
+        <div class="flex-grow-1">
+            <h6 class="text-light small mb-1 text-truncate">{{ schedule.media.title.english|default:schedule.media.title.romaji }}</h6>
+            <div class="text-danger small fw-medium mb-1">Episode {{ schedule.episode }}</div>
+            <div class="text-secondary" style="font-size:0.7rem">
+                Airing in {{ schedule.timeUntilAiring|hours_from_seconds }}h {{ schedule.timeUntilAiring|minutes_remainder }}m
+            </div>
+        </div>
+        {% if schedule.media.averageScore %}
+        <div class="fw-bold text-warning">★{{ schedule.media.averageScore|div:10|floatformat:1 }}</div>
+        {% endif %}
+    </div>
+</a>

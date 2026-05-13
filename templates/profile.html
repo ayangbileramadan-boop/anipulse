@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% block title %}{{ profile_user.username }} — AniPulse{% endblock %}
+
+{% block extra_css %}
+<style>
+.profile-cover{height:200px;background-size:cover;background-position:center;position:relative;border-radius:0 0 20px 20px;overflow:hidden}
+.profile-cover::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,var(--bg),transparent)}
+.profile-avatar{width:100px;height:100px;border-radius:50%;border:4px solid var(--bg);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:2.5rem;font-weight:700;position:relative;z-index:2;margin-top:-50px}
+.profile-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.2rem;text-align:center}
+.stat-card .num{font-size:1.5rem;font-weight:700}
+</style>
+{% endblock %}
+
+{% block content %}
+{% if profile_user.cover_image %}
+<div class="profile-cover" style="background-image:url('{{ profile_user.cover_image }}')"></div>
+{% endif %}
+
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-10">
+      <div class="d-flex align-items-end gap-3 mb-4">
+        <div class="profile-avatar">
+          {% if profile_user.avatar %}
+          <img src="{{ profile_user.avatar }}" alt="" loading="lazy">
+          {% else %}
+          {{ profile_user.username|first|upper }}
+          {% endif %}
+        </div>
+        <div class="flex-grow-1">
+          <h2 class="fw-bold mb-0">{{ profile_user.username }}</h2>
+          <p class="text-secondary small mb-0">Joined {{ profile_user.date_joined|date:"F Y" }}</p>
+        </div>
+        {% if is_me %}
+        <a href="{% url 'profile_edit' %}" class="btn btn-sm btn-outline-light px-3">Edit Profile</a>
+        {% endif %}
+      </div>
+
+      <div class="d-flex flex-wrap gap-2 mb-3">
+        {% if total_watch_hours %}
+        <span class="badge-sm"><span class="text-primary fw-bold">{{ total_watch_hours }}h</span> watched</span>
+        {% endif %}
+        {% if profile_streak and profile_streak.current_streak > 0 %}
+        <span class="badge-sm">🔥 {{ profile_streak.current_streak }} day streak</span>
+        {% endif %}
+        <span class="badge-sm">Joined {{ profile_user.date_joined|date:"Y" }}</span>
+      </div>
+
+      {% if profile_user.bio %}
+      <p class="text-secondary mb-4" style="line-height:1.7">{{ profile_user.bio|linebreaks }}</p>
+      {% endif %}
+
+      {% if stats %}
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+          <div class="stat-card">
+            <div class="num text-primary">{{ stats.watching }}</div>
+            <div class="text-secondary small">Watching</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="stat-card">
+            <div class="num text-success">{{ stats.completed }}</div>
+            <div class="text-secondary small">Completed</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="stat-card">
+            <div class="num text-warning">{{ stats.planning }}</div>
+            <div class="text-secondary small">Planning</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="stat-card">
+            <div class="num text-info">{{ stats.total }}</div>
+            <div class="text-secondary small">Total</div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if is_me %}
+      <div class="d-flex flex-wrap gap-2 mb-4">
+        <a href="{% url 'dashboard' %}" class="badge-sm text-decoration-none">📊 Dashboard</a>
+        <a href="{% url 'my_lists' %}" class="badge-sm text-decoration-none">📋 My Lists</a>
+        <a href="{% url 'achievements' %}" class="badge-sm text-decoration-none">🏆 Achievements</a>
+        <a href="{% url 'watch_time' %}" class="badge-sm text-decoration-none">⏰ Watch Time</a>
+        <a href="{% url 'recommendations' %}" class="badge-sm text-decoration-none">🎯 Recommendations</a>
+        <a href="{% url 'quiz' %}" class="badge-sm text-decoration-none">🧠 Anime Quiz</a>
+      </div>
+
+      {% with reviews=profile_user.reviews.all %}
+      {% if reviews %}
+      <h5 class="fw-bold mb-3">Recent Reviews</h5>
+      {% for review in reviews|slice:":5" %}
+      <div class="p-3 rounded-3 mb-2" style="background:var(--surface);border:1px solid var(--border)">
+        <a href="{% url 'anime_detail' review.anime.anilist_id %}" class="text-decoration-none fw-medium">{{ review.anime.display_title }}</a>
+        <span class="text-warning small ms-2">★ {{ review.rating }}/10</span>
+        <div class="text-secondary small">{{ review.body|truncatechars:120 }}</div>
+      </div>
+      {% endfor %}
+      {% endif %}
+      {% endwith %}
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block title %}{{ char.name.full }} — AniPulse{% endblock %}
+{% block extra_css %}
+<style>
+.char-header{display:flex;gap:30px;align-items:flex-start;padding:30px 0;border-bottom:1px solid var(--border);margin-bottom:30px}
+.char-img{width:200px;height:280px;object-fit:cover;border-radius:14px;flex-shrink:0;border:2px solid var(--border)}
+.char-meta{flex:1}
+.char-meta h1{font-weight:700;font-size:1.8rem;margin-bottom:4px}
+.char-meta .native{font-size:1rem;color:var(--text-muted);margin-bottom:12px}
+.char-meta .info-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+.char-meta .info-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px}
+.char-meta .info-item .label{font-size:0.7rem;text-transform:uppercase;color:var(--text-muted);letter-spacing:0.5px;margin-bottom:2px}
+.char-meta .info-item .value{font-size:0.9rem;font-weight:500}
+.char-desc{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:30px;line-height:1.7;font-size:0.9rem}
+.char-media{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px}
+</style>
+{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="char-header">
+    <img src="{{ char.image.large|default:char.image.medium }}" alt="{{ char.name.full }}" class="char-img" loading="lazy">
+    <div class="char-meta">
+      <h1>{{ char.name.full }}</h1>
+      {% if char.name.native %}<div class="native">{{ char.name.native }}</div>{% endif %}
+      {% if char.name.alternative %}
+      <div class="small text-secondary mb-3">Also known as: {{ char.name.alternative|join:', ' }}</div>
+      {% endif %}
+      <div class="info-grid">
+        {% if char.gender %}<div class="info-item"><div class="label">Gender</div><div class="value">{{ char.gender }}</div></div>{% endif %}
+        {% if char.age %}<div class="info-item"><div class="label">Age</div><div class="value">{{ char.age }}</div></div>{% endif %}
+        {% if char.dateOfBirth %}<div class="info-item"><div class="label">Birthday</div><div class="value">{{ char.dateOfBirth.month }}/{{ char.dateOfBirth.day }}{% if char.dateOfBirth.year %}/{{ char.dateOfBirth.year }}{% endif %}</div></div>{% endif %}
+        {% if char.bloodType %}<div class="info-item"><div class="label">Blood Type</div><div class="value">{{ char.bloodType }}</div></div>{% endif %}
+        {% if char.favourites %}<div class="info-item"><div class="label">Favorites</div><div class="value">{{ char.favourites }}</div></div>{% endif %}
+      </div>
+    </div>
+  </div>
+  {% if char.description %}
+  <div class="char-desc">{{ char.description|safe }}</div>
+  {% endif %}
+  {% if char.media.nodes %}
+  <h5 class="section-title"><span class="dot" style="background:var(--primary)"></span>Appears In</h5>
+  <div class="char-media">
+    {% for m in char.media.nodes %}
+    <a href="{% url 'anime_detail' m.id %}" class="text-decoration-none">
+      <div class="card-anime">
+        <img src="{{ m.coverImage.large }}" alt="{{ m.title.romaji }}" loading="lazy">
+        <div class="p-2">
+          <div class="small fw-medium" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ m.title.english|default:m.title.romaji }}</div>
+          <div class="small text-secondary" style="font-size:0.7rem">{{ m.format|default:'' }}</div>
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

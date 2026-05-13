@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Watch Time — AniPulse{% endblock %}
+
+{% block extra_css %}
+<style>
+    .watch-hero { text-align:center; padding:3rem 1rem; background:linear-gradient(135deg, rgba(232,54,93,0.1), rgba(162,89,255,0.1)); border-radius:20px; margin-bottom:2rem }
+    .watch-hero .hours { font-size:4rem; font-weight:800; background:linear-gradient(135deg, var(--primary), #A259FF); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text }
+    .watch-bar { height:24px; border-radius:12px; background:var(--surface-2); overflow:hidden; position:relative }
+    .watch-bar .fill { height:100%; background:linear-gradient(90deg, var(--primary), #A259FF); border-radius:12px; display:flex; align-items:center; justify-content:flex-end; padding-right:8px; font-size:0.7rem; font-weight:600; color:#fff; min-width:40px }
+    .genre-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; background:var(--surface); border:1px solid var(--border); border-radius:20px; font-size:0.85rem }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="watch-hero">
+        <div class="hours">{{ total_hours }}h</div>
+        <p class="text-secondary mb-0">Total watch time across {{ total_anime }} anime</p>
+    </div>
+
+    {% if genres %}
+    <h5 class="fw-bold mb-3">Top Genres by Watch Time</h5>
+    <div class="d-flex flex-wrap gap-2 mb-5">
+        {% for name, hours in genres %}
+        <div class="genre-pill">
+            {{ name }}
+            <span class="text-primary fw-bold">{{ hours|floatformat:0 }}h</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <h5 class="fw-bold mb-3">Top Anime by Hours</h5>
+    {% for item in breakdown %}
+    <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+            <a href="{% url 'anime_detail' item.anime.anilist_id %}" class="text-decoration-none fw-medium">{{ item.anime.display_title }}</a>
+            <span class="fw-bold" style="color:var(--primary)">{{ item.hours }}h</span>
+        </div>
+        <div class="watch-bar">
+            {% if breakdown.0.hours > 0 %}
+            <div class="fill" style="width:{% widthratio item.hours breakdown.0.hours 100 %}%">{{ item.hours }}h</div>
+            {% endif %}
+        </div>
+        <div class="text-secondary small">{{ item.episodes }} eps × {{ item.duration }}min</div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

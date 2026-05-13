@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}Notification Settings — AniPulse{% endblock %}
+
+{% block extra_css %}
+<style>
+    .toggle-wrapper { display:flex; align-items:center; justify-content:space-between; padding:1.5rem; background:var(--surface); border:1px solid rgba(255,255,255,0.05); border-radius:12px; margin-bottom:1rem }
+    .form-check-input:checked { background-color:var(--primary); border-color:var(--primary) }
+    .form-check-input { width:3em; height:1.5em; cursor:pointer }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <h2 class="fw-bold mb-2">Notification Settings</h2>
+            <p class="text-secondary mb-5">Choose when you want to receive email alerts about your anime</p>
+
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="toggle-wrapper">
+                    <div>
+                        <h6 class="fw-bold mb-1">New Episode Alerts</h6>
+                        <p class="text-secondary small mb-0">Get notified when a new episode airs for anime in your watchlist</p>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="notify_new_episodes" id="notifyEpisodes" {% if user.notify_new_episodes %}checked{% endif %}>
+                    </div>
+                </div>
+
+                <div class="toggle-wrapper">
+                    <div>
+                        <h6 class="fw-bold mb-1">Weekly Airing Digest</h6>
+                        <p class="text-secondary small mb-0">Receive a weekly summary of upcoming episodes for your shows</p>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="notify_airing" id="notifyAiring" {% if user.notify_airing %}checked{% endif %}>
+                    </div>
+                </div>
+
+                <div class="toggle-wrapper">
+                    <div>
+                        <h6 class="fw-bold mb-1">Timezone</h6>
+                        <p class="text-secondary small mb-0">Used to schedule notifications at convenient times</p>
+                    </div>
+                    <select name="timezone" class="form-select form-select-sm bg-dark text-light border-secondary" style="width:auto;min-width:150px">
+                        {% for tz in "UTC,Africa/Lagos,America/New_York,America/Chicago,America/Denver,America/Los_Angeles,Asia/Tokyo,Asia/Shanghai,Asia/Kolkata,Europe/London,Europe/Paris,Europe/Berlin,Australia/Sydney,Pacific/Auckland".split"," %}
+                        <option value="{{ tz }}" {% if user.timezone == tz %}selected{% endif %}>{{ tz }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary-custom px-4">Save Settings</button>
+                </div>
+            </form>
+
+            {% if not user.email %}
+            <div class="alert alert-warning mt-4">
+                <strong>No email set!</strong> Add an email to your profile to receive notifications.
+            </div>
+            {% else %}
+            <div class="text-secondary small mt-4">
+                Notifications will be sent to <strong class="text-light">{{ user.email }}</strong>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

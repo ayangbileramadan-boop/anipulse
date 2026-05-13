@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}My Lists — AniPulse{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0">My Custom Lists</h2>
+        <button class="btn btn-primary-custom btn-sm" data-bs-toggle="modal" data-bs-target="#createListModal">+ New List</button>
+    </div>
+
+    {% if custom_lists %}
+    <div class="row g-4">
+        {% for cl in custom_lists %}
+        <div class="col-md-6 col-lg-4">
+            <div class="p-4 rounded-4" style="background:var(--surface);border:1px solid var(--border)">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <a href="{% url 'view_list' cl.id %}" class="text-decoration-none fw-bold fs-5">{{ cl.name }}</a>
+                    <span class="badge bg-secondary bg-opacity-20">{{ cl.anime.count }} anime</span>
+                </div>
+                {% if cl.description %}
+                <p class="text-secondary small mb-3">{{ cl.description|truncatechars:100 }}</p>
+                {% endif %}
+                <div class="d-flex gap-2">
+                    {% for anime in cl.anime|slice:":4" %}
+                    <a href="{% url 'anime_detail' anime.anilist_id %}">
+                        <img src="{{ anime.cover_image_medium }}" style="width:40px;height:56px;object-fit:cover;border-radius:6px" alt="" loading="lazy">
+                    </a>
+                    {% endfor %}
+                </div>
+                <form method="post" class="d-inline mt-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="list_id" value="{{ cl.id }}">
+                    <button type="submit" class="btn btn-sm text-danger" style="background:none;border:none;font-size:0.8rem">Delete</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <div style="font-size:3rem" class="mb-2">📚</div>
+        <p class="text-secondary">No custom lists yet. Create one!</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="modal fade" id="createListModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background:var(--surface);border:1px solid var(--border)">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create">
+                <div class="modal-header" style="border-color:var(--border)">
+                    <h5 class="modal-title">Create New List</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">List Name</label>
+                        <input type="text" name="name" class="form-control form-control-sm" style="background:var(--surface-2);border:1px solid var(--border);color:var(--text)" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description (optional)</label>
+                        <textarea name="description" rows="2" class="form-control form-control-sm" style="background:var(--surface-2);border:1px solid var(--border);color:var(--text)"></textarea>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="is_public" checked>
+                        <label class="form-check-label small">Public list</label>
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-color:var(--border)">
+                    <button type="submit" class="btn btn-primary-custom btn-sm">Create</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% load core_extras %}
+<div class="card-anime position-relative" style="border-radius:12px">
+    <a href="{% url 'anime_detail' anime.id %}">
+        <img src="{{ anime.coverImage.large|default:anime.coverImage.medium|default:'' }}" alt="" loading="lazy">
+        {% if anime.averageScore %}
+        <span class="badge-score">★ {{ anime.averageScore|div:10|floatformat:1 }}</span>
+        {% endif %}
+        {% if anime.format %}
+        <span class="badge-format">{{ anime.format }}</span>
+        {% endif %}
+        {% if anime.averageScore %}
+        <div class="score-ring"><svg viewBox="0 0 36 36" style="width:36px;height:36px"><path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="3"/><path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#fbbf24" stroke-width="3" stroke-dasharray="{{ anime.averageScore|div:10|floatformat:1 }}, 10" stroke-linecap="round"/></svg></div>
+        {% endif %}
+    </a>
+    <div class="p-2">
+        <a href="{% url 'anime_detail' anime.id %}" class="text-decoration-none small fw-medium d-block text-truncate" style="color:var(--text)">
+            {{ anime.title.english|default:anime.title.romaji }}
+        </a>
+        <div class="d-flex justify-content-between" style="color:var(--text-muted);font-size:0.7rem">
+            <span>{{ anime.genres.0|default:"Anime" }}</span>
+            <span>{% if anime.episodes %}{{ anime.episodes }} ep{% else %}—{% endif %}</span>
+        </div>
+    </div>
+</div>

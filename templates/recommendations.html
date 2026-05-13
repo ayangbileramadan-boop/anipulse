@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% load core_extras %}
+{% block title %}Recommendations — AniPulse{% endblock %}
+
+{% block extra_css %}
+<style>
+    .rec-card { display:flex; gap:16px; padding:16px; background:var(--surface); border:1px solid var(--border); border-radius:14px; margin-bottom:12px; text-decoration:none; color:inherit; transition:all 0.2s }
+    .rec-card:hover { border-color:rgba(232,54,93,0.3); transform:translateX(4px) }
+    .rec-card img { width:72px; height:100px; object-fit:cover; border-radius:10px; flex-shrink:0 }
+    .rec-reason { display:inline-flex; align-items:center; gap:6px; padding:4px 12px; background:rgba(232,54,93,0.1); border:1px solid rgba(232,54,93,0.2); border-radius:20px; font-size:0.75rem; color:var(--primary) }
+    .genre-tag { display:inline-block; padding:3px 10px; background:var(--surface-2); border-radius:12px; font-size:0.75rem; margin-right:4px; margin-bottom:4px }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h2 class="fw-bold mb-2">🎯 Recommendations For You</h2>
+    <p class="text-secondary mb-4">Based on your watchlist and ratings</p>
+
+    {% if top_genres %}
+    <div class="mb-4">
+        <span class="text-secondary small">Your top genres:</span>
+        {% for name, count in top_genres %}
+        <span class="genre-tag">{{ name }} ({{ count }})</span>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if recommendations %}
+    {% for rec in recommendations %}
+    <a href="{% url 'anime_detail' rec.anime.anilist_id %}" class="rec-card">
+        {% if rec.anime.cover_image_medium %}
+        <img src="{{ rec.anime.cover_image_medium }}" alt="" loading="lazy">
+        {% endif %}
+        <div class="flex-grow-1">
+            <div class="fw-bold">{{ rec.anime.display_title }}</div>
+            <div class="d-flex gap-2 mt-1">
+                {% if rec.anime.average_score %}
+                <span class="text-warning small">★ {{ rec.anime.average_score|div:10|floatformat:1 }}</span>
+                {% endif %}
+                {% if rec.anime.format %}
+                <span class="text-secondary small">{{ rec.anime.format }}</span>
+                {% endif %}
+                {% if rec.anime.episodes %}
+                <span class="text-secondary small">{{ rec.anime.episodes }} eps</span>
+                {% endif %}
+            </div>
+            <div class="mt-2"><span class="rec-reason">{{ rec.reason }}</span></div>
+        </div>
+    </a>
+    {% endfor %}
+    {% else %}
+    <div class="text-center py-5">
+        <div style="font-size:3rem" class="mb-2">📺</div>
+        <p class="text-secondary">Add more anime to your watchlist to get personalized recommendations!</p>
+        <a href="{% url 'home' %}" class="btn btn-primary-custom">Discover Anime</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

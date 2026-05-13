@@ -1,0 +1,123 @@
+{% extends 'base.html' %}{% load core_extras %}
+{% block title %}Search Anime — AniPulse{% endblock %}
+{% block extra_css %}
+<style>
+.search-hero{background:linear-gradient(135deg,var(--surface),rgba(232,54,93,0.05));border-bottom:1px solid var(--border);padding:40px 0}
+.search-box{max-width:640px;margin:0 auto;position:relative}
+.search-box input{width:100%;background:var(--surface-2);border:2px solid var(--border);border-radius:14px;color:var(--text);padding:16px 20px;font-size:1.1rem;outline:none;transition:border-color 0.2s}
+.search-box input:focus{border-color:var(--primary)}
+.search-box input::placeholder{color:var(--text-muted)}
+.search-box .clear-btn{position:absolute;right:16px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer;display:none}
+.search-box .clear-btn.visible{display:block}
+.typeahead-dropdown{position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-top:4px;max-height:400px;overflow-y:auto;display:none;z-index:100;box-shadow:0 8px 30px rgba(0,0,0,0.3)}
+.typeahead-dropdown.show{display:block}
+.typeahead-item{display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;transition:background 0.15s;text-decoration:none;color:inherit}
+.typeahead-item:hover{background:rgba(232,54,93,0.08)}
+.typeahead-item img{width:36px;height:50px;object-fit:cover;border-radius:6px}
+.typeahead-item .info{flex:1;min-width:0}
+.typeahead-item .title{font-size:0.85rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.typeahead-item .meta{font-size:0.7rem;color:var(--text-muted)}
+.typeahead-item .score{font-size:0.8rem;font-weight:600;color:var(--primary)}
+</style>
+{% endblock %}
+{% block content %}
+<div class="search-hero">
+  <div class="container">
+    <div class="search-box" id="searchBox">
+      <input type="text" id="searchInput" placeholder="Search anime, characters, genres..." value="{{ query }}" autofocus>
+      <button class="clear-btn" id="clearBtn">&times;</button>
+      <div class="typeahead-dropdown" id="typeahead"></div>
+    </div>
+  </div>
+</div>
+<div class="container py-4">
+  {% if query %}
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <h4 class="mb-0">Results for "{{ query }}"</h4>
+      {% if page_info %}<span class="text-secondary small">Page {{ current_page }} of {{ page_info.lastPage }}</span>{% endif %}
+    </div>
+    {% if results %}
+      <div class="row g-3">
+        {% for a in results %}
+        <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+          <a href="{% url 'anime_detail' a.id %}" class="text-decoration-none">
+            <div class="card-anime">
+              <div class="position-relative">
+                <img src="{{ a.coverImage.large }}" alt="{{ a.title.romaji }}" loading="lazy">
+                {% if a.averageScore %}
+                <div class="badge-score">{{ a.averageScore }}%</div>
+                {% endif %}
+                {% if a.format %}
+                <div class="badge-format">{{ a.format }}</div>
+                {% endif %}
+              </div>
+              <div class="p-2">
+                <div class="small fw-medium" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.title.english|default:a.title.romaji }}</div>
+                <div class="small text-secondary" style="font-size:0.7rem">{{ a.season|default:'' }} {{ a.seasonYear|default:'' }}</div>
+              </div>
+            </div>
+          </a>
+        </div>
+        {% endfor %}
+      </div>
+      {% if page_info and page_info.lastPage > 1 %}
+      <div class="d-flex justify-content-center gap-2 mt-4">
+        {% if current_page > 1 %}
+        <a href="?q={{ query|urlencode }}&page={{ current_page|add:-1 }}" class="btn btn-outline-light btn-sm">Previous</a>
+        {% endif %}
+        {% if page_info.hasNextPage %}
+        <a href="?q={{ query|urlencode }}&page={{ current_page|add:1 }}" class="btn btn-outline-light btn-sm">Next</a>
+        {% endif %}
+      </div>
+      {% endif %}
+    {% else %}
+      <div class="text-center py-5 text-secondary">
+        <div class="fs-1 mb-3">🔍</div>
+        <h5>No results found</h5>
+        <p class="small">Try different keywords or check the spelling</p>
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="text-center py-5 text-secondary">
+      <div class="fs-1 mb-3">🔎</div>
+      <h5>Search for any anime</h5>
+      <p class="small">Type in the search box above to find anime by title</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+const input = document.getElementById('searchInput');
+const typeahead = document.getElementById('typeahead');
+const clearBtn = document.getElementById('clearBtn');
+let timer;
+input.addEventListener('input', () => {
+  const v = input.value.trim();
+  clearBtn.classList.toggle('visible', v.length > 0);
+  clearTimeout(timer);
+  if (v.length < 2) { typeahead.classList.remove('show'); return; }
+  timer = setTimeout(() => {
+    fetch('/search/json/?q=' + encodeURIComponent(v))
+      .then(r => r.json())
+      .then(items => {
+        typeahead.innerHTML = '';
+        if (!items.length) { typeahead.classList.remove('show'); return; }
+        items.forEach(a => {
+          const el = document.createElement('a');
+          el.className = 'typeahead-item';
+          el.href = '/anime/' + a.id + '/';
+          el.innerHTML = '<img src="' + (a.image || '') + '" alt="" loading="lazy">' +
+            '<div class="info"><div class="title">' + a.title + '</div><div class="meta">' + (a.year || '') + ' ' + (a.format || '') + '</div></div>';
+          typeahead.appendChild(el);
+        });
+        typeahead.classList.add('show');
+      });
+  }, 200);
+});
+input.addEventListener('blur', () => setTimeout(() => typeahead.classList.remove('show'), 200));
+input.addEventListener('focus', () => { if (typeahead.children.length) typeahead.classList.add('show'); });
+clearBtn.addEventListener('click', () => { input.value = ''; clearBtn.classList.remove('visible'); typeahead.classList.remove('show'); input.focus(); });
+input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { typeahead.classList.remove('show'); window.location.href = '/search/?q=' + encodeURIComponent(input.value.trim()); } });
+</script>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}Not Found — AniPulse{% endblock %}
+{% block content %}
+<div class="container py-5 text-center" style="min-height:60vh;display:flex;flex-direction:column;align-items:center;justify-content:center">
+  <div style="font-size:5rem;line-height:1;margin-bottom:1rem">🔍</div>
+  <h1 class="fw-bold mb-2">404</h1>
+  <p class="text-secondary mb-4" style="font-size:1.1rem">This page doesn't exist or the anime could not be found.</p>
+  <div class="d-flex gap-3">
+    <a href="{% url 'home' %}" class="btn btn-primary-custom px-4" style="border-radius:12px">Go Home</a>
+    <a href="{% url 'discover' %}" class="btn btn-outline-light px-4" style="border-radius:12px">Discover Anime</a>
+  </div>
+</div>
+{% endblock %}

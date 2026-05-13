@@ -1,0 +1,67 @@
+{% extends 'base.html' %}{% load core_extras %}
+{% block title %}{{ season|title }} {{ year }} Anime — AniPulse{% endblock %}
+{% block extra_css %}
+<style>
+.season-nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}
+.season-nav a{padding:10px 22px;border-radius:10px;border:1px solid var(--border);text-decoration:none;color:var(--text-secondary);font-weight:500;font-size:0.9rem;transition:all 0.2s;background:var(--surface)}
+.season-nav a:hover{border-color:var(--primary);color:var(--primary)}
+.season-nav a.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.year-input{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:10px 16px;font-size:0.9rem;width:100px;outline:none}
+.year-input:focus{border-color:var(--primary)}
+</style>
+{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <h3 class="fw-bold mb-0">{{ season|title }} {{ year }} Anime</h3>
+    <form method="get" class="d-flex align-items-center gap-2">
+      <input type="number" class="year-input" name="year" value="{{ year }}" min="1970" max="2030">
+      <button type="submit" class="btn btn-sm btn-primary-custom">Go</button>
+    </form>
+  </div>
+  <div class="season-nav">
+    {% for s in seasons %}
+      <a href="{% url 'seasonal_archive' year=year season=s %}" class="{% if s == season %}active{% endif %}">{{ s|title }}</a>
+    {% endfor %}
+  </div>
+  {% if results %}
+  <div class="row g-3">
+    {% for a in results %}
+    <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+      <a href="{% url 'anime_detail' a.id %}" class="text-decoration-none">
+        <div class="card-anime">
+          <div class="position-relative">
+            <img src="{{ a.coverImage.large }}" alt="{{ a.title.romaji }}" loading="lazy">
+            {% if a.averageScore %}<div class="badge-score">{{ a.averageScore }}%</div>{% endif %}
+            {% if a.format %}<div class="badge-format">{{ a.format }}</div>{% endif %}
+          </div>
+          <div class="p-2">
+            <div class="small fw-medium" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.title.english|default:a.title.romaji }}</div>
+            <div class="d-flex justify-content-between small text-secondary" style="font-size:0.7rem">
+              <span>{{ a.format|default:'' }}</span>
+              {% if a.episodes %}<span>{{ a.episodes }} eps</span>{% endif %}
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+  {% if page_info and page_info.lastPage > 1 %}
+  <div class="d-flex justify-content-center gap-2 mt-4">
+    {% if current_page > 1 %}
+    <a href="?page={{ current_page|add:-1 }}" class="btn btn-outline-light btn-sm">Previous</a>
+    {% endif %}
+    {% if page_info.hasNextPage %}
+    <a href="?page={{ current_page|add:1 }}" class="btn btn-outline-light btn-sm">Next</a>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="text-center py-5 text-secondary">
+    <div class="fs-1 mb-3">📭</div>
+    <h5>No anime found for this season</h5>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

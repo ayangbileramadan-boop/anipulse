@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}Edit Profile — AniPulse{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <h2 class="fw-bold mb-4">Edit Profile</h2>
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Avatar URL</label>
+                    <input type="url" name="avatar" value="{{ user.avatar|default:'' }}" class="form-control form-control-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text)" placeholder="https://...">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Cover Image URL</label>
+                    <input type="url" name="cover_image" value="{{ user.cover_image|default:'' }}" class="form-control form-control-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text)" placeholder="https://...">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Bio</label>
+                    <textarea name="bio" rows="4" class="form-control" style="background:var(--surface);border:1px solid var(--border);color:var(--text)" placeholder="Tell us about yourself...">{{ user.bio|default:'' }}</textarea>
+                </div>
+                <button type="submit" class="btn btn-primary-custom px-4">Save Changes</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

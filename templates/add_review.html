@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Review {{ anime.display_title }} — AniPulse{% endblock %}
+
+{% block extra_css %}
+<style>
+    .review-form-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:2rem }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <a href="{% url 'anime_detail' anime.anilist_id %}" class="text-decoration-none" style="color:var(--text-secondary);font-size:0.9rem">← Back to {{ anime.display_title }}</a>
+            <h2 class="fw-bold mt-3 mb-1">Write a Review</h2>
+            <p class="text-secondary mb-4">Share your thoughts on <strong>{{ anime.display_title }}</strong></p>
+
+            <form method="post" class="review-form-card">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Rating</label>
+                    {{ form.rating }}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Title (optional)</label>
+                    {{ form.title }}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Your Review</label>
+                    {{ form.body }}
+                </div>
+                <div class="form-check mb-4">
+                    {{ form.is_spoiler }}
+                    <label class="form-check-label small" for="{{ form.is_spoiler.id_for_label }}">This review contains spoilers</label>
+                </div>
+                <button type="submit" class="btn btn-primary-custom px-4">Post Review</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,323 @@
+{% extends 'base.html' %}
+{% load core_extras %}
+{% block title %}Discover Anime — AniPulse{% endblock %}
+
+{% block extra_css %}
+<style>
+    .discover-search { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:6px; display:flex; align-items:center; max-width:560px; margin:0 auto }
+    .discover-search input { flex:1; background:transparent; border:none; outline:none; color:var(--text); padding:12px 16px; font-size:1rem }
+    .discover-search input::placeholder { color:var(--text-muted) }
+    .discover-search button { background:var(--primary); border:none; color:#fff; padding:12px 24px; border-radius:10px; font-weight:600; transition:all 0.2s }
+    .discover-search button:hover { background:var(--primary-dark) }
+    .quick-link { display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:10px 18px; text-decoration:none; color:var(--text); font-size:0.9rem; font-weight:500; transition:all 0.2s }
+    .quick-link:hover { border-color:rgba(232,54,93,0.3); background:rgba(232,54,93,0.05) }
+    .filter-pill { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:10px; border:1px solid var(--border); background:var(--surface); color:var(--text-secondary); font-size:0.85rem; cursor:pointer; transition:all 0.2s; text-decoration:none }
+    .filter-pill:hover, .filter-pill.active { border-color:var(--primary); color:var(--primary); background:rgba(232,54,93,0.08) }
+    .trending-scroll { display:flex; gap:20px; overflow-x:auto; padding-bottom:12px; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch }
+    .trending-scroll::-webkit-scrollbar { height:6px }
+    .trending-scroll::-webkit-scrollbar-track { background:var(--surface-2); border-radius:3px }
+    .trending-scroll::-webkit-scrollbar-thumb { background:var(--primary); border-radius:3px }
+    .trending-item { flex:0 0 200px; scroll-snap-align:start; position:relative }
+    .section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem }
+    .section-header h2 { font-weight:700; font-size:1.5rem; display:flex; align-items:center; gap:10px }
+    .season-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:16px }
+    .genre-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:14px }
+    .genre-card { position:relative; border-radius:14px; overflow:hidden; height:110px; display:flex; align-items:center; justify-content:center; text-decoration:none; color:#fff; font-weight:700; font-size:1rem; transition:all 0.25s; border:1px solid var(--border) }
+    .genre-card:hover { transform:translateY(-4px); filter:brightness(1.3) }
+    .genre-card::before { content:''; position:absolute; inset:0; opacity:0.2; background:linear-gradient(135deg,var(--g1),var(--g2)) }
+    .genre-card span { position:relative; z-index:1 }
+    .search-results-list { display:flex; flex-direction:column; gap:12px }
+    .search-result-item { display:flex; gap:14px; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:12px; text-decoration:none; color:inherit; transition:all 0.2s }
+    .search-result-item:hover { border-color:rgba(232,54,93,0.3) }
+    .search-result-item img { width:60px; height:85px; object-fit:cover; border-radius:8px; flex-shrink:0 }
+    .genre-results-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:18px }
+    .filter-section { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:24px; max-width:800px; margin:0 auto }
+    .filter-select { background:var(--surface-2); border:1px solid var(--border); border-radius:10px; color:var(--text); padding:10px 14px; font-size:0.85rem; width:100%; outline:none }
+    .filter-select:focus { border-color:var(--primary) }
+    .filter-label { display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px; font-weight:500; text-transform:uppercase; letter-spacing:0.5px }
+    .filter-input { background:var(--surface-2); border:1px solid var(--border); border-radius:10px; color:var(--text); padding:10px 14px; font-size:0.85rem; width:100%; outline:none }
+    .filter-input:focus { border-color:var(--primary) }
+    .results-count { display:flex; align-items:center; gap:8px; padding:12px 20px; background:rgba(232,54,93,0.05); border:1px solid rgba(232,54,93,0.1); border-radius:12px }
+    .filter-clear-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:10px; background:rgba(232,54,93,0.08); color:var(--primary); font-size:0.85rem; text-decoration:none; transition:all 0.2s }
+    .filter-clear-btn:hover { background:rgba(232,54,93,0.15); color:var(--primary) }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Search -->
+    <form method="get" action="{% url 'discover' %}" class="discover-search mb-4">
+        <input type="text" name="search" placeholder="Search anime..." value="{{ search_query|default:'' }}" autocomplete="off">
+        <button type="submit">Search</button>
+    </form>
+
+    <!-- Quick Links -->
+    <div class="d-flex justify-content-center gap-3 flex-wrap mb-3">
+        <a href="{% url 'random_anime' %}" class="quick-link">🎲 Random</a>
+        <a href="{% url 'compare' %}" class="quick-link">⚖️ Compare</a>
+        <a href="{% url 'quiz' %}" class="quick-link">🧠 Quiz</a>
+        <a href="{% url 'personality_quiz' %}" class="quick-link">🎭 Who Are You?</a>
+        <a href="{% url 'calendar' %}" class="quick-link">📅 Calendar</a>
+    </div>
+
+    <!-- Mood Mode -->
+    <div class="d-flex justify-content-center gap-3 flex-wrap mb-4">
+        <span class="text-secondary small fw-medium" style="letter-spacing:0.5px;text-transform:uppercase;font-size:0.7rem;align-self:center">Mood:</span>
+        <a href="?mood=action" class="quick-link" style="padding:6px 14px;font-size:0.8rem">⚡ Hype</a>
+        <a href="?mood=romance" class="quick-link" style="padding:6px 14px;font-size:0.8rem">❤️ Romance</a>
+        <a href="?mood=psychological" class="quick-link" style="padding:6px 14px;font-size:0.8rem">🧠 Mind Games</a>
+        <a href="?mood=comedy" class="quick-link" style="padding:6px 14px;font-size:0.8rem">😂 Funny</a>
+        <a href="?mood=horror" class="quick-link" style="padding:6px 14px;font-size:0.8rem">💀 Dark</a>
+        <a href="?mood=sci-fi" class="quick-link" style="padding:6px 14px;font-size:0.8rem">🚀 Sci-Fi</a>
+        <a href="?mood=slice-of-life" class="quick-link" style="padding:6px 14px;font-size:0.8rem">🌙 Chill</a>
+        <a href="?mood=thriller" class="quick-link" style="padding:6px 14px;font-size:0.8rem">😭 Emotional</a>
+    </div>
+
+    <!-- Advanced Filters -->
+    <div class="filter-section mb-4">
+        <form method="get" action="{% url 'discover' %}">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <span class="fw-bold" style="font-size:0.95rem">🔎 Advanced Search</span>
+                <span class="text-secondary small">Filter by format, status, season, and more</span>
+            </div>
+            <div class="row g-3">
+                <div class="col-6 col-md-3">
+                    <label class="filter-label">Format</label>
+                    <select name="format" class="filter-select" onchange="this.form.submit()">
+                        {% for val, label in formats %}
+                        <option value="{{ val }}" {% if selected_format == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="filter-label">Status</label>
+                    <select name="status" class="filter-select" onchange="this.form.submit()">
+                        {% for val, label in statuses %}
+                        <option value="{{ val }}" {% if selected_status == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="filter-label">Season</label>
+                    <select name="season" class="filter-select" onchange="this.form.submit()">
+                        <option value="">Any Season</option>
+                        {% for val, label in seasons %}
+                        <option value="{{ val }}" {% if selected_season == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="filter-label">Year</label>
+                    <select name="year" class="filter-select" onchange="this.form.submit()">
+                        <option value="">Any Year</option>
+                        {% for y in "2026,2025,2024,2023,2022,2021,2020,2019,2018,2017,2016,2015,2010,2000,1990"|cut:""|make_list %}
+                        {% endfor %}
+                        <option value="2026" {% if selected_year == '2026' %}selected{% endif %}>2026</option>
+                        <option value="2025" {% if selected_year == '2025' %}selected{% endif %}>2025</option>
+                        <option value="2024" {% if selected_year == '2024' %}selected{% endif %}>2024</option>
+                        <option value="2023" {% if selected_year == '2023' %}selected{% endif %}>2023</option>
+                        <option value="2022" {% if selected_year == '2022' %}selected{% endif %}>2022</option>
+                        <option value="2021" {% if selected_year == '2021' %}selected{% endif %}>2021</option>
+                        <option value="2020" {% if selected_year == '2020' %}selected{% endif %}>2020</option>
+                        <option value="2010-2019" {% if selected_year == '2010-2019' %}selected{% endif %}>2010-2019</option>
+                        <option value="2000-2009" {% if selected_year == '2000-2009' %}selected{% endif %}>2000-2009</option>
+                        <option value="1990-1999" {% if selected_year == '1990-1999' %}selected{% endif %}>1990-1999</option>
+                        <option value="1980-1989" {% if selected_year == '1980-1989' %}selected{% endif %}>1980-1989</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="filter-label">Sort By</label>
+                    <select name="sort" class="filter-select" onchange="this.form.submit()">
+                        {% for val, label in sort_options %}
+                        <option value="{{ val }}" {% if selected_sort == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-3 col-md-2">
+                    <label class="filter-label">Min Ep</label>
+                    <input type="number" name="min_episodes" class="filter-input" placeholder="Min" value="{{ min_episodes|default:'' }}" min="0" onchange="this.form.submit()">
+                </div>
+                <div class="col-3 col-md-2">
+                    <label class="filter-label">Max Ep</label>
+                    <input type="number" name="max_episodes" class="filter-input" placeholder="Max" value="{{ max_episodes|default:'' }}" min="0" onchange="this.form.submit()">
+                </div>
+            </div>
+            {% if search_query %}
+            <input type="hidden" name="search" value="{{ search_query }}">
+            {% endif %}
+            {% if selected_genre %}
+            <input type="hidden" name="genre" value="{{ selected_genre }}">
+            {% endif %}
+            <div class="d-flex gap-2 mt-3">
+                <button type="submit" class="btn btn-primary-custom btn-sm px-4" style="border-radius:10px">Apply Filters</button>
+                <a href="{% url 'discover' %}" class="btn btn-outline-light btn-sm px-3" style="border-radius:10px">Clear All</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Season + Genre Filter Pills (quick access) -->
+    <div class="d-flex justify-content-center gap-3 flex-wrap mb-2">
+        {% for s in seasons %}
+        <a href="?season={{ s.0 }}{% if selected_genre %}&genre={{ selected_genre }}{% endif %}" class="filter-pill {% if selected_season == s.0 %}active{% endif %}">{{ s.1 }}</a>
+        {% endfor %}
+    </div>
+    <div class="d-flex justify-content-center gap-2 flex-wrap mb-5">
+        {% for g in genre_spotlight|slice:":8" %}
+        <a href="?genre={{ g }}&{% if selected_season %}season={{ selected_season }}{% endif %}" class="filter-pill {% if selected_genre == g %}active{% endif %}">{{ g }}</a>
+        {% endfor %}
+    </div>
+</div>
+
+{% if has_advanced_filters or search_query or selected_genre %}
+<section class="container pb-5">
+    {% if search_query %}
+    <div class="section-header">
+        <h2>🔍 Results for "{{ search_query }}"</h2>
+        <span class="text-secondary small">{{ search_results|length }} found</span>
+    </div>
+    {% elif selected_genre %}
+    <div class="section-header">
+        <h2>🎭 {{ selected_genre }} Anime</h2>
+        <a href="{% url 'discover' %}" class="text-secondary small text-decoration-none">← Clear filter</a>
+    </div>
+    {% else %}
+    <div class="section-header">
+        <h2>📊 Filtered Results</h2>
+        <div class="d-flex align-items-center gap-3">
+            <span class="text-secondary small">{{ search_results|length }} matches</span>
+            <a href="{% url 'discover' %}" class="filter-clear-btn">✕ Clear filters</a>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if search_results %}
+    <div class="search-results-list">
+        {% for anime in search_results %}
+        <a href="{% url 'anime_detail' anime.id %}" class="search-result-item">
+            <img src="{{ anime.coverImage.large|default:anime.coverImage.medium }}" alt="" loading="lazy">
+            <div class="flex-grow-1">
+                <div class="fw-semibold" style="color:var(--text)">{{ anime.title.english|default:anime.title.romaji }}</div>
+                <div class="d-flex gap-2 mt-1 flex-wrap">
+                    {% if anime.averageScore %}<span class="text-warning small">★ {{ anime.averageScore|div:10|floatformat:1 }}</span>{% endif %}
+                    {% if anime.format %}<span class="text-secondary small">{{ anime.format }}</span>{% endif %}
+                    {% if anime.episodes %}<span class="text-secondary small">{{ anime.episodes }} ep</span>{% endif %}
+                    {% if anime.status == 'RELEASING' %}<span class="text-success small">Airing</span>{% endif %}
+                    {% with first_genre=anime.genres.0 %}{% if first_genre %}<span class="text-secondary small">{{ first_genre }}</span>{% endif %}{% endwith %}
+                </div>
+                {% if anime.description %}
+                <div class="text-secondary small mt-1" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ anime.description|striptags|truncatechars:200 }}</div>
+                {% endif %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% if page_info.total %}
+    <nav class="mt-4 d-flex justify-content-center align-items-center gap-3">
+        {% if current_page > 1 %}
+        <a href="?{% url_replace page=current_page|add:'-1' %}" class="btn btn-sm btn-outline-light px-3" style="border-radius:10px">← Previous</a>
+        {% endif %}
+        <span class="text-secondary small">Page {{ current_page }} of {{ page_info.lastPage }}</span>
+        {% if page_info.hasNextPage %}
+        <a href="?{% url_replace page=current_page|add:'1' %}" class="btn btn-sm btn-outline-light px-3" style="border-radius:10px">Next →</a>
+        {% endif %}
+    </nav>
+    {% endif %}
+    {% else %}
+    <div class="text-center py-5">
+        <div style="font-size:3rem" class="mb-3">🔍</div>
+        <h5 class="fw-bold mb-2">No results found</h5>
+        <p class="text-secondary small">Try changing your filters or search query.</p>
+        <a href="{% url 'discover' %}" class="btn btn-outline-light btn-sm px-4" style="border-radius:10px">Reset All Filters</a>
+    </div>
+    {% endif %}
+</section>
+{% endif %}
+
+{% if not search_query and not selected_genre and not has_advanced_filters %}
+<!-- Trending -->
+<section class="container pb-5">
+    <div class="section-header">
+        <h2>🔥 Trending Now</h2>
+        <span class="text-secondary small">Updated daily</span>
+    </div>
+    <div class="trending-scroll">
+        {% if trending %}
+        {% for anime in trending|slice:":20" %}
+        <div class="trending-item">
+            <a href="{% url 'anime_detail' anime.id %}" class="d-block text-decoration-none">
+                <div class="card-anime position-relative">
+                    <img src="{{ anime.coverImage.large|default:anime.coverImage.medium }}" alt="" loading="lazy">
+                    {% if anime.averageScore %}<span class="badge-score">★ {{ anime.averageScore|div:10|floatformat:1 }}</span>{% endif %}
+                    {% if anime.format %}<span class="badge-format">{{ anime.format }}</span>{% endif %}
+                </div>
+                <div class="mt-2"><div class="fw-medium text-truncate" style="color:var(--text);font-size:0.85rem">{{ anime.title.english|default:anime.title.romaji }}</div></div>
+                <div class="d-flex justify-content-between" style="font-size:0.7rem;color:var(--text-muted)">
+                    <span>{{ anime.genres.0|default:"Anime" }}</span>
+                    <span>{% if anime.episodes %}{{ anime.episodes }} ep{% endif %}</span>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+        {% else %}
+        {% for i in "123456"|make_list %}
+        <div class="trending-item">
+            <div class="skeleton skeleton-card" style="aspect-ratio:2/3;width:200px"></div>
+            <div class="mt-2 skeleton skeleton-text" style="width:160px"></div>
+            <div class="skeleton skeleton-text short"></div>
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+</section>
+
+<!-- Popular This Season -->
+<section class="container pb-5">
+    <div class="section-header">
+        <h2>📈 Popular This Season</h2>
+        <span class="text-secondary small">{{ selected_season|default:"Current"|title }}</span>
+    </div>
+    <div class="season-grid">
+        {% if popular %}
+        {% for anime in popular %}
+        {% include 'includes/anime_card.html' with anime=anime %}
+        {% endfor %}
+        {% else %}
+        {% for i in "12345678"|make_list %}
+        <div><div class="skeleton skeleton-card"></div><div class="mt-2 skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div></div>
+        {% endfor %}
+        {% endif %}
+    </div>
+</section>
+
+<!-- Top Rated -->
+<section class="container pb-5">
+    <div class="section-header">
+        <h2>🏆 Top Rated</h2>
+        <span class="text-secondary small">All time</span>
+    </div>
+    <div class="season-grid">
+        {% if top_rated %}
+        {% for anime in top_rated %}
+        {% include 'includes/anime_card.html' with anime=anime %}
+        {% endfor %}
+        {% else %}
+        {% for i in "123456"|make_list %}
+        <div><div class="skeleton skeleton-card"></div><div class="mt-2 skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div></div>
+        {% endfor %}
+        {% endif %}
+    </div>
+</section>
+
+<!-- Browse by Genre -->
+<section class="container pb-5">
+    <div class="section-header">
+        <h2>🎭 Browse by Genre</h2>
+    </div>
+    <div class="genre-grid">
+        {% for g in genre_spotlight %}
+        <a href="?genre={{ g }}" class="genre-card" style="{% cycle '--g1:#ef4444;--g2:#f97316' '--g1:#ec4899;--g2:#f43f5e' '--g1:#eab308;--g2:#f59e0b' '--g1:#8b5cf6;--g2:#a78bfa' '--g1:#06b6d4;--g2:#22d3ee' '--g1:#22c55e;--g2:#4ade80' '--g1:#6366f1;--g2:#818cf8' '--g1:#374151;--g2:#4b5563' '--g1:#f97316;--g2:#fb923c' '--g1:#64748b;--g2:#94a3b8' '--g1:#0ea5e9;--g2:#38bdf8' '--g1:#d946ef;--g2:#e879f9' '--g1:#10b981;--g2:#34d399' '--g1:#64748b;--g2:#6b7280' '--g1:#7c3aed;--g2:#8b5cf6' '--g1:#475569;--g2:#64748b' %}"><span>{{ g }}</span></a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+{% endblock %}

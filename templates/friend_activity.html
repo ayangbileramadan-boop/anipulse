@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Friend Activity — AniPulse{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h4 class="fw-bold mb-4"><i class="fas fa-users me-2"></i>Friend Activity</h4>
+  {% if activities %}
+    {% for a in activities %}
+    <div class="d-flex align-items-center gap-3 p-3 mb-2" style="background:var(--surface);border:1px solid var(--border);border-radius:12px">
+      <div class="d-flex align-items-center justify-content-center rounded-circle" style="width:40px;height:40px;background:var(--surface-2);font-weight:700;font-size:0.9rem;flex-shrink:0">
+        {{ a.user.username|first|upper }}
+      </div>
+      <div class="flex-grow-1 min-w-0">
+        <div class="small">
+          <a href="{% url 'profile' a.user.username %}" class="fw-medium text-decoration-none">{{ a.user.username }}</a>
+          {% if a.activity_type == 'WATCHING' %}
+            started watching
+          {% elif a.activity_type == 'COMPLETED' %}
+            completed
+          {% elif a.activity_type == 'REVIEW' %}
+            reviewed
+          {% elif a.activity_type == 'BATTLE' %}
+            voted in a battle
+          {% elif a.activity_type == 'POST' %}
+            posted
+          {% elif a.activity_type == 'ACHIEVEMENT' %}
+            earned an achievement
+          {% elif a.activity_type == 'STREAK' %}
+            reached a streak milestone
+          {% else %}
+            {{ a.activity_type|lower }}
+          {% endif %}
+          {% if a.anime %}<a href="{% url 'anime_detail' a.anime.anilist_id %}" class="text-decoration-none fw-medium">{{ a.anime.display_title }}</a>{% endif %}
+        </div>
+        <div class="text-secondary" style="font-size:0.75rem">{{ a.created_at|timesince }} ago</div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="text-center py-5 text-secondary">
+      <div class="fs-1 mb-3">👥</div>
+      <h5>No recent activity</h5>
+      <p class="small">Follow some users on the <a href="{% url 'social_feed' %}" class="text-decoration-none">Social Feed</a> to see their activity here</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

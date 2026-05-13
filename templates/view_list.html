@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}{{ custom_list.name }} — AniPulse{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <a href="{% url 'my_lists' %}" class="text-decoration-none" style="color:var(--text-secondary);font-size:0.9rem">← Back to My Lists</a>
+    <h2 class="fw-bold mt-2 mb-1">{{ custom_list.name }}</h2>
+    {% if custom_list.description %}<p class="text-secondary mb-4">{{ custom_list.description }}</p>{% endif %}
+    <p class="text-secondary small mb-4">{{ custom_list.anime.count }} anime • {{ custom_list.user.username }}</p>
+
+    {% if custom_list.anime.exists %}
+    <div class="row g-3">
+        {% for anime in custom_list.anime.all %}
+        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+            <div class="card-anime position-relative">
+                <a href="{% url 'anime_detail' anime.anilist_id %}">
+                    <img src="{{ anime.cover_image_medium }}" alt="" loading="lazy">
+                    {% if anime.average_score %}
+                    <span class="badge-score">★ {{ anime.average_score|floatformat:1 }}</span>
+                    {% endif %}
+                </a>
+                <div class="p-2">
+                    <a href="{% url 'anime_detail' anime.anilist_id %}" class="text-decoration-none text-light small fw-medium d-block text-truncate">{{ anime.display_title }}</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <p class="text-secondary">This list is empty.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

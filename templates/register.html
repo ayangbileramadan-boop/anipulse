@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Register — AniPulse{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5 col-lg-4">
+            <div class="airing-card p-4">
+                <h3 class="fw-bold text-center mb-4">Create Account</h3>
+                <form method="post">{% csrf_token %}
+                    {% if form.errors %}
+                    <div class="alert alert-danger small">
+                        {{ form.errors.as_text }}
+                    </div>
+                    {% endif %}
+                    <div class="mb-3">
+                        <label class="form-label small text-secondary">Username</label>
+                        <input type="text" name="username" class="form-control form-control-custom" required minlength="3">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-secondary">Email</label>
+                        <input type="email" name="email" class="form-control form-control-custom" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-secondary">Password</label>
+                        <input type="password" name="password1" class="form-control form-control-custom" required minlength="8">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label small text-secondary">Confirm Password</label>
+                        <input type="password" name="password2" class="form-control form-control-custom" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary-custom w-100 py-2">Create Account</button>
+                </form>
+                <div class="text-center mt-3">
+                    <small class="text-secondary">Already have an account? <a href="{% url 'login' %}" class="text-danger text-decoration-none">Sign in</a></small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

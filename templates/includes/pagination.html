@@ -1,0 +1,33 @@
+{% if items.has_other_pages %}
+<nav class="mt-4 d-flex justify-content-center">
+  <ul class="pagination pagination-sm mb-0" style="gap:4px">
+    {% if items.has_previous %}
+    <li class="page-item">
+      <a class="page-link" href="?page=1{% if extra_params %}&{{ extra_params }}{% endif %}" style="background:var(--surface);border:1px solid var(--border);color:var(--text-secondary);border-radius:8px;padding:6px 12px">««</a>
+    </li>
+    <li class="page-item">
+      <a class="page-link" href="?page={{ items.previous_page_number }}{% if extra_params %}&{{ extra_params }}{% endif %}" style="background:var(--surface);border:1px solid var(--border);color:var(--text-secondary);border-radius:8px;padding:6px 12px">«</a>
+    </li>
+    {% endif %}
+    {% for num in items.paginator.page_range %}
+      {% if num == items.number %}
+      <li class="page-item active">
+        <span class="page-link" style="background:var(--primary);border:1px solid var(--primary);color:#fff;border-radius:8px;padding:6px 12px;font-weight:600">{{ num }}</span>
+      </li>
+      {% elif num > items.number|add:'-3' and num < items.number|add:'3' %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ num }}{% if extra_params %}&{{ extra_params }}{% endif %}" style="background:var(--surface);border:1px solid var(--border);color:var(--text-secondary);border-radius:8px;padding:6px 12px">{{ num }}</a>
+      </li>
+      {% endif %}
+    {% endfor %}
+    {% if items.has_next %}
+    <li class="page-item">
+      <a class="page-link" href="?page={{ items.next_page_number }}{% if extra_params %}&{{ extra_params }}{% endif %}" style="background:var(--surface);border:1px solid var(--border);color:var(--text-secondary);border-radius:8px;padding:6px 12px">»</a>
+    </li>
+    <li class="page-item">
+      <a class="page-link" href="?page={{ items.paginator.num_pages }}{% if extra_params %}&{{ extra_params }}{% endif %}" style="background:var(--surface);border:1px solid var(--border);color:var(--text-secondary);border-radius:8px;padding:6px 12px">»»</a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}

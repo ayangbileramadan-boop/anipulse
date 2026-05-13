@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { margin:0; padding:0; background:#0D0D14; font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; color:#e0e0e0 }
+        .container { max-width:600px; margin:0 auto; padding:20px }
+        .header { text-align:center; padding:30px 0 }
+        .header h1 { color:#E8365D; margin:0; font-size:28px }
+        .card { background:#20202F; border-radius:16px; overflow:hidden; margin:20px 0 }
+        .card img { width:100%; max-height:300px; object-fit:cover }
+        .card-body { padding:24px }
+        .card-body h2 { margin:0 0 8px; color:#fff; font-size:22px }
+        .episode-badge { display:inline-block; background:#E8365D; color:#fff; padding:4px 12px; border-radius:20px; font-size:14px; font-weight:bold }
+        .btn { display:inline-block; background:#E8365D; color:#fff; text-decoration:none; padding:12px 32px; border-radius:8px; font-weight:bold; margin:16px 0 }
+        .footer { text-align:center; padding:20px 0; color:#666; font-size:12px }
+        .footer a { color:#9ca3af }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>AniPulse</h1>
+        </div>
+
+        <p style="font-size:16px;color:#9ca3af">Hey {{ username }},</p>
+
+        <div class="card">
+            {% if banner %}
+            <img src="{{ banner }}" alt="{{ title }}">
+            {% elif cover %}
+            <img src="{{ cover }}" alt="{{ title }}">
+            {% endif %}
+            <div class="card-body">
+                <span class="episode-badge">Episode {{ episode }}</span>
+                <h2>{{ title }}</h2>
+                {% if description %}
+                <p style="color:#9ca3af;line-height:1.6">{{ description }}...</p>
+                {% endif %}
+                <p style="color:#666;font-size:14px;margin-top:16px">This episode is airing soon! Don't miss it.</p>
+                {% if site_url %}
+                <a href="{{ site_url }}" class="btn">View on AniList</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>You're receiving this because you enabled episode notifications on AniPulse.</p>
+            <p><a href="{{ settings_url }}">Manage notification settings</a></p>
+        </div>
+    </div>
+</body>
+</html>

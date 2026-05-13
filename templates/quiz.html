@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% load core_extras %}
+{% block title %}Anime Quiz — AniPulse{% endblock %}
+
+{% block extra_css %}
+<style>
+    .quiz-container { max-width:700px; margin:0 auto }
+    .quiz-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:2rem; margin-bottom:1.5rem }
+    .quiz-img { width:120px; height:170px; object-fit:cover; border-radius:12px; margin:0 auto 1rem; display:block }
+    .quiz-option { display:block; width:100%; padding:12px 16px; margin-bottom:8px; background:var(--surface-2); border:2px solid var(--border); border-radius:10px; color:var(--text); text-align:left; cursor:pointer; transition:all 0.2s }
+    .quiz-option:hover { border-color:var(--primary); background:rgba(232,54,93,0.1) }
+    .quiz-option.selected { border-color:var(--primary); background:rgba(232,54,93,0.2) }
+    .quiz-option.correct { border-color:#22c55e; background:rgba(34,197,94,0.2) }
+    .quiz-option.wrong { border-color:#ef4444; background:rgba(239,68,68,0.2) }
+    .progress-bar-custom { height:6px; background:var(--surface-2); border-radius:3px; margin-bottom:1.5rem }
+    .progress-bar-custom .fill { height:100%; background:var(--primary); border-radius:3px; transition:width 0.3s }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="quiz-container">
+        <h2 class="fw-bold text-center mb-2">🧠 Anime Quiz</h2>
+        <p class="text-secondary text-center mb-4">Guess the anime from the cover!</p>
+
+        {{ questions|json_script:"quizData" }}
+
+        <div id="quizApp">
+            <div class="progress-bar-custom">
+                <div class="fill" id="progressFill" style="width:0%"></div>
+            </div>
+            <div id="quizBody"></div>
+            <div id="quizResult" class="text-center d-none">
+                <div style="font-size:4rem" class="mb-3" id="resultEmoji">🎉</div>
+                <h3 class="fw-bold" id="resultText"></h3>
+                <p class="text-secondary mb-4" id="resultSub"></p>
+                <form method="post" id="resultForm" class="d-none">
+                    {% csrf_token %}
+                    <input type="hidden" name="score" id="resultScore">
+                    <input type="hidden" name="total" id="resultTotal">
+                </form>
+                <div class="d-flex justify-content-center gap-3">
+                    <button class="btn btn-primary-custom px-4" onclick="restartQuiz()">Play Again</button>
+                    <a href="{% url 'home' %}" class="btn btn-outline-light px-4">Back Home</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const questions = JSON.parse(document.getElementById('quizData').textContent);
+let current = 0, score = 0, answered = false;
+
+function getDisplayTitle(opt) {
+    return opt.title.english || opt.title.romaji || '';
+}
+
+function renderQuestion() {
+    if (current >= questions.length) { showResult(); return; }
+    answered = false;
+    const q = questions[current];
+    document.getElementById('progressFill').style.width = ((current / questions.length) * 100) + '%';
+    document.getElementById('quizBody').innerHTML = `
+        <div class="quiz-card text-center">
+            <img src="${q.image}" class="quiz-img" alt="">
+            <h5 class="fw-bold mb-3">Which anime is this?</h5>
+            <p class="text-secondary small mb-3">${current + 1} of ${questions.length}</p>
+            <div class="text-start">
+                ${q.options.map((o, i) => `<button class="quiz-option" data-id="${o.id}" onclick="selectAnswer(this)">${getDisplayTitle(o)}</button>`).join('')}
+            </div>
+        </div>
+    `;
+}
+
+function selectAnswer(btn) {
+    if (answered) return;
+    answered = true;
+    const q = questions[current];
+    const selectedId = parseInt(btn.dataset.id);
+    const correctId = q.id;
+    const correctTitle = getDisplayTitle(q.options.find(o => o.id === correctId));
+
+    if (selectedId === correctId) {
+        score++;
+        btn.classList.add('correct');
+    } else {
+        btn.classList.add('wrong');
+        document.querySelectorAll('.quiz-option').forEach(b => {
+            if (parseInt(b.dataset.id) === correctId) b.classList.add('correct');
+        });
+    }
+    setTimeout(() => { current++; renderQuestion(); }, 1200);
+}
+
+function showResult() {
+    document.getElementById('quizBody').classList.add('d-none');
+    document.querySelector('.progress-bar-custom').classList.add('d-none');
+    document.getElementById('quizResult').classList.remove('d-none');
+    const pct = Math.round((score / questions.length) * 100);
+    document.getElementById('resultText').textContent = `${score}/${questions.length}`;
+    document.getElementById('resultSub').textContent = `${pct}% correct`;
+    document.getElementById('resultScore').value = score;
+    document.getElementById('resultTotal').value = questions.length;
+    if (pct === 100) {
+        document.getElementById('resultEmoji').textContent = '🎉';
+        document.getElementById('resultForm').classList.remove('d-none');
+        document.getElementById('resultForm').submit();
+    } else {
+        document.getElementById('resultEmoji').textContent = pct >= 70 ? '👏' : '💪';
+    }
+}
+
+function restartQuiz() { location.reload(); }
+
+renderQuestion();
+</script>
+{% endblock %}

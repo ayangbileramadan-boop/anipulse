@@ -1,0 +1,49 @@
+{% extends 'base.html' %}{% load core_extras %}
+{% block title %}Social — AniPulse{% endblock %}
+{% block extra_css %}<style>
+.post-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:20px; transition:all 0.2s }
+.post-card:hover { border-color:rgba(232,54,93,0.15) }
+.post-avatar { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; font-size:0.9rem; flex-shrink:0 }
+</style>{% endblock %}
+{% block content %}
+<div class="container py-5" style="max-width:640px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0">💬 Feed</h2>
+    {% if user.is_authenticated %}
+    <form method="post" action="{% url 'social_create_post' %}" class="d-flex gap-2 flex-grow-1 ms-4">
+      {% csrf_token %}<input type="text" name="body" class="form-control form-control-custom" placeholder="What's on your mind?" required maxlength="1000">
+      <button type="submit" class="btn btn-primary-custom" style="border-radius:10px">Post</button>
+    </form>
+    {% endif %}
+  </div>
+  {% include 'includes/pagination.html' with items=posts %}
+  {% if posts %}
+  <div class="d-flex flex-column gap-3">
+    {% for post in posts %}
+    <div class="post-card">
+      <div class="d-flex align-items-center gap-3 mb-2">
+        <div class="post-avatar" style="background:{% cycle 'var(--primary)' '#A259FF' '#22c55e' '#fbbf24' '#06b6d4' %}">{{ post.user.username|first|upper }}</div>
+        <div>
+          <a href="{% url 'profile' post.user.username %}" class="fw-medium text-decoration-none" style="color:var(--text);font-size:0.9rem">{{ post.user.username }}</a>
+          <div style="color:var(--text-muted);font-size:0.7rem">{{ post.created_at|timesince }} ago</div>
+        </div>
+        {% if post.anime %}
+        <a href="{% url 'anime_detail' post.anime.anilist_id %}" class="ms-auto btn btn-sm btn-outline-light" style="border-radius:8px;font-size:0.75rem">{{ post.anime.display_title|truncatechars:20 }}</a>
+        {% endif %}
+      </div>
+      <p style="color:var(--text-secondary);font-size:0.9rem;line-height:1.6;margin-bottom:8px">{{ post.body }}</p>
+      <div class="d-flex gap-3">
+        <a href="{% url 'social_like_post' post.id %}" class="text-decoration-none d-flex align-items-center gap-1" style="color:var(--text-muted);font-size:0.8rem">❤️ {{ post.likes }}</a>
+        {% if user.is_authenticated and user != post.user %}
+        <a href="{% url 'social_follow' post.user.username %}" class="text-decoration-none" style="color:var(--text-muted);font-size:0.8rem">+ Follow</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-center py-5"><div style="font-size:3rem" class="mb-3">💬</div><h5>No posts yet</h5><p class="text-secondary small">Be the first to share something!</p></div>
+  {% endif %}
+  {% include 'includes/pagination.html' with items=posts %}
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{
+  "name": "AniPulse — Anime Discovery & Tracking",
+  "short_name": "AniPulse",
+  "description": "Discover, track, and watch your favorite anime. Get episode notifications and personalized recommendations.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0D0D14",
+  "theme_color": "#E8365D",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

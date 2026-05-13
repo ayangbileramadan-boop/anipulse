@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}Import from AniList — AniPulse{% endblock %}
+{% block extra_css %}
+<style>.import-box{max-width:480px;margin:0 auto;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;text-align:center}</style>
+{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <div class="import-box">
+    <div class="fs-1 mb-3">📥</div>
+    <h5 class="fw-bold mb-2">Import from AniList</h5>
+    <p class="text-secondary small mb-4">Enter your AniList username to import your watching list, scores, and progress.</p>
+    <form method="post">
+      {% csrf_token %}
+      <input type="text" name="username" class="form-control form-control-custom mb-3" placeholder="AniList username" required autocomplete="off">
+      <button type="submit" class="btn btn-primary-custom w-100 py-2">Import My List</button>
+    </form>
+    <div class="mt-3 small text-secondary">
+      Your list will be merged with existing entries. Duplicates are skipped.
+    </div>
+  </div>
+</div>
+{% endblock %}

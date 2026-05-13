@@ -1,0 +1,498 @@
+{% extends 'base.html' %}
+{% load core_extras %}
+{% block title %}{{ title }} — AniPulse{% endblock %}
+{% block meta_desc %}{{ description|striptags|truncatewords:30 }}{% endblock %}
+{% block og_title %}{{ title }} — AniPulse{% endblock %}
+{% block og_desc %}{{ description|striptags|truncatewords:30 }}{% endblock %}
+{% block og_image %}{{ cover }}{% endblock %}
+{% block og_type %}video.tv_show{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-banner { position:relative; height:420px; overflow:hidden }
+    .detail-banner img { width:100%; height:100%; object-fit:cover; filter:brightness(0.4) blur(3px) }
+    .detail-banner .overlay { position:absolute; inset:0; background:linear-gradient(to top, var(--bg) 0%, rgba(13,13,20,0.5) 50%, transparent 80%) }
+    .cover-wrapper { margin-top:-140px; position:relative; z-index:2 }
+    .cover-wrapper img { border:4px solid var(--bg); box-shadow:0 8px 32px rgba(0,0,0,0.5) }
+    .stat-bar { height:6px; border-radius:3px; background:var(--surface-2); overflow:hidden }
+    .stat-bar .fill { height:100%; border-radius:3px; transition:width 0.5s }
+    .tag-pill { font-size:0.75rem; padding:4px 12px; border-radius:20px }
+    .stream-btn { display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:8px; font-size:0.85rem; text-decoration:none; transition:all 0.2s }
+    .stream-btn:hover { transform:translateY(-2px); filter:brightness(1.1) }
+    .character-img { width:72px; height:72px; border-radius:50%; object-fit:cover; border:2px solid var(--surface-2) }
+    .section-divider { border:none; border-top:1px solid rgba(255,255,255,0.06); margin:2rem 0 }
+    .info-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; text-align:center }
+    .info-card .num { font-size:1.3rem; font-weight:700; color:var(--text) }
+    .info-card .lbl { font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px }
+    .action-btn { display:inline-flex; align-items:center; gap:8px; padding:10px 20px; border-radius:12px; font-weight:600; font-size:0.9rem; text-decoration:none; transition:all 0.2s }
+    .action-btn:hover { transform:translateY(-2px) }
+    .detail-section-title { font-weight:700; font-size:1.1rem; display:flex; align-items:center; gap:10px; margin-bottom:1rem }
+    .detail-section-title .dot { width:10px; height:10px; border-radius:50%; display:inline-block; flex-shrink:0 }
+    .char-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px; text-align:center; transition:all 0.2s }
+    .char-card:hover { border-color:rgba(162,89,255,0.3); transform:translateY(-2px) }
+    .relation-card { position:relative; border-radius:12px; overflow:hidden; transition:all 0.2s; border:1px solid var(--border) }
+    .relation-card:hover { transform:translateY(-4px); border-color:rgba(232,54,93,0.3) }
+    .relation-card img { width:100%; aspect-ratio:2/3; object-fit:cover }
+    .rec-card { border-radius:12px; overflow:hidden; transition:all 0.2s; border:1px solid var(--border) }
+    .rec-card:hover { transform:translateY(-4px); border-color:rgba(162,89,255,0.3) }
+    .rec-card img { width:100%; aspect-ratio:2/3; object-fit:cover }
+    .review-highlight { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px }
+    .synopsis-text { line-height:1.9; font-size:0.95rem; max-width:800px }
+    .meta-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px }
+    .episode-badge { position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.8); backdrop-filter:blur(4px); color:#fff; font-size:0.7rem; padding:4px 10px; border-radius:6px; font-weight:600 }
+    .download-btn { display:inline-flex; align-items:center; gap:8px; padding:12px 24px; border-radius:12px; background:linear-gradient(135deg,#22c55e,#16a34a); color:#fff; font-weight:700; font-size:0.95rem; text-decoration:none; transition:all 0.2s; border:none }
+    .download-btn:hover { transform:translateY(-3px); box-shadow:0 8px 24px rgba(34,197,94,0.3); color:#fff }
+    .stream-section { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:20px }
+    .theme-badge { font-size:0.75rem; padding:6px 14px; border-radius:20px; background:rgba(162,89,255,0.1); color:#A259FF }
+    .studio-link { color:var(--text-secondary); text-decoration:none; font-size:0.9rem; transition:color 0.2s }
+    .studio-link:hover { color:var(--primary) }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if banner or trailer.thumbnail %}
+<div class="detail-banner">
+    <img src="{{ trailer.thumbnail|default:banner }}" alt="">
+    <div class="overlay"></div>
+    {% if trailer.thumbnail %}
+    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2">
+        <a href="{{ trailer.watch_url }}" target="_blank" rel="noopener" class="text-decoration-none d-flex flex-column align-items-center gap-2" style="filter:drop-shadow(0 4px 20px rgba(0,0,0,0.5))">
+            <div style="width:72px;height:72px;border-radius:50%;background:rgba(232,54,93,0.9);display:flex;align-items:center;justify-content:center;font-size:1.8rem;color:#fff;box-shadow:0 4px 24px rgba(232,54,93,0.5)">▶</div>
+            <span class="fw-bold text-light" style="font-size:1.1rem;text-shadow:0 2px 12px rgba(0,0,0,0.8)">Play Trailer</span>
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if cover_color and cover_color != '#1a1a2e' %}
+<style>
+    .detail-banner .overlay { background: linear-gradient(to top, var(--bg) 0%, rgba(13,13,20,0.4) 50%, transparent 80%) !important }
+    .score-ring-detail { color: {{ cover_color }} }
+    .accent-glow { box-shadow: 0 0 40px {{ cover_color }}40 }
+</style>
+{% endif %}
+
+<div class="container">
+    <!-- Top Row: Cover + Title + Actions -->
+    <div class="row g-4">
+        <div class="col-lg-3 col-md-4">
+            <div class="cover-wrapper">
+                <div class="rounded-4 overflow-hidden shadow-lg">
+                    <img src="{{ cover }}" alt="{{ title }}" class="w-100" style="aspect-ratio:2/3;object-fit:cover;border-radius:12px">
+                </div>
+                {% if cover_color and cover_color != '#1a1a2e' %}
+                <div style="height:4px;background:{{ cover_color }};border-radius:2px;margin-top:8px"></div>
+                {% endif %}
+
+                <!-- Add to List -->
+                {% if user.is_authenticated %}
+                <div class="mt-3">
+                    <form method="post" action="{% url 'add_to_watchlist' %}" class="dropdown">
+                        {% csrf_token %}
+                        <input type="hidden" name="anilist_id" value="{{ anilist_id }}">
+                        <button type="button" class="btn btn-primary-custom w-100 dropdown-toggle" data-bs-toggle="dropdown" style="border-radius:12px;font-weight:600">
+                            + Add to List
+                        </button>
+                        <ul class="dropdown-menu w-100 dropdown-menu-dark">
+                            <li><button class="dropdown-item" name="status" value="WATCHING"><span class="badge bg-primary me-2"></span>Watching</button></li>
+                            <li><button class="dropdown-item" name="status" value="PLANNING"><span class="badge bg-warning me-2"></span>Plan to Watch</button></li>
+                            <li><button class="dropdown-item" name="status" value="COMPLETED"><span class="badge bg-success me-2"></span>Completed</button></li>
+                            <li><button class="dropdown-item" name="status" value="PAUSED"><span class="badge bg-danger me-2"></span>On Hold</button></li>
+                            <li><button class="dropdown-item" name="status" value="DROPPED"><span class="badge bg-secondary me-2"></span>Dropped</button></li>
+                        </ul>
+                    </form>
+                </div>
+                {% endif %}
+
+                <!-- Download Button -->
+                {% if animepahe_url %}
+                <div class="mt-3">
+                    <a href="{{ animepahe_url }}" target="_blank" rel="noopener" class="download-btn w-100 justify-content-center">
+                        ⬇ Download via AnimePahe
+                    </a>
+                </div>
+                {% endif %}
+
+                <!-- Streaming Links -->
+                {% if streaming_links %}
+                <div class="mt-4 stream-section">
+                    <h6 class="text-secondary small text-uppercase mb-3" style="letter-spacing:0.5px">▶ Watch Online</h6>
+                    <div class="d-flex flex-column gap-2">
+                        {% for link in streaming_links|slice:":5" %}
+                        <a href="{{ link.url }}" target="_blank" rel="noopener" class="stream-btn text-light" style="background:{{ link.color|default:'#333' }}20; border:1px solid {{ link.color|default:'#333' }}40">
+                            <span style="width:8px;height:8px;border-radius:50%;background:{{ link.color|default:'#888' }};display:inline-block"></span>
+                            {{ link.site }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+
+            </div>
+        </div>
+
+        <div class="col-lg-9 col-md-8">
+            <!-- Title -->
+            <h1 class="fw-bold display-6 mb-1">{{ title }}</h1>
+            {% if title_native %}<p class="text-secondary small mb-2">{{ title_native }}</p>{% endif %}
+            {% if title_native and romaji_title and romaji_title != title_english and romaji_title != title_native %}
+            <p class="text-secondary mb-3" style="font-size:0.85rem">{{ romaji_title }}</p>
+            {% endif %}
+
+            <!-- Badges Row -->
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                {% if format %}<span class="badge bg-secondary bg-opacity-25 text-light px-3 py-2" style="font-size:0.8rem">{{ format|cut:"_"|title }}</span>{% endif %}
+                <span class="badge px-3 py-2" style="font-size:0.8rem;{% if status == 'RELEASING' %}background:rgba(34,197,94,0.15);color:#22c55e{% elif status == 'NOT_YET_RELEASED' %}background:rgba(251,191,36,0.15);color:#fbbf24{% elif status == 'FINISHED' %}background:rgba(59,130,246,0.15);color:#3b82f6{% else %}background:rgba(156,163,175,0.15);color:#9ca3af{% endif %}">{{ status_label }}</span>
+                {% if average_score %}<span class="badge px-3 py-2" style="font-size:0.8rem;background:rgba(251,191,36,0.15);color:#fbbf24">★ {{ average_score|div:10|floatformat:1 }}</span>{% endif %}
+                {% if popularity %}<span class="badge px-3 py-2" style="font-size:0.8rem;background:rgba(156,163,175,0.1);color:#9ca3af">{{ popularity|floatformat:0 }} ♡</span>{% endif %}
+                {% if isAdult %}<span class="badge bg-danger px-3 py-2" style="font-size:0.8rem">🔞 18+</span>{% endif %}
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="d-flex flex-wrap gap-2 mb-4">
+                <a href="{% url 'anime_discussions' anilist_id %}" class="action-btn" style="background:rgba(162,89,255,0.1);color:#A259FF;border:1px solid rgba(162,89,255,0.2)">💬 Discuss</a>
+                {% if animepahe_url %}
+                <a href="{{ animepahe_url }}" target="_blank" rel="noopener" class="action-btn" style="background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.2)">⬇ Download</a>
+                {% endif %}
+                <a href="{% url 'random_anime' %}" class="action-btn" style="background:rgba(232,54,93,0.1);color:var(--primary);border:1px solid rgba(232,54,93,0.2)">🎲 Random</a>
+            </div>
+
+            <!-- Synopsis -->
+            {% if description %}
+            <div class="mb-4">
+                <div class="detail-section-title"><span class="dot bg-primary"></span> Synopsis</div>
+                <div class="synopsis-text" style="color:var(--text-secondary)">{{ description|safe }}</div>
+            </div>
+            {% endif %}
+
+            <!-- Info Cards -->
+            <div class="meta-grid mb-4">
+                {% if episodes %}<div class="info-card"><div class="num">{{ episodes }}</div><div class="lbl">Episodes</div></div>{% endif %}
+                {% if duration %}<div class="info-card"><div class="num">{{ duration }}m</div><div class="lbl">Duration</div></div>{% endif %}
+                {% if season and season_year %}<div class="info-card"><div class="num">{{ season|title }}</div><div class="lbl">{{ season_year }}</div></div>{% endif %}
+                {% if start_date %}<div class="info-card"><div class="num">{{ start_date|slice:":3" }}</div><div class="lbl">Started</div></div>{% endif %}
+                {% if average_score %}<div class="info-card"><div class="num" style="color:#fbbf24">{{ average_score|div:10|floatformat:1 }}</div><div class="lbl">Score</div></div>{% endif %}
+                {% if format %}<div class="info-card"><div class="num" style="font-size:1rem">{{ format|cut:"_"|title }}</div><div class="lbl">Format</div></div>{% endif %}
+                {% if next_airing_date %}<div class="info-card" style="border-color:rgba(232,54,93,0.2)"><div class="num text-danger" style="font-size:1rem">⚡ Live</div><div class="lbl">{{ next_airing_episode.episode|default:'' }}/{{ episodes|default:'?' }}</div></div>{% endif %}
+                {% if popularity %}<div class="info-card"><div class="num" style="font-size:1rem">#{{ popularity|floatformat:0 }}</div><div class="lbl">Popularity</div></div>{% endif %}
+            </div>
+
+            <!-- Genres -->
+            {% if genres %}
+            <div class="mb-4">
+                <div class="detail-section-title"><span class="dot" style="background:#22c55e"></span> Genres</div>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for g in genres %}
+                    <a href="{% url 'discover' %}?genre={{ g }}" class="badge px-3 py-2 text-decoration-none" style="background:rgba(232,54,93,0.08);color:var(--primary);border:1px solid rgba(232,54,93,0.15);font-size:0.8rem">{{ g }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Studios -->
+            {% if studios %}
+            <div class="mb-4">
+                <div class="detail-section-title"><span class="dot" style="background:#A259FF"></span> Studios</div>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for s in studios %}
+                    <span class="studio-link"><span class="theme-badge">{{ s.name|default:s }}</span></span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Score Analysis -->
+    {% if stats.score_distribution %}
+    <hr class="section-divider">
+    <section class="my-5">
+        <div class="detail-section-title"><span class="dot" style="background:{{ stats.score_distribution.color }}"></span> Score Analysis</div>
+        <div class="row g-4 align-items-center">
+            <div class="col-md-3 text-center">
+                <div class="display-3 fw-bold" style="color:{{ stats.score_distribution.color }}">{{ average_score|div:10|floatformat:1 }}</div>
+                <span class="badge px-3 py-2" style="background:{{ stats.score_distribution.color }}20; color:{{ stats.score_distribution.color }};border:1px solid {{ stats.score_distribution.color }}40">{{ stats.score_distribution.label }}</span>
+                <div class="text-secondary small mt-2">out of 10</div>
+            </div>
+            <div class="col-md-5">
+                <div class="d-flex justify-content-between mb-1 small">
+                    <span class="text-secondary">Community Score</span>
+                    <span class="text-light">{{ stats.score_distribution.pct }}%</span>
+                </div>
+                <div class="stat-bar mb-3">
+                    <div class="fill" style="width:{{ stats.score_distribution.pct }}%; background:{{ stats.score_distribution.color }}"></div>
+                </div>
+                <div class="row g-2 text-center small">
+                    {% if mean_score %}
+                    <div class="col-4">
+                        <div class="text-secondary">Mean</div>
+                        <div class="fw-medium">{{ mean_score|div:10|floatformat:1 }}</div>
+                    </div>
+                    {% endif %}
+                    <div class="col-4">
+                        <div class="text-secondary">Rank</div>
+                        <div class="fw-medium">{{ stats.rank_info.popularity_label }}</div>
+                    </div>
+                    {% if favourites %}
+                    <div class="col-4">
+                        <div class="text-secondary">Favorites</div>
+                        <div class="fw-medium">{{ favourites }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="row g-2">
+                    {% if episodes %}
+                    <div class="col-6"><div class="info-card"><div class="num">{{ episodes }}</div><div class="lbl">Episodes</div></div></div>
+                    {% endif %}
+                    {% if duration %}
+                    <div class="col-6"><div class="info-card"><div class="num">{{ duration }}m</div><div class="lbl">Per Ep</div></div></div>
+                    {% endif %}
+                    {% if trending %}
+                    <div class="col-6"><div class="info-card"><div class="num" style="color:var(--primary)">{{ trending }}</div><div class="lbl">Trending</div></div></div>
+                    {% endif %}
+                    {% if popularity %}
+                    <div class="col-6"><div class="info-card"><div class="num">{{ popularity }}</div><div class="lbl">Popularity</div></div></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Tags -->
+    {% if tags %}
+    <hr class="section-divider">
+    <section class="my-5">
+        <div class="detail-section-title"><span class="dot" style="background:#6b7280"></span> Tags</div>
+        <div class="d-flex flex-wrap gap-2">
+            {% for tag in tags|slice:":20" %}
+            <span class="tag-pill" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:#9ca3af">
+                {{ tag.name }}{% if tag.isGeneralSpoiler %} ⚠{% endif %}
+                <span class="text-secondary ms-1" style="font-size:0.65rem">{{ tag.rank }}%</span>
+            </span>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Trailer -->
+    {% if trailer %}
+    <hr class="section-divider">
+    <section class="my-5">
+        <div class="detail-section-title"><span class="dot bg-danger"></span> Trailer</div>
+        {% if trailer.thumbnail %}
+        <div class="d-flex align-items-start gap-4">
+            <a href="{{ trailer.watch_url }}" target="_blank" rel="noopener" class="d-block text-decoration-none position-relative rounded-4 overflow-hidden shadow-lg flex-shrink-0" style="max-width:480px;width:100%;aspect-ratio:16/9;background:var(--surface-2)">
+                <img src="{{ trailer.thumbnail }}" alt="" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" loading="lazy">
+                <div style="position:absolute;inset:0;background:linear-gradient(rgba(0,0,0,0.3),rgba(0,0,0,0.7))"></div>
+                <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
+                    <div style="width:56px;height:56px;border-radius:50%;background:rgba(232,54,93,0.9);display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#fff;box-shadow:0 4px 20px rgba(232,54,93,0.4)">▶</div>
+                    <span class="fw-bold text-light" style="font-size:0.95rem;text-shadow:0 2px 8px rgba(0,0,0,0.5)">Watch Trailer</span>
+                </div>
+            </a>
+            <div class="flex-grow-1">
+                <p class="fw-bold mb-2">{{ title }} — Official Trailer</p>
+                <p class="text-secondary small mb-3">Click to watch the official trailer on YouTube.</p>
+                <a href="{{ trailer.watch_url }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-light px-4" style="border-radius:10px">▶ Open in YouTube</a>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <a href="{{ trailer.watch_url }}" target="_blank" rel="noopener" class="btn btn-lg btn-primary-custom px-5" style="border-radius:12px">▶ Watch Trailer on YouTube</a>
+        </div>
+        {% endif %}
+    </section>
+    {% else %}
+    <hr class="section-divider">
+    <section class="my-5 text-center py-4" style="background:var(--surface);border:1px solid var(--border);border-radius:16px">
+        <div style="font-size:2.5rem" class="mb-2">🎬</div>
+        <h5 class="fw-bold mb-1">No Trailer Available</h5>
+        <p class="text-secondary small mb-3">Check the AniList page for more media.</p>
+        {% if site_url %}
+        <a href="{{ site_url }}" target="_blank" rel="noopener" class="btn btn-outline-light px-4" style="border-radius:10px">View on AniList</a>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    <!-- Theme Songs -->
+    {% if themes %}
+    <hr class="section-divider">
+    <section class="my-5">
+        <div class="detail-section-title"><span class="dot" style="background:#f59e0b"></span> 🎵 Theme Songs</div>
+        <div class="row g-3">
+            {% for theme in themes %}
+            <div class="col-md-6">
+                <div class="d-flex align-items-center gap-3 p-3 rounded-3" style="background:var(--surface);border:1px solid var(--border)">
+                    <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0" style="width:48px;height:48px;background:rgba(245,158,11,0.15);font-size:1.3rem">🎵</div>
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="fw-medium text-truncate" style="color:var(--text);font-size:0.9rem">{{ theme.title|default:"Untitled" }}</div>
+                        <div class="text-secondary" style="font-size:0.8rem">{{ theme.artist|default:"Unknown Artist" }} · {{ theme.get_theme_type_display }} {{ theme.number }}</div>
+                    </div>
+                    {% if theme.video_url %}
+                    <a href="{{ theme.video_url }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-light flex-shrink-0" style="border-radius:10px">▶</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Reviews -->
+    {% if anilist_reviews %}
+    <hr class="section-divider">
+    <section class="my-5">
+        <div class="detail-section-title"><span class="dot" style="background:#3b82f6"></span> Reviews</div>
+        <div class="d-flex flex-column gap-3">
+            {% for r in anilist_reviews %}
+            <div class="review-highlight">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width:32px;height:32px;background:#3b82f6;color:#fff;font-size:0.75rem">{{ r.user.name|first|upper }}</div>
+                    <div>
+                        <span class="fw-medium small">{{ r.user.name }}</span>
+                        <span class="text-warning small ms-2">★ {{ r.rating|default:r.score|floatformat:0 }}/10</span>
+                    </div>
+                </div>
+                {% if r.summary %}<div class="fw-semibold mb-1" style="font-size:0.9rem">{{ r.summary }}</div>{% endif %}
+                <div style="color:var(--text-secondary);font-size:0.85rem;line-height:1.7">{{ r.body|striptags|truncatechars:300 }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Characters -->
+    {% if characters %}
+    <hr class="section-divider">
+    <section class="my-5">
+        <div class="detail-section-title"><span class="dot" style="background:#A259FF"></span> Characters</div>
+        <div class="row g-3">
+            {% for char in characters|slice:":8" %}
+            <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+                <div class="char-card">
+                    <img src="{{ char.image }}" alt="{{ char.name }}" class="character-img mb-2" loading="lazy">
+                    <div class="text-light small fw-medium text-truncate">{{ char.name }}</div>
+                    <div class="text-secondary" style="font-size:0.65rem">{{ char.role }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Relations -->
+    {% if relations %}
+    <hr class="section-divider">
+    <section class="my-5">
+        <div class="detail-section-title"><span class="dot" style="background:#06b6d4"></span> Related Anime</div>
+        <div class="row g-3">
+            {% for rel in relations|slice:":8" %}
+            {% if rel.node %}
+            <div class="col-6 col-sm-4 col-md-3">
+                <a href="{% url 'anime_detail' rel.node.id %}" class="text-decoration-none">
+                    <div class="relation-card">
+                        {% if rel.node.coverImage.large or rel.node.coverImage.medium %}
+                        <img src="{{ rel.node.coverImage.large|default:rel.node.coverImage.medium }}" alt="" loading="lazy">
+                        {% endif %}
+                        <span class="episode-badge">{{ rel.relationType }}</span>
+                        <div class="p-2" style="background:var(--surface)">
+                            <div class="text-truncate" style="color:var(--text);font-size:0.8rem">{{ rel.node.title.english|default:rel.node.title.romaji }}</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Recommendations -->
+    {% if recommendations %}
+    <hr class="section-divider">
+    <section class="my-5">
+        <div class="detail-section-title"><span class="dot" style="background:#f97316"></span> Recommendations</div>
+        <div class="row g-3">
+            {% for rec in recommendations|slice:":8" %}
+            {% if rec.mediaRecommendation %}
+            <div class="col-6 col-sm-4 col-md-3">
+                <a href="{% url 'anime_detail' rec.mediaRecommendation.id %}" class="text-decoration-none">
+                    <div class="rec-card">
+                        {% if rec.mediaRecommendation.coverImage.large or rec.mediaRecommendation.coverImage.medium %}
+                        <img src="{{ rec.mediaRecommendation.coverImage.large|default:rec.mediaRecommendation.coverImage.medium }}" alt="" loading="lazy">
+                        {% endif %}
+                        {% if rec.rating %}
+                        <span class="episode-badge" style="background:rgba(0,0,0,0.8)">❤ {{ rec.rating }}</span>
+                        {% endif %}
+                        <div class="p-2" style="background:var(--surface)">
+                            <div class="text-truncate" style="color:var(--text);font-size:0.8rem">{{ rec.mediaRecommendation.title.english|default:rec.mediaRecommendation.title.romaji }}</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Reviews -->
+    <hr class="section-divider">
+    <section class="my-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="detail-section-title mb-0"><span class="dot bg-warning"></span> Reviews ({{ reviews|length }})</div>
+            {% if user.is_authenticated and not user_review %}
+            <a href="{% url 'add_review' anilist_id %}" class="btn btn-primary-custom btn-sm px-4" style="border-radius:10px;font-weight:600">✍ Write Review</a>
+            {% endif %}
+        </div>
+
+        {% if user_review %}
+        <div class="review-highlight mb-4" style="border-color:rgba(232,54,93,0.2)">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="fw-bold text-danger small text-uppercase" style="letter-spacing:0.5px">Your Review</span>
+                <span class="text-warning fw-bold">★ {{ user_review.rating }}/10</span>
+            </div>
+            {% if user_review.title %}<div class="fw-semibold mb-1">{{ user_review.title }}</div>{% endif %}
+            <div style="color:var(--text-secondary);font-size:0.9rem;line-height:1.7">{{ user_review.body|truncatechars:200 }}</div>
+            <div style="color:var(--text-muted);font-size:0.75rem" class="mt-2">{{ user_review.created_at|timesince }} ago</div>
+        </div>
+        {% endif %}
+
+        {% if reviews %}
+        {% for review in reviews|slice:":10" %}
+        <div class="review-highlight mb-3">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width:36px;height:36px;background:var(--primary);color:#fff;font-size:0.8rem">{{ review.user.username|first|upper }}</div>
+                    <div>
+                        <span class="fw-medium small">{{ review.user.username }}</span>
+                        <div style="color:var(--text-muted);font-size:0.7rem">{{ review.created_at|timesince }} ago</div>
+                    </div>
+                    {% if review.is_spoiler %}<span class="badge bg-danger" style="font-size:0.65rem">⚠ SPOILER</span>{% endif %}
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-warning small fw-bold">★ {{ review.rating }}/10</span>
+                    <a href="{% url 'like_review' review.id %}" class="text-decoration-none d-flex align-items-center gap-1" style="color:var(--text-secondary);font-size:0.8rem">
+                        {% if review.likes > 0 %}❤ {{ review.likes }}{% else %}🤍 0{% endif %}
+                    </a>
+                </div>
+            </div>
+            {% if review.title %}<div class="fw-semibold mb-1">{{ review.title }}</div>{% endif %}
+            <div style="color:var(--text-secondary);font-size:0.9rem;line-height:1.7">{{ review.body|truncatechars:300 }}</div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="text-center py-5" style="background:var(--surface);border:1px solid var(--border);border-radius:16px">
+            <div style="font-size:2.5rem" class="mb-2">✍️</div>
+            <h5 class="fw-bold mb-1">No reviews yet</h5>
+            <p class="text-secondary small mb-0">Be the first to share your thoughts about {{ title }}!</p>
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

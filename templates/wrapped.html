@@ -1,0 +1,34 @@
+{% extends 'base.html' %}{% load core_extras %}
+{% block title %}Anime Wrapped — AniPulse{% endblock %}
+{% block extra_css %}<style>
+.wrapped-card { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:2rem; text-align:center; height:100% }
+.wrapped-num { font-size:3rem; font-weight:800; background:linear-gradient(135deg,var(--primary),#A259FF); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text }
+.wrapped-label { color:var(--text-secondary); font-size:0.85rem; text-transform:uppercase; letter-spacing:1px }
+.wrapped-badge { display:inline-block; padding:6px 16px; border-radius:20px; font-weight:600; font-size:0.85rem }
+</style>{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <div class="text-center mb-5">
+    <div style="font-size:3rem" class="mb-2">🎉</div>
+    <h2 class="fw-bold" style="font-size:2rem">Your Anime Wrapped</h2>
+    <p class="text-secondary">Your anime year in review</p>
+  </div>
+  {% if total_completed > 0 or total_watching > 0 %}
+  <div class="row g-4 mb-5">
+    <div class="col-6 col-md-3"><div class="wrapped-card"><div class="wrapped-num">{{ total_completed }}</div><div class="wrapped-label">Completed</div></div></div>
+    <div class="col-6 col-md-3"><div class="wrapped-card"><div class="wrapped-num">{{ total_watching }}</div><div class="wrapped-label">Watching</div></div></div>
+    <div class="col-6 col-md-3"><div class="wrapped-card"><div class="wrapped-num">{{ total_episodes }}</div><div class="wrapped-label">Episodes</div></div></div>
+    <div class="col-6 col-md-3"><div class="wrapped-card"><div class="wrapped-num">{{ hours_watched }}h</div><div class="wrapped-label">Hours Watched</div></div></div>
+  </div>
+  <div class="row g-4">
+    <div class="col-md-6"><div class="wrapped-card text-start"><h5 class="fw-bold mb-3">🎭 Top Genres</h5><div class="d-flex flex-wrap gap-2">{% for g, c in top_genres %}<span class="wrapped-badge" style="background:rgba(232,54,93,0.1);color:var(--primary);border:1px solid rgba(232,54,93,0.2)">{{ g }} ({{ c }})</span>{% endfor %}</div></div></div>
+    <div class="col-md-6"><div class="wrapped-card text-start"><h5 class="fw-bold mb-3">⭐ Average Score</h5><div class="wrapped-num text-start" style="font-size:2.5rem">{{ avg_score }}</div><div class="wrapped-label">/10 across all rated</div></div></div>
+  </div>
+  {% if top_rated %}
+  <div class="mt-4"><div class="wrapped-card text-start"><h5 class="fw-bold mb-3">🏆 Top Rated</h5><div class="d-flex flex-column gap-2">{% for e in top_rated %}<div class="d-flex justify-content-between"><span style="color:var(--text)">{{ e.anime.display_title }}</span><span class="text-warning">★ {{ e.score }}/10</span></div>{% endfor %}</div></div></div>
+  {% endif %}
+  {% else %}
+  <div class="text-center py-5"><div style="font-size:3rem" class="mb-3">📊</div><h5>No data yet</h5><p class="text-secondary small">Start tracking anime to see your wrapped stats!</p></div>
+  {% endif %}
+</div>
+{% endblock %}

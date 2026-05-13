@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% load core_extras %}
+{% block title %}Calendar — AniPulse{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h2 class="fw-bold mb-4">Airing Calendar</h2>
+
+    {% for day in days %}
+    <div class="mb-5">
+        <h5 class="fw-bold mb-3">
+            <span class="dot bg-danger d-inline-block me-2" style="width:8px;height:8px;border-radius:50%;background:var(--primary)"></span>
+            {{ day.name }}
+            <span class="text-secondary small fw-normal">({{ day.entries|length }})</span>
+        </h5>
+        {% if day.entries %}
+        <div class="row g-3">
+            {% for schedule in day.entries %}
+            <div class="col-md-6 col-lg-4">
+                <a href="{% url 'anime_detail' schedule.media.id %}" class="text-decoration-none">
+                    <div class="airing-card d-flex gap-3">
+                        <div style="width:56px;height:80px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--surface-2)">
+                            {% if schedule.media.coverImage.medium %}
+                            <img src="{{ schedule.media.coverImage.medium }}" class="w-100 h-100 object-fit-cover" alt="" loading="lazy">
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="text-light small mb-1 text-truncate">{{ schedule.media.title.english|default:schedule.media.title.romaji }}</h6>
+                            <div class="text-danger small fw-medium mb-1">Episode {{ schedule.episode }}</div>
+                            <div class="text-secondary" style="font-size:0.7rem">
+                                {{ schedule.airing_time|date:"g:i A" }}
+                            </div>
+                        </div>
+                        {% if schedule.media.averageScore %}
+                        <div class="fw-bold text-warning">★{{ schedule.media.averageScore|div:10|floatformat:1 }}</div>
+                        {% endif %}
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-secondary small">No episodes airing</p>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

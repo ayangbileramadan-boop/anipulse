@@ -1,0 +1,48 @@
+{% extends 'base.html' %}{% load core_extras %}
+{% block title %}{{ tier_list.title }} — AniPulse{% endblock %}
+{% block extra_css %}<style>
+.tier-row { display:flex; align-items:stretch; margin-bottom:4px; border-radius:10px; overflow:hidden }
+.tier-label { width:50px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.3rem; color:#fff; flex-shrink:0 }
+.tier-items { display:flex; gap:8px; padding:8px; flex-wrap:wrap; background:rgba(255,255,255,0.03); flex:1 }
+.tier-mini { width:56px; border-radius:6px; overflow:hidden; text-align:center }
+.tier-mini img { width:100%; aspect-ratio:2/3; object-fit:cover }
+.tier-mini span { font-size:0.6rem; display:block; color:var(--text-secondary) }
+.tier-input { display:flex; gap:8px; margin-bottom:16px }
+</style>{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <div class="d-flex justify-content-between align-items-center mb-1">
+    <h3 class="fw-bold mb-0">{{ tier_list.title }}</h3>
+    <small class="text-secondary">by {{ tier_list.user.username }}</small>
+  </div>
+
+  {% if user == tier_list.user %}
+  <form method="post" action="{% url 'tier_list_add_item' tier_list.slug %}" class="tier-input mt-3">
+    {% csrf_token %}
+    <input type="text" name="search" class="form-control form-control-custom" placeholder="Search anime to add..." required style="flex:1">
+    <select name="tier" class="form-select form-control-custom" style="width:80px">
+      <option value="S">S</option><option value="A">A</option><option value="B" selected>B</option><option value="C">C</option><option value="D">D</option><option value="F">F</option>
+    </select>
+    <button type="submit" class="btn btn-primary-custom" style="border-radius:10px">Add</button>
+  </form>
+  {% endif %}
+
+  <div class="mt-4">
+    {% for code,label,color in tier_cfg %}
+    <div class="tier-row" style="border:1px solid var(--border)">
+      <div class="tier-label" style="background:{{ color }}">{{ code }}</div>
+      <div class="tier-items">
+        {% for item in tiers|get_item:code %}
+        <div class="tier-mini" title="{{ item.anime.display_title }}">
+          <img src="{{ item.anime.cover_image_medium|default:item.anime.cover_image_large }}" alt="" loading="lazy">
+          <span>{{ item.anime.display_title|truncatechars:12 }}</span>
+        </div>
+        {% empty %}
+        <span class="text-secondary" style="font-size:0.8rem">{% if user == tier_list.user %}Search above to add anime{% else %}No anime in this tier{% endif %}</span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

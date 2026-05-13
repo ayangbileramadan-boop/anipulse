@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Create Battle — AniPulse{% endblock %}
+{% block content %}
+<div class="container py-5" style="max-width:560px">
+  <h3 class="fw-bold mb-2">⚔️ Create a Battle</h3>
+  <p class="text-secondary small mb-4">Pit two anime against each other and let the community decide!</p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-3"><label class="form-label fw-medium">Anime 1</label><input type="text" name="anime1" class="form-control form-control-custom" placeholder="Search title..." required></div>
+    <div class="mb-3"><label class="form-label fw-medium">Anime 2</label><input type="text" name="anime2" class="form-control form-control-custom" placeholder="Search title..." required></div>
+    <div class="mb-3"><label class="form-label fw-medium">Category</label><select name="category" class="form-select form-control-custom"><option value="versus">Versus</option><option value="villain">Best Villain</option><option value="opening">Best Opening</option></select></div>
+    <button type="submit" class="btn btn-primary-custom w-100 py-2" style="border-radius:12px">Create Battle</button>
+  </form>
+</div>
+{% endblock %}

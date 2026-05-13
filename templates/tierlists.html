@@ -1,0 +1,25 @@
+{% extends 'base.html' %}{% load core_extras %}
+{% block title %}Tier Lists — AniPulse{% endblock %}
+{% block extra_css %}<style>
+.tl-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:20px; text-decoration:none; color:inherit; display:block; transition:all 0.2s }
+.tl-card:hover { border-color:var(--primary); transform:translateY(-2px) }
+</style>{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold">🏆 Tier Lists</h2>
+    {% if user.is_authenticated %}<a href="{% url 'tier_list_create' %}" class="btn btn-primary-custom px-4" style="border-radius:12px">+ Create</a>{% endif %}
+  </div>
+  {% include 'includes/pagination.html' with items=tier_lists %}
+  {% if tier_lists %}
+  <div class="row g-3">
+    {% for tl in tier_lists %}
+    <div class="col-md-4"><a href="{% url 'tier_list_view' tl.slug %}" class="tl-card"><h6 class="fw-bold mb-1">{{ tl.title }}</h6><small class="text-secondary">by {{ tl.user.username }} · {{ tl.items.count }} anime</small></a></div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-center py-5"><div style="font-size:3rem" class="mb-3">🏆</div><h5>No tier lists yet</h5><p class="text-secondary small">Create one to rank your favorites!</p></div>
+  {% endif %}
+  {% include 'includes/pagination.html' with items=tier_lists %}
+</div>
+{% endblock %}

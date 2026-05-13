@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}Achievements — AniPulse{% endblock %}
+
+{% block extra_css %}
+<style>
+    .achievement-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:1.5rem; text-align:center; transition:all 0.3s }
+    .achievement-card.unlocked { border-color:rgba(232,54,93,0.3); background:linear-gradient(135deg, rgba(232,54,93,0.05), rgba(162,89,255,0.05)) }
+    .achievement-card.locked { opacity:0.5; filter:grayscale(1) }
+    .achievement-icon { font-size:2.5rem; margin-bottom:0.5rem }
+    .achievement-title { font-weight:700; font-size:1rem; margin-bottom:0.25rem }
+    .achievement-desc { color:var(--text-secondary); font-size:0.8rem }
+    .achievement-date { color:var(--primary); font-size:0.7rem; margin-top:0.5rem }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h2 class="fw-bold mb-2">Achievements</h2>
+    <p class="text-secondary mb-5">Unlock achievements by using AniPulse</p>
+
+    {% if unlocked %}
+    <h5 class="fw-bold mb-3">Unlocked ({{ unlocked|length }}/{{ unlocked|length|add:available|length }})</h5>
+    <div class="row g-3 mb-5">
+        {% for a in unlocked %}
+        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+            <div class="achievement-card unlocked">
+                <div class="achievement-icon">{{ a.icon }}</div>
+                <div class="achievement-title">{{ a.title }}</div>
+                <div class="achievement-desc">{{ a.description }}</div>
+                <div class="achievement-date">{{ a.unlocked_at|timesince }} ago</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if available %}
+    <h5 class="fw-bold mb-3">Locked</h5>
+    <div class="row g-3">
+        {% for a in available %}
+        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+            <div class="achievement-card locked">
+                <div class="achievement-icon">🔒</div>
+                <div class="achievement-title">{{ a.title }}</div>
+                <div class="achievement-desc">{{ a.description }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
