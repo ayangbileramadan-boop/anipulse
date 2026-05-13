@@ -1,5 +1,4 @@
 from .base import *
-import sentry_sdk
 from decouple import config
 
 DEBUG = False
@@ -31,6 +30,7 @@ CACHES = {
 # Sentry
 SENTRY_DSN = config('SENTRY_DSN', default='')
 if SENTRY_DSN:
+    import sentry_sdk
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         traces_sample_rate=0.1,
