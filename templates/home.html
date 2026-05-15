@@ -128,8 +128,8 @@
         {% for anime in search_results %}
         <a href="{% url 'anime_detail' anime.id %}" class="search-result-item">
             <img src="{{ anime.coverImage.large|default:anime.coverImage.medium }}" alt="" loading="lazy">
-            <div class="flex-grow-1">
-                <div class="fw-semibold" style="color:var(--text)">{{ anime.title.english|default:anime.title.romaji }}</div>
+            <div class="flex-grow-1 min-w-0">
+                <div class="fw-semibold text-truncate" style="color:var(--text)">{{ anime.title.english|default:anime.title.romaji }}</div>
                 <div class="d-flex gap-2 mt-1 flex-wrap">
                     {% if anime.averageScore %}<span class="text-warning small">★ {{ anime.averageScore|div:10|floatformat:1 }}</span>{% endif %}
                     {% if anime.format %}<span class="text-secondary small">{{ anime.format }}</span>{% endif %}

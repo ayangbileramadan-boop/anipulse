@@ -175,7 +175,7 @@
                         {% endif %}
                     </div>
                     <div class="flex-grow-1">
-                        <a href="{% url 'anime_detail' schedule.media.id %}" class="text-decoration-none text-light fw-medium d-block">
+                        <a href="{% url 'anime_detail' schedule.media.id %}" class="text-decoration-none text-light fw-medium d-block text-truncate">
                             {{ schedule.media.title.english|default:schedule.media.title.romaji }}
                         </a>
                         <div class="text-danger small fw-medium">Episode {{ schedule.episode }}</div>

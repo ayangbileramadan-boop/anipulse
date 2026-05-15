@@ -95,7 +95,7 @@
       <h5 class="fw-bold mb-3">Recent Reviews</h5>
       {% for review in reviews|slice:":5" %}
       <div class="p-3 rounded-3 mb-2" style="background:var(--surface);border:1px solid var(--border)">
-        <a href="{% url 'anime_detail' review.anime.anilist_id %}" class="text-decoration-none fw-medium">{{ review.anime.display_title }}</a>
+        <a href="{% url 'anime_detail' review.anime.anilist_id %}" class="text-decoration-none fw-medium text-truncate d-inline-block" style="max-width:80%;vertical-align:middle">{{ review.anime.display_title }}</a>
         <span class="text-warning small ms-2">★ {{ review.rating }}/10</span>
         <div class="text-secondary small">{{ review.body|truncatechars:120 }}</div>
       </div>
