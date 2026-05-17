@@ -130,11 +130,18 @@ class AniListClient:
             }
           }
         }
-        characters(sort: ROLE, perPage: 8) {
-          nodes {
-            id name { full }
-            image { medium }
-            description
+        characters(sort: ROLE, perPage: 30) {
+          edges {
+            role
+            node {
+              id name { full }
+              image { medium }
+            }
+            voiceActors(sort: LANGUAGE) {
+              id name { full }
+              image { medium }
+              languageV2
+            }
           }
         }
         relations {

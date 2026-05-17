@@ -338,12 +338,21 @@ def anime_detail(request, anime_id):
     }
 
     characters = []
-    chars_data = (media.get('characters') or {}).get('nodes', [])
-    for c in chars_data:
+    edges = (media.get('characters') or {}).get('edges', [])
+    for edge in edges:
+        node = edge.get('node', {})
+        vas = edge.get('voiceActors', [])
         characters.append({
-            'name': c.get('name', {}).get('full', ''),
-            'image': c.get('image', {}).get('medium', ''),
-            'role': 'Main' if c.get('id') else 'Supporting',
+            'id': node.get('id'),
+            'name': node.get('name', {}).get('full', ''),
+            'image': node.get('image', {}).get('medium', ''),
+            'role': edge.get('role', ''),
+            'voice_actors': [{
+                'id': va.get('id'),
+                'name': va.get('name', {}).get('full', ''),
+                'image': va.get('image', {}).get('medium', ''),
+                'language': va.get('languageV2', ''),
+            } for va in vas],
         })
 
     from apps.anime.models import Review
