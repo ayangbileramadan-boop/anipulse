@@ -375,16 +375,20 @@
             {% for char in characters|slice:":24" %}
             <div class="col-6 col-sm-4 col-md-3 col-lg-2">
                 <div class="char-card">
-                    <img src="{{ char.image }}" alt="{{ char.name }}" class="character-img mb-2" loading="lazy">
-                    <div class="text-light small fw-medium text-truncate" title="{{ char.name }}">{{ char.name }}</div>
-                    <div class="text-secondary" style="font-size:0.65rem">{{ char.role|title }}</div>
+                    <a href="{% url 'character' char.id %}" class="text-decoration-none">
+                        <img src="{{ char.image }}" alt="{{ char.name }}" class="character-img mb-2" loading="lazy">
+                        <div class="text-light small fw-medium text-truncate" title="{{ char.name }}">{{ char.name }}</div>
+                        <div class="text-secondary" style="font-size:0.65rem">{{ char.role|title }}</div>
+                    </a>
                     {% if char.voice_actors %}
                     <hr class="my-1" style="border-color:var(--border)">
                     {% for va in char.voice_actors|slice:":2" %}
-                    <div class="d-flex align-items-center gap-1 mt-1 justify-content-center">
-                        <img src="{{ va.image }}" alt="" style="width:18px;height:18px;border-radius:50%;object-fit:cover;flex-shrink:0">
-                        <span class="text-light" style="font-size:0.65rem;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">{{ va.name }}</span>
-                    </div>
+                    <a href="{% url 'staff' va.id %}" class="text-decoration-none">
+                        <div class="d-flex align-items-center gap-1 mt-1 justify-content-center">
+                            <img src="{{ va.image }}" alt="" style="width:18px;height:18px;border-radius:50%;object-fit:cover;flex-shrink:0">
+                            <span class="text-light" style="font-size:0.65rem;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">{{ va.name }}</span>
+                        </div>
+                    </a>
                     {% endfor %}
                     {% endif %}
                 </div>
