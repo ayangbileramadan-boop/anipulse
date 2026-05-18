@@ -1,10 +1,13 @@
 {% extends 'base.html' %}
 {% block title %}{{ staff.name.full }} — AniPulse{% endblock %}
+{% block meta_desc %}{{ staff.description|striptags|truncatewords:30 }}{% endblock %}
+{% block og_title %}{{ staff.name.full }} — AniPulse{% endblock %}
+{% block og_image %}{{ staff.image.large|default:staff.image.medium }}{% endblock %}
 {% block extra_css %}
 <style>
 .staff-header{display:flex;gap:30px;align-items:flex-start;padding:30px 0;border-bottom:1px solid var(--border);margin-bottom:30px}
 .staff-img{width:200px;height:280px;object-fit:cover;border-radius:14px;flex-shrink:0;border:2px solid var(--border)}
-.staff-meta{flex:1}
+.staff-meta{flex:1;min-width:0}
 .staff-meta h1{font-weight:700;font-size:1.8rem;margin-bottom:4px}
 .staff-meta .native{font-size:1rem;color:var(--text-muted);margin-bottom:12px}
 .staff-meta .info-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:16px}
@@ -12,9 +15,24 @@
 .staff-meta .info-item .label{font-size:0.7rem;text-transform:uppercase;color:var(--text-muted);letter-spacing:0.5px;margin-bottom:2px}
 .staff-meta .info-item .value{font-size:0.9rem;font-weight:500}
 .staff-desc{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:30px;line-height:1.7;font-size:0.9rem}
-.staff-media{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px}
-.section-title{font-weight:700;font-size:1.3rem;margin-bottom:1rem}
-.section-title .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:8px}
+.section-title{font-weight:700;font-size:1.3rem;margin-bottom:1rem;display:flex;align-items:center;gap:10px}
+.section-title .dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0}
+.media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px}
+.media-card{position:relative;border-radius:12px;overflow:hidden;transition:all 0.2s;border:1px solid var(--border);text-decoration:none;display:block}
+.media-card:hover{transform:translateY(-4px);border-color:rgba(232,54,93,0.3)}
+.media-card img{width:100%;aspect-ratio:2/3;object-fit:cover}
+.media-card .info{padding:10px;background:var(--surface)}
+.media-card .info .title{font-size:0.8rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.media-card .info .sub{font-size:0.65rem;color:var(--text-muted)}
+.char-grid{display:flex;flex-wrap:wrap;gap:12px}
+.char-card{width:100px;text-align:center;text-decoration:none;color:inherit;transition:all 0.2s}
+.char-card:hover{transform:translateY(-3px)}
+.char-card img{width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--border)}
+.char-card .name{font-size:0.75rem;margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text);transition:all 0.2s}
+.fav-btn:hover{background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3)}
+.fav-btn.active{background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);color:#ef4444}
+@media(max-width:768px){.staff-header{flex-direction:column;align-items:center;text-align:center}.staff-img{width:150px;height:210px}}
 </style>
 {% endblock %}
 {% block content %}
@@ -22,7 +40,14 @@
   <div class="staff-header">
     <img src="{{ staff.image.large|default:staff.image.medium }}" alt="{{ staff.name.full }}" class="staff-img" loading="lazy">
     <div class="staff-meta">
-      <h1>{{ staff.name.full }}</h1>
+      <div class="d-flex align-items-center gap-3 flex-wrap mb-2">
+        <h1 class="mb-0">{{ staff.name.full }}</h1>
+        {% if user.is_authenticated %}
+        <button class="fav-btn" id="favBtn" data-id="{{ staff.id }}" data-name="{{ staff.name.full }}" data-image="{{ staff.image.medium|default:'' }}" onclick="toggleFav(this)">
+          ♥ <span id="favLabel">Favorite</span>
+        </button>
+        {% endif %}
+      </div>
       {% if staff.name.native %}<div class="native">{{ staff.name.native }}</div>{% endif %}
       {% if staff.name.alternative %}
       <div class="small text-secondary mb-3">Also known as: {{ staff.name.alternative|join:', ' }}</div>
@@ -36,39 +61,55 @@
         {% if staff.favourites %}<div class="info-item"><div class="label">Favorites</div><div class="value">{{ staff.favourites }}</div></div>{% endif %}
       </div>
       {% if staff.yearsActive %}
-      <div class="mt-2 small text-secondary">Active: {{ staff.yearsActive|join:' — ' }}</div>
+      <div class="mt-2 small text-secondary"><span class="fw-medium text-light">Years Active:</span> {{ staff.yearsActive|join:' — ' }}</div>
       {% endif %}
     </div>
   </div>
+
   {% if staff.description %}
   <div class="staff-desc">{{ staff.description|safe }}</div>
   {% endif %}
+
   {% if staff.staffMedia.nodes %}
-  <h5 class="section-title"><span class="dot" style="background:var(--primary)"></span>Works</h5>
-  <div class="staff-media">
+  <div class="section-title"><span class="dot" style="background:var(--primary)"></span> Anime Worked On <span class="text-secondary" style="font-size:0.9rem;font-weight:400">({{ staff.staffMedia.nodes|length }})</span></div>
+  <div class="media-grid">
     {% for m in staff.staffMedia.nodes %}
-    <a href="{% url 'anime_detail' m.id %}" class="text-decoration-none">
-      <div class="card-anime">
-        <img src="{{ m.coverImage.large }}" alt="{{ m.title.romaji }}" loading="lazy">
-        <div class="p-2">
-          <div class="small fw-medium" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ m.title.english|default:m.title.romaji }}</div>
-          <div class="small text-secondary" style="font-size:0.7rem">{{ m.format|default:'' }}</div>
-        </div>
+    <a href="{% url 'anime_detail' m.id %}" class="media-card">
+      <img src="{{ m.coverImage.large|default:m.coverImage.medium }}" alt="{{ m.title.romaji }}" loading="lazy">
+      <div class="info">
+        <div class="title">{{ m.title.english|default:m.title.romaji }}</div>
+        <div class="sub">{{ m.format|default:'' }}</div>
       </div>
     </a>
     {% endfor %}
   </div>
   {% endif %}
+
   {% if staff.characters.nodes %}
-  <h5 class="section-title mt-4"><span class="dot" style="background:#f97316"></span>Voiced Characters</h5>
-  <div class="d-flex flex-wrap gap-3">
+  <div class="section-title mt-4"><span class="dot" style="background:#f97316"></span> Voiced Characters <span class="text-secondary" style="font-size:0.9rem;font-weight:400">({{ staff.characters.nodes|length }})</span></div>
+  <div class="char-grid">
     {% for c in staff.characters.nodes %}
-    <a href="{% url 'character' c.id %}" class="text-decoration-none text-center" style="width:100px">
-      <img src="{{ c.image.medium }}" alt="{{ c.name.full }}" class="rounded-3" style="width:80px;height:80px;object-fit:cover;border:2px solid var(--border)" loading="lazy">
-      <div class="small mt-1" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.name.full }}</div>
+    <a href="{% url 'character' c.id %}" class="char-card">
+      <img src="{{ c.image.medium|default:'' }}" alt="{{ c.name.full }}" loading="lazy">
+      <div class="name">{{ c.name.full }}</div>
     </a>
     {% endfor %}
   </div>
   {% endif %}
 </div>
+
+{% if user.is_authenticated %}
+<script>
+async function toggleFav(btn) {
+  const id = btn.dataset.id;
+  const resp = await fetch(`/favorite/staff/${id}/toggle/?name=${encodeURIComponent(btn.dataset.name)}&image=${encodeURIComponent(btn.dataset.image)}`);
+  const data = await resp.json();
+  btn.classList.toggle('active', data.favorited);
+  document.getElementById('favLabel').textContent = data.favorited ? 'Favorited' : 'Favorite';
+}
+fetch(`/favorite/staff/{{ staff.id }}/check/`).then(r=>r.json()).then(d=>{
+  if(d.favorited){document.getElementById('favBtn').classList.add('active');document.getElementById('favLabel').textContent='Favorited'}
+}).catch(()=>{});
+</script>
+{% endif %}
 {% endblock %}

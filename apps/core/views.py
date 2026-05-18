@@ -1852,7 +1852,29 @@ def character_view(request, character_id):
     except AniListError:
         return render(request, '404.html', status=404)
     char = data.get('Character', {})
-    return render(request, 'character.html', {'char': char})
+
+    media_appearances = []
+    for edge in char.get('media', {}).get('edges', []):
+        node = edge.get('node', {})
+        media_appearances.append({
+            'id': node.get('id'),
+            'title_romaji': node.get('title', {}).get('romaji', ''),
+            'title_english': node.get('title', {}).get('english', ''),
+            'cover': node.get('coverImage', {}).get('large', '') or node.get('coverImage', {}).get('medium', ''),
+            'format': node.get('format', ''),
+            'role': edge.get('characterRole', ''),
+            'voice_actors': [{
+                'id': va.get('id'),
+                'name': va.get('name', {}).get('full', ''),
+                'image': va.get('image', {}).get('medium', ''),
+                'language': va.get('languageV2', ''),
+            } for va in edge.get('voiceActors', [])],
+        })
+
+    return render(request, 'character.html', {
+        'char': char,
+        'media_appearances': media_appearances,
+    })
 
 
 def staff_view(request, staff_id):
@@ -2056,4 +2078,52 @@ def bulk_update_watchlist(request):
             messages.success(request, f'Updated {len(entry_ids)} entries to {dict(WatchlistEntry.Status.choices)[action]}.')
         return redirect('watchlist')
     return redirect('watchlist')
+
+
+@login_required
+def toggle_character_favorite(request, character_id):
+    from django.http import JsonResponse
+    from apps.anime.models import CharacterFavorite
+    name = request.GET.get('name', '')
+    image = request.GET.get('image', '')
+    fav, created = CharacterFavorite.objects.get_or_create(
+        user=request.user, character_id=character_id,
+        defaults={'character_name': name, 'character_image': image},
+    )
+    if not created:
+        fav.delete()
+        return JsonResponse({'favorited': False})
+    return JsonResponse({'favorited': True})
+
+
+@login_required
+def check_character_favorite(request, character_id):
+    from django.http import JsonResponse
+    from apps.anime.models import CharacterFavorite
+    exists = CharacterFavorite.objects.filter(user=request.user, character_id=character_id).exists()
+    return JsonResponse({'favorited': exists})
+
+
+@login_required
+def toggle_staff_favorite(request, staff_id):
+    from django.http import JsonResponse
+    from apps.anime.models import StaffFavorite
+    name = request.GET.get('name', '')
+    image = request.GET.get('image', '')
+    fav, created = StaffFavorite.objects.get_or_create(
+        user=request.user, staff_id=staff_id,
+        defaults={'staff_name': name, 'staff_image': image},
+    )
+    if not created:
+        fav.delete()
+        return JsonResponse({'favorited': False})
+    return JsonResponse({'favorited': True})
+
+
+@login_required
+def check_staff_favorite(request, staff_id):
+    from django.http import JsonResponse
+    from apps.anime.models import StaffFavorite
+    exists = StaffFavorite.objects.filter(user=request.user, staff_id=staff_id).exists()
+    return JsonResponse({'favorited': exists})
 

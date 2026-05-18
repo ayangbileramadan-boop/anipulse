@@ -70,4 +70,8 @@ urlpatterns = [
     path('activity/', views.friend_activity, name='friend_activity'),
     path('import/', views.import_anilist, name='import_anilist'),
     path('watchlist/bulk-update/', views.bulk_update_watchlist, name='bulk_update_watchlist'),
+    path('favorite/character/<int:character_id>/toggle/', views.toggle_character_favorite, name='toggle_character_favorite'),
+    path('favorite/character/<int:character_id>/check/', views.check_character_favorite, name='check_character_favorite'),
+    path('favorite/staff/<int:staff_id>/toggle/', views.toggle_staff_favorite, name='toggle_staff_favorite'),
+    path('favorite/staff/<int:staff_id>/check/', views.check_staff_favorite, name='check_staff_favorite'),
 ]

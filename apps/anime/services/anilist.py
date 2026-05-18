@@ -391,12 +391,19 @@ class AniListClient:
         bloodType
         siteUrl
         favourites
-        media(page: 1, perPage: 20, sort: POPULARITY_DESC) {
-          nodes {
-            id title { romaji english }
-            coverImage { large medium }
-            format type
-            mediaListEntry { status }
+        media(page: 1, perPage: 25, sort: POPULARITY_DESC) {
+          edges {
+            characterRole
+            voiceActors(sort: LANGUAGE) {
+              id name { full }
+              image { medium }
+              languageV2
+            }
+            node {
+              id title { romaji english }
+              coverImage { large medium }
+              format type
+            }
           }
         }
       }
@@ -418,14 +425,14 @@ class AniListClient:
         homeTown
         siteUrl
         favourites
-        staffMedia(page: 1, perPage: 20, sort: POPULARITY_DESC) {
+        staffMedia(page: 1, perPage: 25, sort: POPULARITY_DESC) {
           nodes {
             id title { romaji english }
             coverImage { large medium }
             format type
           }
         }
-        characters(page: 1, perPage: 10, sort: FAVOURITES_DESC) {
+        characters(page: 1, perPage: 20, sort: FAVOURITES_DESC) {
           nodes {
             id name { full }
             image { medium }

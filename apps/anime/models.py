@@ -410,6 +410,36 @@ class Notification(models.Model):
         return f"{self.user.username}: {self.title}"
 
 
+class CharacterFavorite(models.Model):
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='character_favorites')
+    character_id = models.IntegerField()
+    character_name = models.CharField(max_length=300)
+    character_image = models.URLField(max_length=500, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'character_id')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} fav {self.character_name}"
+
+
+class StaffFavorite(models.Model):
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='staff_favorites')
+    staff_id = models.IntegerField()
+    staff_name = models.CharField(max_length=300)
+    staff_image = models.URLField(max_length=500, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'staff_id')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} fav {self.staff_name}"
+
+
 class AnimeTheme(models.Model):
     THEME_TYPES = [
         ('OP', 'Opening'),
