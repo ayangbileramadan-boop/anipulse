@@ -1,10 +1,19 @@
 import hashlib
 import json
 import logging
+import urllib.request
+import urllib.error
 
 import httpx
 from django.conf import settings
 from django.core.cache import cache
+
+try:
+    import requests as _requests_lib
+    HAS_REQUESTS = True
+except ImportError:
+    _requests_lib = None
+    HAS_REQUESTS = False
 
 logger = logging.getLogger(__name__)
 
@@ -256,37 +265,114 @@ class AniListClient:
             logger.debug("AniList cache HIT: %s", cache_key[:16])
             return cached
 
+        # Try multiple transport strategies to handle Cloudflare blocking
+        strategies = [
+            ('httpx', lambda: self._query_via_httpx(query, variables)),
+            ('urllib', lambda: self._query_via_urllib(query, variables)),
+        ]
+        if HAS_REQUESTS:
+            strategies.append(('requests', lambda: self._query_via_requests(query, variables)))
+
+        errors = []
+        for label, fn in strategies:
+            try:
+                data = fn()
+                result = data['data']
+                cache.set(cache_key, result, ttl)
+                return result
+            except AniListError as e:
+                errors.append(f"{label} failed: {e}")
+                logger.warning("AniList %s failed: %s", label, e)
+                continue
+
+        # All strategies failed
+        logger.error("AniList all transport strategies failed: %s", '; '.join(errors))
+        raise AniListError([{'message': 'AniList unreachable', 'detail': '; '.join(errors)}])
+
+    def _query_via_httpx(self, query, variables):
+        headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Origin': 'https://anilist.co',
+            'Referer': 'https://anilist.co/',
+        }
         try:
-            response = httpx.post(
-                self.URL,
-                json={'query': query, 'variables': variables},
-                headers={
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-                    'Accept-Language': 'en-US,en;q=0.9',
-                    'Accept-Encoding': 'gzip, deflate, br',
-                    'Origin': 'https://anilist.co',
-                    'Referer': 'https://anilist.co/',
-                },
-                timeout=30.0,
-            )
-            response.raise_for_status()
+            with httpx.Client(http2=False) as client:
+                response = client.post(
+                    self.URL,
+                    json={'query': query, 'variables': variables},
+                    headers=headers,
+                    timeout=30.0,
+                )
+                response.raise_for_status()
         except httpx.TimeoutException:
-            logger.error("AniList API timeout")
-            raise AniListError([{'message': 'AniList API timeout'}])
+            raise AniListError([{'message': 'AniList API timeout (httpx)'}])
         except httpx.HTTPStatusError as e:
-            logger.error("AniList HTTP error %s: %s", e.response.status_code, e)
-            raise AniListError([{'message': f'HTTP {e.response.status_code}', 'status': e.response.status_code}])
+            raise AniListError([{'message': f'HTTP {e.response.status_code} (httpx)', 'status': e.response.status_code}])
 
         data = response.json()
         if 'errors' in data:
-            logger.error("AniList GraphQL errors: %s", data['errors'])
             raise AniListError(data['errors'])
+        return data
 
-        result = data['data']
-        cache.set(cache_key, result, ttl)
-        return result
+    def _query_via_urllib(self, query, variables):
+        payload = json.dumps({'query': query, 'variables': variables}).encode('utf-8')
+        req = urllib.request.Request(
+            self.URL,
+            data=payload,
+            headers={
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Origin': 'https://anilist.co',
+                'Referer': 'https://anilist.co/',
+            },
+            method='POST',
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30.0) as resp:
+                raw = resp.read().decode('utf-8')
+        except urllib.error.HTTPError as e:
+            raise AniListError([{'message': f'HTTP {e.code} (urllib)', 'status': e.code}])
+        except urllib.error.URLError as e:
+            raise AniListError([{'message': f'URLError (urllib): {e.reason}'}])
+
+        data = json.loads(raw)
+        if 'errors' in data:
+            raise AniListError(data['errors'])
+        return data
+
+    def _query_via_requests(self, query, variables):
+        headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Origin': 'https://anilist.co',
+            'Referer': 'https://anilist.co/',
+        }
+        try:
+            resp = _requests_lib.post(
+                self.URL,
+                json={'query': query, 'variables': variables},
+                headers=headers,
+                timeout=30.0,
+            )
+            resp.raise_for_status()
+        except _requests_lib.exceptions.Timeout:
+            raise AniListError([{'message': 'AniList API timeout (requests)'}])
+        except _requests_lib.exceptions.HTTPError as e:
+            raise AniListError([{'message': f'HTTP {e.response.status_code} (requests)', 'status': e.response.status_code}])
+
+        data = resp.json()
+        if 'errors' in data:
+            raise AniListError(data['errors'])
+        return data
 
     # ─── Public API ───────────────────────────────────────────────
 
