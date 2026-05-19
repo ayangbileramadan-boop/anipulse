@@ -263,9 +263,13 @@ class AniListClient:
                 headers={
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'User-Agent': 'AniPulse/1.0 (https://makaveli.pythonanywhere.com)',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Origin': 'https://anilist.co',
+                    'Referer': 'https://anilist.co/',
                 },
-                timeout=15.0,
+                timeout=30.0,
             )
             response.raise_for_status()
         except httpx.TimeoutException:
