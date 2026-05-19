@@ -263,16 +263,17 @@ class AniListClient:
                 headers={
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
+                    'User-Agent': 'AniPulse/1.0 (https://makaveli.pythonanywhere.com)',
                 },
                 timeout=15.0,
             )
             response.raise_for_status()
         except httpx.TimeoutException:
             logger.error("AniList API timeout")
-            raise
+            raise AniListError([{'message': 'AniList API timeout'}])
         except httpx.HTTPStatusError as e:
             logger.error("AniList HTTP error %s: %s", e.response.status_code, e)
-            raise
+            raise AniListError([{'message': f'HTTP {e.response.status_code}', 'status': e.response.status_code}])
 
         data = response.json()
         if 'errors' in data:
