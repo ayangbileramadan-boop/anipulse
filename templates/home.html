@@ -161,10 +161,10 @@
             <span class="text-secondary small">{{ currently_watching|length }} watching</span>
         </a>
         {% endif %}
-        <a href="{% url 'anime_wrapped' %}" class="d-flex align-items-center gap-2 px-4 py-2 rounded-4 text-decoration-none" style="background:rgba(162,89,255,0.08);border:1px solid rgba(162,89,255,0.15)">
+        {% comment %}<a href="{% url 'anime_wrapped' %}" class="d-flex align-items-center gap-2 px-4 py-2 rounded-4 text-decoration-none" style="background:rgba(162,89,255,0.08);border:1px solid rgba(162,89,255,0.15)">
             <span style="font-size:1.3rem">🎉</span>
             <span class="text-secondary small">My Wrapped</span>
-        </a>
+        </a>{% endcomment %}
         <a href="{% url 'tier_list_list' %}" class="d-flex align-items-center gap-2 px-4 py-2 rounded-4 text-decoration-none" style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.15)">
             <span style="font-size:1.3rem">🏆</span>
             <span class="text-secondary small">Tier Lists</span>
