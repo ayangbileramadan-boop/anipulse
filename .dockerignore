@@ -1,0 +1,17 @@
+.git
+.gitignore
+.env
+.env.example
+*.pyc
+__pycache__/
+*.pyo
+.DS_Store
+node_modules/
+media/
+staticfiles/
+*.log
+docker-compose.yml
+Dockerfile
+README.md
+AGENTS.md
+*.md

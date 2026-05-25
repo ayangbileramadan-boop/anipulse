@@ -1,5 +1,6 @@
 from django.utils import timezone
 from apps.anime.models import Streak, UserActivity
+from apps.core.services.gamification import GamificationEngine
 
 
 def user_streak(request):
@@ -15,4 +16,12 @@ def user_streak(request):
                 description=f'{streak.current_streak} day streak!',
             )
         ctx['user_streak'] = streak
+
+        try:
+            engine = GamificationEngine()
+            profile = engine.get_profile(request.user)
+            ctx['game_level'] = profile.level_progress
+            ctx['unlocked_badges'] = engine.get_unlocked_badges(request.user)
+        except Exception:
+            pass
     return ctx

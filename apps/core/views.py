@@ -15,6 +15,8 @@ from apps.watchlist.models import WatchlistEntry
 from apps.watchlist.models import ACHIEVEMENT_DEFS
 from apps.anime.models import Anime, Battle, BattleVote, TierList, TierListItem, SocialPost, SocialLike, UserFollow, UserActivity, Streak
 from apps.recommendations.engine import get_recommendations_for_user
+from apps.core.services.personalization import PersonalizationEngine
+from apps.core.services.gamification import GamificationEngine
 
 logger = logging.getLogger(__name__)
 
@@ -120,6 +122,12 @@ def home(request):
             'completed': WatchlistEntry.objects.filter(user=request.user, status='COMPLETED').count(),
             'planning': WatchlistEntry.objects.filter(user=request.user, status='PLANNING').count(),
         }
+        try:
+            engine = PersonalizationEngine()
+            context['personalized_sections'] = engine.get_homepage_sections(request.user)
+        except Exception as e:
+            logger.error(f"Failed to generate personalized sections: {e}")
+            context['personalized_sections'] = []
 
     if search_query:
         context['search_query'] = search_query
@@ -699,12 +707,20 @@ def profile_view(request, username):
 
     streak = Streak.objects.filter(user=profile_user).first()
 
+    game_engine = GamificationEngine()
+    game_profile = game_engine.get_profile(profile_user)
+    level_progress = game_profile.level_progress
+    unlocked_badges = game_engine.get_unlocked_badges(profile_user)
+
     return render(request, 'profile.html', {
         'profile_user': profile_user,
         'is_me': is_me,
         'stats': stats,
         'total_watch_hours': round(total_hours, 1),
         'profile_streak': streak,
+        'game_profile': game_profile,
+        'level_progress': level_progress,
+        'unlocked_badges': unlocked_badges,
     })
 
 
@@ -1555,7 +1571,6 @@ def chat_ai(request):
     # ─── What should I watch? — Personalized ────────────────────
     if request.user.is_authenticated and any(p in msg_lower for p in ['what should i watch', 'recommend me something', 'suggest me something', 'what do you recommend', 'i dont know what to watch', 'anything good', 'give me a recommendation']):
         try:
-            from apps.recommendations.engine import get_recommendations_for_user
             recs = list(get_recommendations_for_user(request.user, limit=6))
             if recs:
                 anime_list = [{'id': a.anilist_id, 'title': a.display_title, 'image': a.cover_image_medium or a.cover_image_large, 'score': a.average_score, 'format': a.format, 'episodes': a.episodes} for a in recs]

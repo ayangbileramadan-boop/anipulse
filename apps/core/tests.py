@@ -1,8 +1,139 @@
 import pytest
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from apps.anime.models import Streak, Battle, SocialPost, SocialLike, UserFollow, Notification
+from django.core.cache import cache
+from apps.anime.models import Streak, Battle, SocialPost, SocialLike, UserFollow, Notification, Genre
 from apps.watchlist.models import WatchlistEntry
+from apps.core.services.gamification import GamificationEngine, XP_RATES, BADGE_DEFS, level_for_xp, xp_for_level
+from apps.core.models import UserProfile, UserBadge
+
+
+class TestGamification:
+    @pytest.fixture(autouse=True)
+    def setup(self, db, user, anime, genre):
+        self.user = user
+        self.anime = anime
+        self.genre = genre
+        self.engine = GamificationEngine()
+
+    def test_level_for_xp(self):
+        assert level_for_xp(0) == (1, 0)
+        assert level_for_xp(100) == (2, 0)
+        assert level_for_xp(150) == (2, 50)
+        assert level_for_xp(800) == (5, 0)
+
+    def test_xp_for_level(self):
+        assert xp_for_level(1) == 0
+        assert xp_for_level(2) == 100
+        assert xp_for_level(5) == 800
+
+    def test_xp_for_level_beyond_table(self):
+        assert xp_for_level(50) == 400000
+        assert xp_for_level(99) == 400000
+
+    def test_award_xp_creates_profile(self):
+        self.engine.award_xp(self.user, 'add_to_watchlist')
+        assert UserProfile.objects.filter(user=self.user).exists()
+
+    def test_award_xp_increases_total(self):
+        self.engine.award_xp(self.user, 'add_to_watchlist')
+        profile = UserProfile.objects.get(user=self.user)
+        assert profile.total_xp == XP_RATES['add_to_watchlist']
+
+    def test_award_xp_multiple_actions(self):
+        self.engine.award_xp(self.user, 'complete_anime')
+        self.engine.award_xp(self.user, 'add_review')
+        profile = UserProfile.objects.get(user=self.user)
+        expected = XP_RATES['complete_anime'] + XP_RATES['add_review']
+        assert profile.total_xp == expected
+
+    def test_award_xp_unknown_action(self):
+        self.engine.award_xp(self.user, 'unknown_action')
+        assert not UserProfile.objects.filter(user=self.user).exists()
+
+    def test_get_level_progress(self):
+        self.engine.award_xp(self.user, 'complete_anime')
+        progress = self.engine.get_level_progress(self.user)
+        assert progress['level'] == 1
+        assert progress['xp'] == XP_RATES['complete_anime']
+
+    def test_first_anime_badge(self):
+        WatchlistEntry.objects.create(user=self.user, anime=self.anime, status='COMPLETED')
+        assert UserBadge.objects.filter(user=self.user, badge_id='first_anime').exists()
+
+    def test_no_badge_for_no_activity(self):
+        awarded = self.engine.check_badges(self.user)
+        assert list(awarded) == []
+
+    def test_badge_persistence(self):
+        WatchlistEntry.objects.create(user=self.user, anime=self.anime, status='COMPLETED')
+        assert UserBadge.objects.filter(user=self.user, badge_id='first_anime').exists()
+
+    def test_badge_not_duplicated(self):
+        WatchlistEntry.objects.create(user=self.user, anime=self.anime, status='COMPLETED')
+        assert UserBadge.objects.filter(user=self.user).count() == 1
+        self.engine.check_badges(self.user)
+        assert UserBadge.objects.filter(user=self.user).count() == 1
+
+    def test_get_unlocked_badges(self):
+        WatchlistEntry.objects.create(user=self.user, anime=self.anime, status='COMPLETED')
+        badges = self.engine.get_unlocked_badges(self.user)
+        assert 'first_anime' in badges
+        assert badges['first_anime']['name'] == 'First Steps'
+
+    def test_get_profile_creates_if_missing(self):
+        profile = self.engine.get_profile(self.user)
+        assert profile is not None
+        assert profile.total_xp == 0
+
+
+class TestPersonalization:
+    @pytest.fixture(autouse=True)
+    def setup(self, db, user, anime, genre):
+        self.user = user
+        self.anime = anime
+        self.genre = genre
+        cache.clear()
+
+    def test_continue_watching_with_no_entries(self):
+        from apps.core.services.personalization import PersonalizationEngine
+        engine = PersonalizationEngine()
+        cw = engine.get_continue_watching(self.user)
+        assert cw == []
+
+    def test_continue_watching_with_entry(self):
+        from apps.core.services.personalization import PersonalizationEngine
+        WatchlistEntry.objects.create(user=self.user, anime=self.anime, status='WATCHING', episodes_watched=5)
+        engine = PersonalizationEngine()
+        cw = engine.get_continue_watching(self.user)
+        assert len(cw) >= 1
+        assert cw[0]['episode'] == 6
+
+    def test_genre_affinity_empty(self):
+        from apps.core.services.personalization import PersonalizationEngine
+        engine = PersonalizationEngine()
+        affinity = engine.get_genre_affinity(self.user)
+        assert affinity == {}
+
+    def test_genre_affinity_with_completed_entry(self):
+        from apps.core.services.personalization import PersonalizationEngine
+        WatchlistEntry.objects.create(user=self.user, anime=self.anime, status='COMPLETED', episodes_watched=24, score=8)
+        engine = PersonalizationEngine()
+        affinity = engine.get_genre_affinity(self.user)
+        assert 'Action' in affinity
+        assert 0 < affinity['Action'] <= 1
+
+    def test_homepage_sections_anonymous(self):
+        from apps.core.services.personalization import PersonalizationEngine
+        engine = PersonalizationEngine()
+        sections = engine.get_homepage_sections(self.user)
+        assert isinstance(sections, list)
+
+    def test_recommendations_empty_for_no_history(self):
+        from apps.core.services.personalization import PersonalizationEngine
+        engine = PersonalizationEngine()
+        recs = engine.get_recommendations(self.user, limit=5)
+        assert isinstance(recs, list)
 
 
 class TestHomePage:
@@ -16,7 +147,7 @@ class TestHomePage:
 
 
 class TestAuth:
-    def test_login_page(self, client):
+    def test_login_page(self, client, db):
         resp = client.get('/login/')
         assert resp.status_code == 200
 

@@ -237,8 +237,47 @@
 <hr class="home-divider">
 {% endif %}
 
+{% if user.is_authenticated %}
+<!-- === PERSONALIZED SECTIONS === -->
+{% for section in personalized_sections %}
+<section class="container py-5">
+    <div class="section-header">
+        <h2><span class="icon bg-danger bg-opacity-10 text-danger">
+            {% if section.key == 'continue_watching' %}▶{% elif section.key == 'genre_affinity' %}💖{% elif section.key == 'mixed_affinity' %}🎯{% else %}🔥{% endif %}
+        </span> {{ section.title }}</h2>
+        {% if section.key == 'continue_watching' %}
+        <a href="{% url 'watchlist' %}" class="text-secondary small text-decoration-none">My list →</a>
+        {% endif %}
+    </div>
+    <div class="trending-scroll">
+        {% for item in section.items %}
+        <div class="trending-item">
+            <a href="{% url 'anime_detail' item.id %}" class="d-block text-decoration-none">
+                <div class="card-anime position-relative">
+                    <img src="{{ item.image }}" alt="" loading="lazy">
+                    {% if section.key == 'continue_watching' and item.episode %}
+                    <span class="badge-score" style="background:rgba(232,54,93,0.9);color:#fff">Ep {{ item.episode }}/{{ item.total|default:'?' }}</span>
+                    {% elif item.score %}
+                    <span class="badge-score">★ {{ item.score|floatformat:1 }}</span>
+                    {% endif %}
+                </div>
+                <div class="mt-2"><div class="fw-medium text-truncate" style="color:var(--text);font-size:0.85rem">{{ item.title }}</div></div>
+                {% if section.key == 'continue_watching' and item.progress %}
+                <div class="mt-1" style="height:4px;background:var(--border);border-radius:2px;overflow:hidden">
+                    <div style="height:100%;width:{{ item.progress }}%;background:var(--primary);border-radius:2px"></div>
+                </div>
+                {% endif %}
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+<hr class="home-divider">
+{% endfor %}
+{% endif %}
+
 {% if user.is_authenticated and currently_watching %}
-<!-- === CONTINUE WATCHING === -->
+<!-- === CONTINUE WATCHING (legacy) === -->
 <section class="container py-5">
     <div class="section-header">
         <h2><span class="icon bg-danger bg-opacity-10 text-danger">▶</span> Continue Watching</h2>
@@ -250,11 +289,13 @@
             <a href="{% url 'anime_detail' entry.anime.anilist_id %}" class="d-block text-decoration-none">
                 <div class="card-anime position-relative">
                     <img src="{{ entry.anime.cover_image_large|default:entry.anime.cover_image_medium }}" alt="" loading="lazy">
-                    <span class="badge-score" style="background:rgba(232,54,93,0.9);color:#fff">Ep {{ entry.current_episode }}/{{ entry.anime.episodes|default:'?' }}</span>
+                    <span class="badge-score" style="background:rgba(232,54,93,0.9);color:#fff">Ep {{ entry.episodes_watched }}/{{ entry.anime.episodes|default:'?' }}</span>
                 </div>
                 <div class="mt-2"><div class="fw-medium text-truncate" style="color:var(--text);font-size:0.85rem">{{ entry.anime.display_title }}</div></div>
                 {% if entry.anime.episodes %}
-                <div class="stat-bar mt-1"><div class="fill" style="width:{% widthratio entry.current_episode entry.anime.episodes 100 %}%;background:var(--primary)"></div></div>
+                <div class="mt-1" style="height:4px;background:var(--border);border-radius:2px;overflow:hidden">
+                    <div style="height:100%;width:{% widthratio entry.episodes_watched entry.anime.episodes 100 %}%;background:var(--primary);border-radius:2px"></div>
+                </div>
                 {% endif %}
             </a>
         </div>
