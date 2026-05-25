@@ -14,7 +14,7 @@
     </a>
     <div class="p-2">
         <a href="{% url 'anime_detail' anime.id %}" class="text-decoration-none small fw-medium d-block text-truncate" style="color:var(--text)">
-            {{ anime.title.english|default:anime.title.romaji }}
+            {{ anime.title.english|default:anime.title.romaji|surrogatefree }}
         </a>
         <div class="d-flex justify-content-between" style="color:var(--text-muted);font-size:0.7rem">
             <span>{{ anime.genres.0|default:"Anime" }}</span>

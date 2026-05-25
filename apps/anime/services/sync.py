@@ -3,7 +3,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 from apps.anime.models import Anime, Genre, Studio, Tag, AnimeTag, ExternalLink
-from apps.core.utils import parse_anilist_date, unix_to_datetime
+from apps.core.utils import parse_anilist_date, surrogatefree, unix_to_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -41,11 +41,11 @@ def sync_anime_from_anilist(data: dict) -> Anime:
     studios_data = (data.get('studios') or {}).get('nodes', [])
 
     defaults = {
-        'title_romaji': title_romaji,
-        'title_english': title_english,
-        'title_native': title_native,
+        'title_romaji': surrogatefree(title_romaji),
+        'title_english': surrogatefree(title_english),
+        'title_native': surrogatefree(title_native),
         'slug': slug,
-        'description': data.get('description', '') or '',
+        'description': surrogatefree(data.get('description', '') or ''),
         'format': data.get('format', '') or '',
         'status': data.get('status', '') or '',
         'episodes': data.get('episodes'),

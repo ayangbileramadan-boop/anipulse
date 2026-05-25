@@ -116,7 +116,8 @@ class Anime(TimeStampedModel):
 
     @property
     def display_title(self):
-        return self.title_english or self.title_romaji
+        from apps.core.utils import surrogatefree
+        return surrogatefree(self.title_english or self.title_romaji)
 
     @property
     def trailer_url(self):

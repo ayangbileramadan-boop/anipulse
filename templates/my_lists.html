@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'base.html' %}{% load core_extras %}
 {% block title %}My Lists — AniPulse{% endblock %}
 
 {% block content %}
@@ -18,7 +18,7 @@
                     <span class="badge bg-secondary bg-opacity-20">{{ cl.anime.count }} anime</span>
                 </div>
                 {% if cl.description %}
-                <p class="text-secondary small mb-3">{{ cl.description|truncatechars:100 }}</p>
+                <p class="text-secondary small mb-3">{{ cl.description|surrogatefree|truncatechars:100 }}</p>
                 {% endif %}
                 <div class="d-flex gap-2">
                     {% for anime in cl.anime|slice:":4" %}

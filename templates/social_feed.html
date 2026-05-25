@@ -31,7 +31,7 @@
         <a href="{% url 'anime_detail' post.anime.anilist_id %}" class="ms-auto btn btn-sm btn-outline-light" style="border-radius:8px;font-size:0.75rem">{{ post.anime.display_title|truncatechars:20 }}</a>
         {% endif %}
       </div>
-      <p style="color:var(--text-secondary);font-size:0.9rem;line-height:1.6;margin-bottom:8px">{{ post.body }}</p>
+      <p style="color:var(--text-secondary);font-size:0.9rem;line-height:1.6;margin-bottom:8px">{{ post.body|surrogatefree }}</p>
       <div class="d-flex gap-3">
         <a href="{% url 'social_like_post' post.id %}" class="text-decoration-none d-flex align-items-center gap-1" style="color:var(--text-muted);font-size:0.8rem">❤️ {{ post.likes }}</a>
         {% if user.is_authenticated and user != post.user %}

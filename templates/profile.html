@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'base.html' %}{% load core_extras %}
 {% block title %}{{ profile_user.username }} — AniPulse{% endblock %}
 
 {% block extra_css %}{% endblock %}
@@ -39,7 +39,7 @@
       </div>
 
       {% if profile_user.bio %}
-      <p class="text-secondary mb-4" style="line-height:1.7">{{ profile_user.bio|linebreaks }}</p>
+      <p class="text-secondary mb-4" style="line-height:1.7">{{ profile_user.bio|surrogatefree|linebreaks }}</p>
       {% endif %}
 
       {% if game_profile %}
@@ -110,7 +110,7 @@
       <div class="p-3 rounded-3 mb-2" style="background:var(--surface);border:1px solid var(--border)">
         <a href="{% url 'anime_detail' review.anime.anilist_id %}" class="text-decoration-none fw-medium text-truncate d-inline-block" style="max-width:80%;vertical-align:middle">{{ review.anime.display_title }}</a>
         <span class="text-warning small ms-2">★ {{ review.rating }}/10</span>
-        <div class="text-secondary small">{{ review.body|truncatechars:120 }}</div>
+        <div class="text-secondary small">{{ review.body|surrogatefree|truncatechars:120 }}</div>
       </div>
       {% endfor %}
       {% endif %}

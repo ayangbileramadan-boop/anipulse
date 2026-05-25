@@ -1,11 +1,11 @@
-{% extends 'base.html' %}
+{% extends 'base.html' %}{% load core_extras %}
 {% block title %}{{ custom_list.name }} — AniPulse{% endblock %}
 
 {% block content %}
 <div class="container py-5">
     <a href="{% url 'my_lists' %}" class="text-decoration-none" style="color:var(--text-secondary);font-size:0.9rem">← Back to My Lists</a>
     <h2 class="fw-bold mt-2 mb-1">{{ custom_list.name }}</h2>
-    {% if custom_list.description %}<p class="text-secondary mb-4">{{ custom_list.description }}</p>{% endif %}
+    {% if custom_list.description %}<p class="text-secondary mb-4">{{ custom_list.description|surrogatefree }}</p>{% endif %}
     <p class="text-secondary small mb-4">{{ custom_list.anime.count }} anime • {{ custom_list.user.username }}</p>
 
     {% if custom_list.anime.exists %}

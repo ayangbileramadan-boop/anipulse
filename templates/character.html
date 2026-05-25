@@ -1,6 +1,6 @@
-{% extends 'base.html' %}
+{% extends 'base.html' %}{% load core_extras %}
 {% block title %}{{ char.name.full }} — AniPulse{% endblock %}
-{% block meta_desc %}{{ char.description|striptags|truncatewords:30 }}{% endblock %}
+{% block meta_desc %}{{ char.description|surrogatefree|striptags|truncatewords:30 }}{% endblock %}
 {% block og_title %}{{ char.name.full }} — AniPulse{% endblock %}
 {% block og_image %}{{ char.image.large|default:char.image.medium }}{% endblock %}
 {% block extra_css %}
@@ -64,7 +64,7 @@
   </div>
 
   {% if char.description %}
-  <div class="char-desc">{{ char.description|safe }}</div>
+  <div class="char-desc">{{ char.description|surrogatefree|safe }}</div>
   {% endif %}
 
   {% if media_appearances %}

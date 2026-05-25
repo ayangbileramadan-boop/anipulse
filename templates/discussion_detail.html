@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'base.html' %}{% load core_extras %}
 {% block title %}{{ thread.title }} — AniPulse{% endblock %}
 
 {% block extra_css %}
@@ -26,7 +26,7 @@
             <div class="comment-avatar">{{ thread.user.username|slice:":2"|upper }}</div>
             <span class="small text-secondary">{{ thread.user.username }} · {{ thread.created_at|timesince }} ago</span>
         </div>
-        <div class="text-light" style="line-height:1.8">{{ thread.body|linebreaks }}</div>
+        <div class="text-light" style="line-height:1.8">{{ thread.body|surrogatefree|linebreaks }}</div>
         <div class="d-flex gap-3 mt-3 pt-3" style="border-top:1px solid var(--border)">
             <span class="small text-secondary">💬 {{ thread.comments.count }} comments</span>
             <span class="small text-secondary">👁 {{ thread.views }} views</span>
@@ -58,7 +58,7 @@
             {% if comment.is_spoiler %}<span class="badge bg-danger" style="font-size:0.65rem">Spoiler</span>{% endif %}
             <span class="small text-secondary ms-auto">{{ comment.created_at|timesince }} ago</span>
         </div>
-        <div class="small text-light" style="line-height:1.7">{{ comment.body|linebreaks }}</div>
+        <div class="small text-light" style="line-height:1.7">{{ comment.body|surrogatefree|linebreaks }}</div>
     </div>
     {% empty %}
     <div class="text-center py-3">

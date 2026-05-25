@@ -1,6 +1,17 @@
 from django import template
+from django.utils.safestring import mark_safe
+
+from ..utils import surrogatefree as _surrogatefree
 
 register = template.Library()
+
+
+@register.filter
+def surrogatefree(value):
+    if not value:
+        return value
+    cleaned = _surrogatefree(value)
+    return mark_safe(cleaned) if getattr(value, 'is_safe', False) else cleaned
 
 
 @register.filter
