@@ -16,3 +16,4 @@ sentry-sdk==2.13.0
 django-celery-beat==2.6.0
 django-allauth==65.16.1
 cryptography==44.0.1
+PyJWT==2.10.1

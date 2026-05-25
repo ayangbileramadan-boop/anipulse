@@ -1,6 +1,7 @@
 import pytest
 from django.contrib.auth import get_user_model
-from apps.anime.models import Anime, Genre, Streak
+from apps.core.models import Streak
+from apps.anime.models import Anime, Genre
 from apps.watchlist.models import WatchlistEntry
 
 

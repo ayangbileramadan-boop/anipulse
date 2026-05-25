@@ -1,6 +1,6 @@
 from django.db import models
 from django.utils import timezone
-from apps.core.models import TimeStampedModel
+from apps.core.models import TimeStampedModel, Streak, UserFollow, Notification, CharacterFavorite, StaffFavorite
 
 
 class Genre(models.Model):
@@ -234,31 +234,6 @@ class DiscussionComment(TimeStampedModel):
         return f"{self.user.username} on {self.thread.title}"
 
 
-class Streak(models.Model):
-    user = models.OneToOneField('users.User', on_delete=models.CASCADE, related_name='streak')
-    current_streak = models.IntegerField(default=0)
-    longest_streak = models.IntegerField(default=0)
-    last_activity = models.DateField(null=True, blank=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def check_and_update(self):
-        today = timezone.now().date()
-        if self.last_activity:
-            delta = (today - self.last_activity).days
-            if delta == 1:
-                self.current_streak += 1
-            elif delta > 1:
-                self.current_streak = 1
-        else:
-            self.current_streak = 1
-        self.longest_streak = max(self.longest_streak, self.current_streak)
-        self.last_activity = today
-        self.save()
-
-    def __str__(self):
-        return f"{self.user.username}: {self.current_streak} day streak"
-
-
 class Battle(models.Model):
     anime1 = models.ForeignKey(Anime, on_delete=models.CASCADE, related_name='battles_as_first')
     anime2 = models.ForeignKey(Anime, on_delete=models.CASCADE, related_name='battles_as_second')
@@ -358,19 +333,6 @@ class SocialLike(models.Model):
         unique_together = ('post', 'user')
 
 
-class UserFollow(models.Model):
-    follower = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='following')
-    following = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='followers')
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ('follower', 'following')
-        ordering = ['-created_at']
-
-    def __str__(self):
-        return f"{self.follower} follows {self.following}"
-
-
 class UserActivity(TimeStampedModel):
     ACTIVITY_TYPES = [
         ('WATCHING', 'Started Watching'),
@@ -392,52 +354,6 @@ class UserActivity(TimeStampedModel):
 
     def __str__(self):
         return f"{self.user.username}: {self.activity_type}"
-
-
-class Notification(models.Model):
-    user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='notifications')
-    title = models.CharField(max_length=200)
-    message = models.TextField(blank=True)
-    url = models.CharField(max_length=500, blank=True)
-    is_read = models.BooleanField(default=False, db_index=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['-created_at']
-        indexes = [models.Index(fields=['user', 'is_read'])]
-
-    def __str__(self):
-        return f"{self.user.username}: {self.title}"
-
-
-class CharacterFavorite(models.Model):
-    user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='character_favorites')
-    character_id = models.IntegerField()
-    character_name = models.CharField(max_length=300)
-    character_image = models.URLField(max_length=500, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ('user', 'character_id')
-        ordering = ['-created_at']
-
-    def __str__(self):
-        return f"{self.user.username} fav {self.character_name}"
-
-
-class StaffFavorite(models.Model):
-    user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='staff_favorites')
-    staff_id = models.IntegerField()
-    staff_name = models.CharField(max_length=300)
-    staff_image = models.URLField(max_length=500, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ('user', 'staff_id')
-        ordering = ['-created_at']
-
-    def __str__(self):
-        return f"{self.user.username} fav {self.staff_name}"
 
 
 class AnimeTheme(models.Model):

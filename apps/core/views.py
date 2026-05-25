@@ -13,7 +13,8 @@ from apps.anime.services.anilist import anilist_client, AniListError
 from apps.anime.services.sync import sync_anime_from_anilist
 from apps.watchlist.models import WatchlistEntry
 from apps.watchlist.models import ACHIEVEMENT_DEFS
-from apps.anime.models import Anime, Battle, BattleVote, TierList, TierListItem, SocialPost, SocialLike, UserFollow, UserActivity, Streak
+from apps.core.models import UserFollow, Streak
+from apps.anime.models import Anime, Battle, BattleVote, TierList, TierListItem, SocialPost, SocialLike, UserActivity
 from apps.recommendations.engine import get_recommendations_for_user
 from apps.core.services.personalization import PersonalizationEngine
 from apps.core.services.gamification import GamificationEngine
@@ -302,6 +303,16 @@ def anime_detail(request, anime_id):
         return render(request, '404.html', status=404)
 
     media = data.get('Media', {})
+
+    if request.GET.get('partial') == '1':
+        from django.http import JsonResponse
+        return JsonResponse({
+            'id': media.get('id'),
+            'title': media.get('title', {}),
+            'coverImage': media.get('coverImage', {}),
+            'format': media.get('format'),
+            'averageScore': media.get('averageScore'),
+        })
     title = media.get('title', {})
     title_english = title.get('english', '')
     title_romaji = title.get('romaji', '')
@@ -803,15 +814,23 @@ def compare_anime(request):
         try:
             result = anilist_client.get_anime_detail(int(id1))
             data1 = result.get('Media', {})
-        except AniListError:
+        except (AniListError, ValueError):
             pass
 
     if id2:
         try:
             result = anilist_client.get_anime_detail(int(id2))
             data2 = result.get('Media', {})
-        except AniListError:
+        except (AniListError, ValueError):
             pass
+
+    if request.GET.get('partial') == '1':
+        return render(request, 'compare_partial.html', {
+            'data1': data1,
+            'data2': data2,
+            'id1': id1,
+            'id2': id2,
+        })
 
     return render(request, 'compare.html', {
         'data1': data1,
@@ -823,11 +842,46 @@ def compare_anime(request):
 
 @login_required
 def profile_edit(request):
+    from django.core.files.storage import default_storage
+    from django.core.files.base import ContentFile
+    from PIL import Image
+    import io, uuid, os
+
     user = request.user
     if request.method == 'POST':
         user.bio = request.POST.get('bio', '')
-        user.avatar = request.POST.get('avatar', '')
-        user.cover_image = request.POST.get('cover_image', '')
+
+        avatar_url = request.POST.get('avatar', '').strip()
+        cover_url = request.POST.get('cover_image', '').strip()
+
+        if 'avatar_file' in request.FILES:
+            f = request.FILES['avatar_file']
+            try:
+                img = Image.open(f)
+                img.verify()
+                f.seek(0)
+                ext = os.path.splitext(f.name)[1] or '.jpg'
+                filename = f'avatars/{user.id}_{uuid.uuid4().hex}{ext}'
+                path = default_storage.save(filename, ContentFile(f.read()))
+                avatar_url = settings.MEDIA_URL + path
+            except Exception:
+                messages.error(request, 'Invalid avatar image file.')
+
+        if 'cover_file' in request.FILES:
+            f = request.FILES['cover_file']
+            try:
+                img = Image.open(f)
+                img.verify()
+                f.seek(0)
+                ext = os.path.splitext(f.name)[1] or '.jpg'
+                filename = f'covers/{user.id}_{uuid.uuid4().hex}{ext}'
+                path = default_storage.save(filename, ContentFile(f.read()))
+                cover_url = settings.MEDIA_URL + path
+            except Exception:
+                messages.error(request, 'Invalid cover image file.')
+
+        user.avatar = avatar_url
+        user.cover_image = cover_url
         user.save()
         messages.success(request, 'Profile updated!')
         return redirect('profile', username=user.username)
@@ -1009,9 +1063,38 @@ def tier_list_create(request):
     if request.method == 'POST':
         title = request.POST.get('title', '').strip()
         if title:
-            import string, random
+            import string, random, json
             slug = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
             tl = TierList.objects.create(user=request.user, title=title, slug=slug)
+
+            if tier_data_raw:
+                try:
+                    tier_data = json.loads(tier_data_raw)
+                    order = 0
+                    for tier, anime_ids in tier_data.items():
+                        for aid in anime_ids:
+                            try:
+                                anime_obj = Anime.objects.filter(anilist_id=aid).first()
+                                if not anime_obj:
+                                    from apps.anime.services.anilist import anilist_client, AniListError
+                                    try:
+                                        d = anilist_client.get_anime_detail(int(aid))
+                                        m = d.get('Media', {})
+                                        if m:
+                                            from apps.anime.services.sync import sync_anime_from_anilist
+                                            anime_obj = sync_anime_from_anilist(m)
+                                    except AniListError:
+                                        pass
+                                if anime_obj:
+                                    TierListItem.objects.create(
+                                        tier_list=tl, anime=anime_obj,
+                                        tier=tier.upper(), order=order
+                                    )
+                                    order += 1
+                            except Exception:
+                                pass
+                except json.JSONDecodeError:
+                    pass
             return redirect('tier_list_view', slug=slug)
     return render(request, 'tierlist_create.html')
 
@@ -1844,21 +1927,24 @@ def search_view(request):
 def search_json(request):
     from django.http import JsonResponse
     q = request.GET.get('q', '').strip()
+    limit = int(request.GET.get('limit', 8))
     if len(q) < 2:
         return JsonResponse([], safe=False)
     try:
-        data = anilist_client.search(search=q, page=1, per_page=8)
+        data = anilist_client.search(search=q, page=1, per_page=min(limit, 20))
         results = data.get('Page', {}).get('media', [])
         items = [{
             'id': a['id'],
-            'title': a.get('title', {}).get('english') or a.get('title', {}).get('romaji', ''),
-            'image': a.get('coverImage', {}).get('medium', ''),
+            'title': a.get('title', {}),
+            'coverImage': a.get('coverImage', {}),
             'year': a.get('seasonYear'),
             'format': a.get('format', ''),
+            'averageScore': a.get('averageScore'),
+            'episodes': a.get('episodes'),
         } for a in results]
-        return JsonResponse(items, safe=False)
+        return JsonResponse({'results': items}, safe=False)
     except AniListError:
-        return JsonResponse([], safe=False)
+        return JsonResponse({'results': []}, safe=False)
 
 
 def character_view(request, character_id):

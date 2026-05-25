@@ -1,0 +1,35 @@
+{% with t1=data1.title|default:"" t2=data2.title|default:"" %}
+{% with title1=t1.english|default:t1.romaji title2=t2.english|default:t2.romaji %}
+<div class="row g-4 align-items-start">
+  <div class="col-md-5">
+    <div class="compare-card">
+      <img src="{{ data1.coverImage.large|default:data1.coverImage.medium }}" style="width:140px;aspect-ratio:2/3;object-fit:cover;border-radius:12px;margin-bottom:1rem" alt="" loading="lazy">
+      <h4 class="fw-bold text-truncate" title="{{ title1 }}">{{ title1 }}</h4>
+      {% if data1.format %}<span class="badge bg-secondary bg-opacity-20">{{ data1.format }}</span>{% endif %}
+      <div class="compare-stat"><div class="label">Score</div><div class="value {% if data1.averageScore > data2.averageScore %}winner{% endif %}">{% if data1.averageScore %}★ {{ data1.averageScore|div:10|floatformat:1 }}{% else %}N/A{% endif %}</div></div>
+      <div class="compare-stat"><div class="label">Popularity</div><div class="value {% if data1.popularity > data2.popularity %}winner{% endif %}">{% if data1.popularity %}{{ data1.popularity|floatformat:0 }}{% else %}N/A{% endif %}</div>{% if data1.popularity and data2.popularity %}<div class="bar-compare mt-2"><div class="fill" style="width:{% widthratio data1.popularity data2.popularity 100 %}%"></div></div>{% endif %}</div>
+      <div class="compare-stat"><div class="label">Episodes</div><div class="value {% if data1.episodes and data1.episodes > data2.episodes|default:0 %}winner{% endif %}">{% if data1.episodes %}{{ data1.episodes }}{% else %}?{% endif %}</div></div>
+      <div class="compare-stat"><div class="label">Duration</div><div class="value">{{ data1.duration|default:"?" }} min</div></div>
+      <div class="compare-stat"><div class="label">Favourites</div><div class="value {% if data1.favourites > data2.favourites %}winner{% endif %}">{% if data1.favourites %}{{ data1.favourites }}{% else %}0{% endif %}</div></div>
+      <div class="compare-stat"><div class="label">Status</div><div class="value" style="font-size:1rem">{{ data1.status|default:"?" }}</div></div>
+      <div class="compare-stat"><div class="label">Genres</div><div class="d-flex flex-wrap gap-1 justify-content-center mt-1">{% for g in data1.genres|slice:":4" %}<span class="badge bg-secondary bg-opacity-10" style="font-size:0.7rem">{{ g }}</span>{% endfor %}</div></div>
+    </div>
+  </div>
+  <div class="col-md-2 d-flex justify-content-center compare-vs-wrap" style="padding-top:200px"><div class="compare-vs">VS</div></div>
+  <div class="col-md-5">
+    <div class="compare-card">
+      <img src="{{ data2.coverImage.large|default:data2.coverImage.medium }}" style="width:140px;aspect-ratio:2/3;object-fit:cover;border-radius:12px;margin-bottom:1rem" alt="" loading="lazy">
+      <h4 class="fw-bold text-truncate" title="{{ title2 }}">{{ title2 }}</h4>
+      {% if data2.format %}<span class="badge bg-secondary bg-opacity-20">{{ data2.format }}</span>{% endif %}
+      <div class="compare-stat"><div class="label">Score</div><div class="value {% if data2.averageScore > data1.averageScore %}winner{% endif %}">{% if data2.averageScore %}★ {{ data2.averageScore|div:10|floatformat:1 }}{% else %}N/A{% endif %}</div></div>
+      <div class="compare-stat"><div class="label">Popularity</div><div class="value {% if data2.popularity > data1.popularity %}winner{% endif %}">{% if data2.popularity %}{{ data2.popularity|floatformat:0 }}{% else %}N/A{% endif %}</div>{% if data1.popularity and data2.popularity %}<div class="bar-compare mt-2"><div class="fill" style="width:{% widthratio data2.popularity data1.popularity 100 %}%"></div></div>{% endif %}</div>
+      <div class="compare-stat"><div class="label">Episodes</div><div class="value {% if data2.episodes and data2.episodes > data1.episodes|default:0 %}winner{% endif %}">{% if data2.episodes %}{{ data2.episodes }}{% else %}?{% endif %}</div></div>
+      <div class="compare-stat"><div class="label">Duration</div><div class="value">{{ data2.duration|default:"?" }} min</div></div>
+      <div class="compare-stat"><div class="label">Favourites</div><div class="value {% if data2.favourites > data1.favourites %}winner{% endif %}">{% if data2.favourites %}{{ data2.favourites }}{% else %}0{% endif %}</div></div>
+      <div class="compare-stat"><div class="label">Status</div><div class="value" style="font-size:1rem">{{ data2.status|default:"?" }}</div></div>
+      <div class="compare-stat"><div class="label">Genres</div><div class="d-flex flex-wrap gap-1 justify-content-center mt-1">{% for g in data2.genres|slice:":4" %}<span class="badge bg-secondary bg-opacity-10" style="font-size:0.7rem">{{ g }}</span>{% endfor %}</div></div>
+    </div>
+  </div>
+</div>
+{% endwith %}
+{% endwith %}

@@ -1,28 +1,96 @@
 {% extends 'base.html' %}
 {% block title %}Edit Profile — AniPulse{% endblock %}
-
+{% block extra_css %}
+<style>
+.drop-zone{width:120px;height:120px;border-radius:50%;border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;position:relative;transition:all .2s;background:var(--surface);margin:0 auto}
+.drop-zone:hover{border-color:var(--primary);background:var(--surface-2)}
+.drop-zone.drag-over{border-color:var(--primary);background:rgba(232,54,93,0.08)}
+.drop-zone img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.drop-zone .placeholder{font-size:2rem;color:var(--text-muted)}
+.drop-zone-cover{width:100%;height:160px;border-radius:16px;border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;position:relative;transition:all .2s;background:var(--surface)}
+.drop-zone-cover:hover{border-color:var(--primary);background:var(--surface-2)}
+.drop-zone-cover.drag-over{border-color:var(--primary);background:rgba(232,54,93,0.08)}
+.drop-zone-cover img{width:100%;height:100%;object-fit:cover}
+.drop-zone-cover .placeholder{font-size:2rem;color:var(--text-muted)}
+.file-input{display:none}
+</style>
+{% endblock %}
 {% block content %}
 <div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-6">
-            <h2 class="fw-bold mb-4">Edit Profile</h2>
-            <form method="post">
-                {% csrf_token %}
-                <div class="mb-3">
-                    <label class="form-label fw-medium">Avatar URL</label>
-                    <input type="url" name="avatar" value="{{ user.avatar|default:'' }}" class="form-control form-control-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text)" placeholder="https://...">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-medium">Cover Image URL</label>
-                    <input type="url" name="cover_image" value="{{ user.cover_image|default:'' }}" class="form-control form-control-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text)" placeholder="https://...">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-medium">Bio</label>
-                    <textarea name="bio" rows="4" class="form-control" style="background:var(--surface);border:1px solid var(--border);color:var(--text)" placeholder="Tell us about yourself...">{{ user.bio|default:'' }}</textarea>
-                </div>
-                <button type="submit" class="btn btn-primary-custom px-4">Save Changes</button>
-            </form>
+  <div class="row justify-content-center">
+    <div class="col-lg-6">
+      <h2 class="fw-bold mb-4">Edit Profile</h2>
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="text-center mb-4">
+          <label class="d-block fw-medium mb-2 text-secondary" style="font-size:0.85rem">Profile Picture</label>
+          <div class="drop-zone" id="avatarDrop" onclick="document.getElementById('avatarInput').click()">
+            {% if user.avatar %}
+            <img src="{{ user.avatar }}" id="avatarPreview" alt="">
+            {% else %}
+            <div class="placeholder" id="avatarPlaceholder">📷</div>
+            {% endif %}
+          </div>
+          <input type="file" id="avatarInput" class="file-input" accept="image/*" name="avatar_file" onchange="previewFile(this, 'avatarPreview', 'avatarPlaceholder')">
+          <small class="text-secondary d-block mt-2">Click to upload or drag. Max 5MB.</small>
         </div>
+        <div class="mb-4">
+          <label class="d-block fw-medium mb-2 text-secondary" style="font-size:0.85rem">Cover Image</label>
+          <div class="drop-zone-cover" id="coverDrop" onclick="document.getElementById('coverInput').click()">
+            {% if user.cover_image %}
+            <img src="{{ user.cover_image }}" id="coverPreview" alt="">
+            {% else %}
+            <div class="placeholder" id="coverPlaceholder">🖼️</div>
+            {% endif %}
+          </div>
+          <input type="file" id="coverInput" class="file-input" accept="image/*" name="cover_file" onchange="previewFile(this, 'coverPreview', 'coverPlaceholder')">
+          <small class="text-secondary d-block mt-2">Click to upload or drag. Max 5MB.</small>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-medium">Avatar URL <small class="text-muted">(optional, overrides upload)</small></label>
+          <input type="url" name="avatar" value="{{ user.avatar|default:'' }}" class="form-input" placeholder="https://...">
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-medium">Cover Image URL <small class="text-muted">(optional, overrides upload)</small></label>
+          <input type="url" name="cover_image" value="{{ user.cover_image|default:'' }}" class="form-input" placeholder="https://...">
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-medium">Bio</label>
+          <textarea name="bio" rows="4" class="form-input" placeholder="Tell us about yourself...">{{ user.bio|default:'' }}</textarea>
+        </div>
+        <button type="submit" class="btn btn-primary-custom px-4">Save Changes</button>
+      </form>
     </div>
+  </div>
 </div>
+<script>
+function previewFile(input, previewId, placeholderId) {
+  const preview = document.getElementById(previewId);
+  const placeholder = document.getElementById(placeholderId);
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { alert('File too large. Max 5MB.'); input.value = ''; return; }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    if (!preview) {
+      const img = document.createElement('img');
+      img.id = previewId;
+      img.src = e.target.result;
+      placeholder.parentNode.replaceChild(img, placeholder);
+    } else {
+      preview.src = e.target.result;
+    }
+  };
+  reader.readAsDataURL(file);
+}
+document.querySelectorAll('.drop-zone, .drop-zone-cover').forEach(zone => {
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('drag-over');
+    const input = zone.querySelector('img') ? zone.id === 'avatarDrop' ? document.getElementById('avatarInput') : document.getElementById('coverInput') : zone.id === 'avatarDrop' ? document.getElementById('avatarInput') : document.getElementById('coverInput');
+    if (e.dataTransfer.files.length) { input.files = e.dataTransfer.files; previewFile(input, input.id === 'avatarInput' ? 'avatarPreview' : 'coverPreview', input.id === 'avatarInput' ? 'avatarPlaceholder' : 'coverPlaceholder'); }
+  });
+});
+</script>
 {% endblock %}

@@ -1,15 +1,99 @@
 {% extends 'base.html' %}
 {% block title %}Create Battle — AniPulse{% endblock %}
+{% block extra_css %}
+<style>
+.anime-search-card{display:flex;align-items:center;gap:10px;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .2s}
+.anime-search-card:hover{border-color:var(--primary);background:var(--surface-2)}
+.anime-search-card img{width:40px;height:56px;object-fit:cover;border-radius:6px;flex-shrink:0}
+.anime-search-card.selected{border-color:var(--primary);background:rgba(232,54,93,0.08)}
+.search-dropdown{position:absolute;top:100%;left:0;right:0;z-index:50;background:var(--bg-2);border:1px solid var(--border);border-radius:12px;max-height:300px;overflow-y:auto;display:none;margin-top:4px;box-shadow:0 8px 32px rgba(0,0,0,0.3)}
+.search-dropdown.open{display:block}
+.picked-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:10px;background:rgba(232,54,93,0.1);border:1px solid rgba(232,54,93,0.2);font-size:0.85rem;font-weight:500}
+.search-box{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);width:100%;outline:none;transition:border-color .2s}
+.search-box:focus{border-color:var(--primary)}
+</style>
+{% endblock %}
 {% block content %}
-<div class="container py-5" style="max-width:560px">
+<div class="container py-5" style="max-width:680px">
   <h3 class="fw-bold mb-2">⚔️ Create a Battle</h3>
-  <p class="text-secondary small mb-4">Pit two anime against each other and let the community decide!</p>
-  <form method="post">
+  <p class="text-secondary small mb-4">Search and select two anime to pit against each other.</p>
+  <form method="post" id="battleForm">
     {% csrf_token %}
-    <div class="mb-3"><label class="form-label fw-medium">Anime 1</label><input type="text" name="anime1" class="form-control form-control-custom" placeholder="Search title..." required></div>
-    <div class="mb-3"><label class="form-label fw-medium">Anime 2</label><input type="text" name="anime2" class="form-control form-control-custom" placeholder="Search title..." required></div>
-    <div class="mb-3"><label class="form-label fw-medium">Category</label><select name="category" class="form-select form-control-custom"><option value="versus">Versus</option><option value="villain">Best Villain</option><option value="opening">Best Opening</option></select></div>
-    <button type="submit" class="btn btn-primary-custom w-100 py-2" style="border-radius:12px">Create Battle</button>
+    <div class="row g-4 mb-4">
+      <div class="col-md-6">
+        <label class="form-label fw-medium mb-2">Anime #1</label>
+        <div style="position:relative">
+          <input type="text" class="search-box" id="search1" placeholder="Search anime..." autocomplete="off" data-hidden="anime1_id" data-pick="pick1" data-results="res1">
+          <div class="search-dropdown" id="res1"></div>
+        </div>
+        <div id="pick1" class="mt-2"></div>
+        <input type="hidden" name="anime1" id="anime1_id">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label fw-medium mb-2">Anime #2</label>
+        <div style="position:relative">
+          <input type="text" class="search-box" id="search2" placeholder="Search anime..." autocomplete="off" data-hidden="anime2_id" data-pick="pick2" data-results="res2">
+          <div class="search-dropdown" id="res2"></div>
+        </div>
+        <div id="pick2" class="mt-2"></div>
+        <input type="hidden" name="anime2" id="anime2_id">
+      </div>
+    </div>
+    <div class="mb-4">
+      <label class="form-label fw-medium mb-2">Category</label>
+      <select name="category" class="form-select search-box">
+        <option value="versus">Versus</option>
+        <option value="villain">Best Villain</option>
+        <option value="opening">Best Opening</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary-custom w-100 py-2" style="border-radius:12px" id="submitBtn" disabled>Create Battle</button>
   </form>
 </div>
+
+<script>
+let timers={};
+function initSearch(inputId) {
+  const input = document.getElementById(inputId);
+  input.addEventListener('input', function() {
+    const val = this.value.trim();
+    const res = document.getElementById(this.dataset.results);
+    if (val.length < 2) { res.classList.remove('open'); return; }
+    clearTimeout(timers[inputId]);
+    timers[inputId] = setTimeout(() => {
+      fetch('/search/json/?q=' + encodeURIComponent(val) + '&limit=5')
+        .then(r => r.json())
+        .then(d => {
+          const items = d.results || [];
+          res.innerHTML = items.map(a =>
+            '<div class="anime-search-card" onclick="pickBattle(' + a.id + ',\'' + input.dataset.pick + '\',\'' + input.id + '\',\'' + input.dataset.hidden + '\')">' +
+            '<img src="' + (a.coverImage?.medium || '') + '" alt="" loading="lazy">' +
+            '<div><div style="font-size:0.85rem;font-weight:500">' + (a.title?.english || a.title?.romaji || '') + '</div>' +
+            (a.format ? '<span class="text-secondary" style="font-size:0.7rem">' + a.format + '</span>' : '') +
+            '</div></div>'
+          ).join('');
+          res.classList.toggle('open', items.length > 0);
+        });
+    }, 300);
+  });
+  input.addEventListener('blur', function() { setTimeout(() => document.getElementById(this.dataset.results)?.classList.remove('open'), 200); });
+}
+function pickBattle(id, pickId, inputId, hiddenId) {
+  const pick = document.getElementById(pickId);
+  const hidden = document.getElementById(hiddenId);
+  const input = document.getElementById(inputId);
+  document.getElementById(input.dataset.results).classList.remove('open');
+  hidden.value = id;
+  fetch('/anime/' + id + '/?partial=1')
+    .then(r => r.json())
+    .then(d => {
+      input.value = d.title?.english || d.title?.romaji || '';
+      pick.innerHTML = '<span class="picked-badge">&#9989; ' + (d.title?.english || d.title?.romaji || 'Selected') + '</span>';
+      document.getElementById('submitBtn').disabled = !document.getElementById('anime1_id').value || !document.getElementById('anime2_id').value;
+    })
+    .catch(() => { input.value = ''; });
+}
+initSearch('search1');
+initSearch('search2');
+</script>
 {% endblock %}

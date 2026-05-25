@@ -1,5 +1,6 @@
 import pytest
-from apps.anime.models import Anime, Genre, Studio, Tag, Battle, BattleVote, TierList, TierListItem, Streak, Review
+from apps.core.models import Streak
+from apps.anime.models import Anime, Genre, Studio, Tag, Battle, BattleVote, TierList, TierListItem, Review
 
 
 pytestmark = pytest.mark.django_db

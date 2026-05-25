@@ -6,8 +6,7 @@ import logging
 
 from django.db.models import Sum
 
-from apps.anime.models import Streak, Notification
-from apps.core.models import UserProfile, UserBadge
+from apps.core.models import UserProfile, UserBadge, Streak, Notification
 from apps.watchlist.models import WatchlistEntry
 
 logger = logging.getLogger(__name__)
@@ -106,20 +105,27 @@ class GamificationEngine:
     def award_xp(self, user, action):
         """Award XP for an action and check for level-ups."""
         amount = XP_RATES.get(action, 0)
-        if not amount:
+        if not amount or not user:
             return
 
         profile, _ = UserProfile.objects.get_or_create(user=user)
+        if profile.total_xp is None:
+            profile.total_xp = 0
         old_level = level_for_xp(profile.total_xp)[0]
-        profile.total_xp = (profile.total_xp or 0) + amount
+        profile.total_xp += amount
         profile.save(update_fields=['total_xp'])
 
         new_level = level_for_xp(profile.total_xp)[0]
         if new_level > old_level:
-            self._on_level_up(user, new_level, profile)
+            try:
+                self._on_level_up(user, new_level, profile)
+            except Exception as e:
+                logger.error(f"Level-up notif failed for {user.id}: {e}")
 
-        # Check badges that may have been unlocked
-        self.check_badges(user)
+        try:
+            self.check_badges(user)
+        except Exception as e:
+            logger.error(f"Badge check failed for {user.id}: {e}")
 
     def check_badges(self, user):
         """Evaluate and award any newly earned badges."""

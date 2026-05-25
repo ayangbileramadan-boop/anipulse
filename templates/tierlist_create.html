@@ -1,9 +1,109 @@
 {% extends 'base.html' %}
 {% block title %}Create Tier List — AniPulse{% endblock %}
+{% block extra_css %}
+<style>
+.search-box{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);width:100%;outline:none;transition:border-color .2s}
+.search-box:focus{border-color:var(--primary)}
+.search-card{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all .2s}
+.search-card:hover{border-color:var(--primary);background:var(--surface-2)}
+.search-card img{width:32px;height:44px;object-fit:cover;border-radius:4px;flex-shrink:0}
+.search-dropdown{position:absolute;top:100%;left:0;right:0;z-index:50;background:var(--bg-2);border:1px solid var(--border);border-radius:10px;max-height:260px;overflow-y:auto;display:none;margin-top:4px;box-shadow:0 8px 32px rgba(0,0,0,0.3)}
+.search-dropdown.open{display:block}
+.tier-row{display:flex;align-items:stretch;margin-bottom:6px;border-radius:10px;overflow:hidden;border:1px solid var(--border);min-height:72px}
+.tier-label{width:60px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.2rem;flex-shrink:0;color:#fff}
+.tier-items{flex:1;display:flex;flex-wrap:wrap;gap:6px;padding:8px;min-height:56px;background:var(--surface);transition:background .2s}
+.tier-items.dragover{background:var(--surface-2)}
+.tier-item{width:52px;height:72px;border-radius:6px;overflow:hidden;cursor:grab;border:2px solid transparent;position:relative;transition:transform .15s,box-shadow .15s}
+.tier-item:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.3)}
+.tier-item img{width:100%;height:100%;object-fit:cover}
+.tier-item .remove{position:absolute;top:-4px;right:-4px;width:18px;height:18px;border-radius:50%;background:var(--error);color:#fff;border:none;font-size:0.6rem;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity .2s}
+.tier-item:hover .remove{opacity:1}
+.tier-item.sortable-chosen{transform:scale(1.08);box-shadow:0 8px 24px rgba(0,0,0,0.4);z-index:100}
+.search-pool{display:flex;flex-wrap:wrap;gap:6px;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;min-height:80px}
+@media(max-width:576px){
+  .tier-label{width:44px;font-size:0.9rem}
+  .tier-item{width:44px;height:60px}
+}
+</style>
+{% endblock %}
 {% block content %}
-<div class="container py-5" style="max-width:480px">
-  <h3 class="fw-bold mb-2">🏆 Create Tier List</h3>
-  <p class="text-secondary small mb-4">Name your list and start ranking anime!</p>
-  <form method="post"><div class="mb-3"><label class="form-label fw-medium">Title</label><input type="text" name="title" class="form-control form-control-custom" placeholder="Best Anime Ever..." required></div>{% csrf_token %}<button type="submit" class="btn btn-primary-custom w-100 py-2" style="border-radius:12px">Create</button></form>
+<div class="container py-4">
+  <h3 class="fw-bold mb-1">🏆 Create Tier List</h3>
+  <p class="text-secondary small mb-3">Search anime and drag them into tiers.</p>
+  <form method="post" id="tierForm">
+    {% csrf_token %}
+    <div class="mb-3">
+      <input type="text" name="title" class="search-box" placeholder="Name your tier list..." required>
+    </div>
+
+    <div class="mb-3">
+      <label class="fw-medium mb-2 text-secondary" style="font-size:0.85rem">Search anime to add:</label>
+      <div style="position:relative">
+        <input type="text" class="search-box" id="tierSearch" placeholder="Search anime..." autocomplete="off">
+        <div class="search-dropdown" id="tierSearchRes"></div>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="fw-medium mb-2 text-secondary" style="font-size:0.85rem">Unranked pool (drag to tiers below):</label>
+      <div class="search-pool" id="pool"></div>
+    </div>
+
+    {% for tier in "SABCDEF"|make_list %}
+    <div class="tier-row" data-tier="{{ tier }}">
+      <div class="tier-label" style="background:{% cycle '#FF7F7F' '#FFBF7F' '#FFDF7F' '#BFFF7F' '#7FBFFF' '#BF7FFF' '#FF7FBF' %}">{{ tier }}</div>
+      <div class="tier-items" data-tier="{{ tier }}"></div>
+    </div>
+    {% endfor %}
+
+    <input type="hidden" name="tier_data" id="tierData">
+    <button type="submit" class="btn btn-primary-custom w-100 py-2 mt-3" style="border-radius:12px" id="submitTier">Save Tier List</button>
+  </form>
 </div>
+
+<script>
+const animePool = {};
+const tiers = {S:[],A:[],B:[],C:[],D:[],E:[],F:[]};
+let searchTimer;
+
+document.getElementById('tierSearch').addEventListener('input', function() {
+  const val = this.value.trim();
+  const res = document.getElementById('tierSearchRes');
+  if (val.length < 2) { res.classList.remove('open'); return; }
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    fetch('/search/json/?q=' + encodeURIComponent(val) + '&limit=8')
+      .then(r => r.json())
+      .then(d => {
+        const items = d.results || [];
+        res.innerHTML = items.filter(a => !animePool[a.id]).map(a =>
+          '<div class="search-card" onclick="addToPool(' + a.id + ',\'' + (a.title?.english || a.title?.romaji || '').replace(/'/g,"\\'") + '\',\'' + (a.coverImage?.medium || '') + '\')">' +
+          '<img src="' + (a.coverImage?.medium || '') + '" alt="" loading="lazy">' +
+          '<div style="font-size:0.85rem">' + (a.title?.english || a.title?.romaji || '') + '</div></div>'
+        ).join('');
+        res.classList.toggle('open', items.some(a => !animePool[a.id]));
+      });
+  }, 300);
+});
+document.getElementById('tierSearch').addEventListener('blur', function() {
+  setTimeout(() => document.getElementById('tierSearchRes')?.classList.remove('open'), 200);
+});
+
+function addToPool(id, title, image) {
+  if (animePool[id]) return;
+  animePool[id] = {id, title, image, tier:''};
+  renderPool();
+  document.getElementById('tierSearch').value = '';
+  document.getElementById('tierSearchRes').classList.remove('open');
+}
+
+function renderPool() {
+  const pool = document.getElementById('pool');
+  pool.innerHTML = Object.values(animePool).filter(a => !a.tier).map(a =>
+    '<div class="tier-item" data-id="' + a.id + '" draggable="true">' +
+    '<img src="' + a.image + '" alt="" title="' + a.title + '">' +
+    '</div>'
+  ).join('');
+}
+</script>
 {% endblock %}

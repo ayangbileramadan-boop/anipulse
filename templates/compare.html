@@ -1,160 +1,122 @@
 {% extends 'base.html' %}
 {% load core_extras %}
 {% block title %}Compare Anime — AniPulse{% endblock %}
-
 {% block extra_css %}
 <style>
-    .compare-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:2rem; text-align:center; transition:all 0.3s }
-    .compare-card:hover { border-color:rgba(232,54,93,0.3) }
-    .compare-stat { padding:1rem 0; border-bottom:1px solid var(--border) }
-    .compare-stat:last-child { border-bottom:none }
-    .compare-stat .label { color:var(--text-secondary); font-size:0.8rem; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem }
-    .compare-stat .value { font-size:1.5rem; font-weight:700 }
-    .compare-stat .value.winner { color:var(--primary) }
-    .compare-vs { display:flex; align-items:center; justify-content:center; font-size:2rem; font-weight:800; color:var(--primary); background:var(--surface); border-radius:50%; width:60px; height:60px; border:2px solid var(--primary); position:relative; z-index:2 }
-    .compare-input { background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:12px 16px; color:var(--text); width:100%; outline:none }
-    .compare-input:focus { border-color:var(--primary); }
-    .bar-compare { height:8px; border-radius:4px; background:var(--surface-2); overflow:hidden }
-    .bar-compare .fill { height:100%; border-radius:4px; background:var(--primary) }
-    @media (max-width:768px) {
-        .compare-vs-wrap { padding-top:0 !important; padding-bottom:1rem }
-        .compare-card { padding:1.25rem }
-        .compare-stat .value { font-size:1.2rem }
-    }
+.compare-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2rem;text-align:center;transition:all 0.3s}
+.compare-card:hover{border-color:rgba(232,54,93,0.3)}
+.compare-stat{padding:1rem 0;border-bottom:1px solid var(--border)}
+.compare-stat:last-child{border-bottom:none}
+.compare-stat .label{color:var(--text-secondary);font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem}
+.compare-stat .value{font-size:1.5rem;font-weight:700}
+.compare-stat .value.winner{color:var(--primary)}
+.compare-vs{display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800;color:var(--primary);background:var(--surface);border-radius:50%;width:60px;height:60px;border:2px solid var(--primary);position:relative;z-index:2}
+.bar-compare{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+.bar-compare .fill{height:100%;border-radius:4px;background:var(--primary)}
+.search-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all 0.2s}
+.search-card:hover{border-color:var(--primary);background:var(--surface-2)}
+.search-card img{width:48px;height:68px;object-fit:cover;border-radius:8px;flex-shrink:0}
+.search-card.selected{border-color:var(--primary);background:rgba(232,54,93,0.08)}
+.search-results{position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--bg-2);border:1px solid var(--border);border-radius:12px;max-height:320px;overflow-y:auto;display:none;margin-top:4px;box-shadow:0 8px 32px rgba(0,0,0,0.3)}
+.search-results.open{display:block}
+.search-input{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;color:var(--text);width:100%;outline:none;transition:border-color 0.2s}
+.search-input:focus{border-color:var(--primary)}
+.picked-cover{width:100px;height:140px;object-fit:cover;border-radius:12px;margin:0 auto 12px;display:block}
+@media(max-width:768px){
+  .compare-card{padding:1.25rem}
+  .compare-stat .value{font-size:1.2rem}
+  .compare-vs-wrap{padding-top:0!important;padding-bottom:1rem}
+}
 </style>
 {% endblock %}
-
 {% block content %}
 <div class="container py-5">
-    <h2 class="fw-bold mb-4 text-center">Compare Anime</h2>
-    <p class="text-secondary text-center mb-5">Enter two AniList IDs to compare side-by-side</p>
+  <h2 class="fw-bold mb-4 text-center">Compare Anime</h2>
+  <p class="text-secondary text-center mb-4">Search for two anime to compare side-by-side</p>
 
-    <form method="get" class="row g-3 justify-content-center mb-5">
-        <div class="col-md-4">
-            <input type="number" name="id1" value="{{ id1 }}" placeholder="AniList ID #1" class="compare-input" required>
-        </div>
-        <div class="col-md-4">
-            <input type="number" name="id2" value="{{ id2 }}" placeholder="AniList ID #2" class="compare-input" required>
-        </div>
-        <div class="col-auto">
-            <button type="submit" class="btn btn-primary-custom px-4 py-2">Compare</button>
-        </div>
-    </form>
-
-    {% if data1 and data2 %}
-    {% with t1=data1.title|default:"" t2=data2.title|default:"" %}
-    {% with title1=t1.english|default:t1.romaji title2=t2.english|default:t2.romaji %}
-    <div class="row g-4 align-items-start">
-        <div class="col-md-5">
-            <div class="compare-card">
-                <img src="{{ data1.coverImage.large|default:data1.coverImage.medium }}" style="width:140px;aspect-ratio:2/3;object-fit:cover;border-radius:12px;margin-bottom:1rem" alt="" loading="lazy">
-                <h4 class="fw-bold text-truncate" title="{{ title1 }}">{{ title1 }}</h4>
-                {% if data1.format %}<span class="badge bg-secondary bg-opacity-20">{{ data1.format }}</span>{% endif %}
-
-                <div class="compare-stat">
-                    <div class="label">Score</div>
-                    <div class="value {% if data1.averageScore > data2.averageScore %}winner{% endif %}">
-                        {% if data1.averageScore %}★ {{ data1.averageScore|div:10|floatformat:1 }}{% else %}N/A{% endif %}
-                    </div>
-                </div>
-                <div class="compare-stat">
-                    <div class="label">Popularity</div>
-                    <div class="value {% if data1.popularity > data2.popularity %}winner{% endif %}">
-                        {% if data1.popularity %}{{ data1.popularity|floatformat:0 }}{% else %}N/A{% endif %}
-                    </div>
-                    {% if data1.popularity and data2.popularity %}
-                    <div class="bar-compare mt-2"><div class="fill" style="width:{% widthratio data1.popularity data2.popularity 100 %}%"></div></div>
-                    {% endif %}
-                </div>
-                <div class="compare-stat">
-                    <div class="label">Episodes</div>
-                    <div class="value {% if data1.episodes and data1.episodes > data2.episodes|default:0 %}winner{% endif %}">
-                        {% if data1.episodes %}{{ data1.episodes }}{% else %}?{% endif %}
-                    </div>
-                </div>
-                <div class="compare-stat">
-                    <div class="label">Duration</div>
-                    <div class="value">{{ data1.duration|default:"?" }} min</div>
-                </div>
-                <div class="compare-stat">
-                    <div class="label">Favourites</div>
-                    <div class="value {% if data1.favourites > data2.favourites %}winner{% endif %}">
-                        {% if data1.favourites %}{{ data1.favourites }}{% else %}0{% endif %}
-                    </div>
-                </div>
-                <div class="compare-stat">
-                    <div class="label">Status</div>
-                    <div class="value" style="font-size:1rem">{{ data1.status|default:"?" }}</div>
-                </div>
-                <div class="compare-stat">
-                    <div class="label">Genres</div>
-                    <div class="d-flex flex-wrap gap-1 justify-content-center mt-1">
-                        {% for g in data1.genres|slice:":4" %}
-                        <span class="badge bg-secondary bg-opacity-10" style="font-size:0.7rem">{{ g }}</span>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-2 d-flex justify-content-center compare-vs-wrap" style="padding-top:200px">
-            <div class="compare-vs">VS</div>
-        </div>
-
-        <div class="col-md-5">
-            <div class="compare-card">
-                <img src="{{ data2.coverImage.large|default:data2.coverImage.medium }}" style="width:140px;aspect-ratio:2/3;object-fit:cover;border-radius:12px;margin-bottom:1rem" alt="" loading="lazy">
-                <h4 class="fw-bold text-truncate" title="{{ title2 }}">{{ title2 }}</h4>
-                {% if data2.format %}<span class="badge bg-secondary bg-opacity-20">{{ data2.format }}</span>{% endif %}
-
-                <div class="compare-stat">
-                    <div class="label">Score</div>
-                    <div class="value {% if data2.averageScore > data1.averageScore %}winner{% endif %}">
-                        {% if data2.averageScore %}★ {{ data2.averageScore|div:10|floatformat:1 }}{% else %}N/A{% endif %}
-                    </div>
-                </div>
-                <div class="compare-stat">
-                    <div class="label">Popularity</div>
-                    <div class="value {% if data2.popularity > data1.popularity %}winner{% endif %}">
-                        {% if data2.popularity %}{{ data2.popularity|floatformat:0 }}{% else %}N/A{% endif %}
-                    </div>
-                    {% if data1.popularity and data2.popularity %}
-                    <div class="bar-compare mt-2"><div class="fill" style="width:{% widthratio data2.popularity data1.popularity 100 %}%"></div></div>
-                    {% endif %}
-                </div>
-                <div class="compare-stat">
-                    <div class="label">Episodes</div>
-                    <div class="value {% if data2.episodes and data2.episodes > data1.episodes|default:0 %}winner{% endif %}">
-                        {% if data2.episodes %}{{ data2.episodes }}{% else %}?{% endif %}
-                    </div>
-                </div>
-                <div class="compare-stat">
-                    <div class="label">Duration</div>
-                    <div class="value">{{ data2.duration|default:"?" }} min</div>
-                </div>
-                <div class="compare-stat">
-                    <div class="label">Favourites</div>
-                    <div class="value {% if data2.favourites > data1.favourites %}winner{% endif %}">
-                        {% if data2.favourites %}{{ data2.favourites }}{% else %}0{% endif %}
-                    </div>
-                </div>
-                <div class="compare-stat">
-                    <div class="label">Status</div>
-                    <div class="value" style="font-size:1rem">{{ data2.status|default:"?" }}</div>
-                </div>
-                <div class="compare-stat">
-                    <div class="label">Genres</div>
-                    <div class="d-flex flex-wrap gap-1 justify-content-center mt-1">
-                        {% for g in data2.genres|slice:":4" %}
-                        <span class="badge bg-secondary bg-opacity-10" style="font-size:0.7rem">{{ g }}</span>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
+  <div class="row g-4 mb-5">
+    <div class="col-md-5">
+      <div style="position:relative">
+        <input type="text" class="search-input" id="search1" placeholder="Search anime #1..." autocomplete="off" data-target="result1" data-pick="pick1">
+        <div class="search-results" id="result1"></div>
+      </div>
+      <div id="pick1" class="text-center mt-3"></div>
     </div>
-    {% endwith %}
-    {% endwith %}
+    <div class="col-md-2 d-flex align-items-center justify-content-center">
+      <div class="compare-vs">VS</div>
+    </div>
+    <div class="col-md-5">
+      <div style="position:relative">
+        <input type="text" class="search-input" id="search2" placeholder="Search anime #2..." autocomplete="off" data-target="result2" data-pick="pick2">
+        <div class="search-results" id="result2"></div>
+      </div>
+      <div id="pick2" class="text-center mt-3"></div>
+    </div>
+  </div>
+
+  <div id="compareResults">
+    {% if data1 and data2 %}
+    {% include "compare_partial.html" %}
     {% endif %}
+  </div>
 </div>
+
+<script>
+let searchTimers = {};
+function doSearch(input) {
+  const val = input.value.trim();
+  const target = document.getElementById(input.dataset.target);
+  if (val.length < 2) { target.classList.remove('open'); return; }
+  clearTimeout(searchTimers[input.id]);
+  searchTimers[input.id] = setTimeout(() => {
+    fetch('/search/json/?q=' + encodeURIComponent(val) + '&limit=6')
+      .then(r => r.json())
+      .then(data => {
+        const results = data.results || data.anime || [];
+        target.innerHTML = results.map(a =>
+          '<div class="search-card" onclick="pickAnime(' + a.id + ', \'' + input.dataset.pick + '\', \'' + input.id + '\')">' +
+          '<img src="' + (a.coverImage?.large || a.coverImage?.medium || '') + '" alt="" loading="lazy">' +
+          '<div><div class="fw-medium" style="font-size:0.85rem">' + (a.title?.english || a.title?.romaji || a.title || '') + '</div>' +
+          (a.format ? '<span class="text-secondary" style="font-size:0.7rem">' + a.format + (a.averageScore ? ' · ★' + (a.averageScore/10).toFixed(1) : '') + '</span>' : '') +
+          '</div></div>'
+        ).join('');
+        target.classList.toggle('open', results.length > 0);
+      });
+  }, 300);
+}
+function pickAnime(id, pickId, inputId) {
+  const input = document.getElementById(inputId);
+  const pick = document.getElementById(pickId);
+  document.querySelectorAll('.search-results.open').forEach(r => r.classList.remove('open'));
+  input.value = 'Loading...';
+  fetch('/anime/' + id + '/?partial=1')
+    .then(r => r.json())
+    .then(d => {
+      if (d.error) { input.value = ''; return; }
+      input.value = d.title?.english || d.title?.romaji || '';
+      document.getElementById(input.dataset.target).classList.remove('open');
+      pick.innerHTML = d.coverImage?.large
+        ? '<img src="' + (d.coverImage.large || d.coverImage.medium) + '" class="picked-cover" alt="">' +
+          '<div class="fw-bold">' + (d.title?.english || d.title?.romaji) + '</div>'
+        : '<div class="text-secondary">Selected: ID ' + id + '</div>';
+      pick.dataset.id = id;
+      if (document.getElementById('pick1').dataset.id && document.getElementById('pick2').dataset.id) {
+        loadCompare(document.getElementById('pick1').dataset.id, document.getElementById('pick2').dataset.id);
+      }
+    })
+    .catch(() => { input.value = ''; });
+}
+function loadCompare(id1, id2) {
+  const results = document.getElementById('compareResults');
+  results.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><div class="text-secondary mt-2">Comparing...</div></div>';
+  fetch('/compare/?id1=' + id1 + '&id2=' + id2 + '&partial=1')
+    .then(r => r.text())
+    .then(html => { results.innerHTML = html; })
+    .catch(() => { results.innerHTML = '<div class="text-center text-danger py-5">Failed to load comparison.</div>'; });
+}
+document.querySelectorAll('.search-input').forEach(inp => {
+  inp.addEventListener('input', function() { doSearch(this); });
+  inp.addEventListener('blur', function() { setTimeout(() => document.getElementById(this.dataset.target)?.classList.remove('open'), 200); });
+});
+</script>
 {% endblock %}

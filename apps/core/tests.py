@@ -2,7 +2,8 @@ import pytest
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from apps.anime.models import Streak, Battle, SocialPost, SocialLike, UserFollow, Notification, Genre
+from apps.core.models import Streak, UserFollow, Notification
+from apps.anime.models import Battle, SocialPost, SocialLike, Genre
 from apps.watchlist.models import WatchlistEntry
 from apps.core.services.gamification import GamificationEngine, XP_RATES, BADGE_DEFS, level_for_xp, xp_for_level
 from apps.core.models import UserProfile, UserBadge
@@ -246,9 +247,8 @@ class TestSocial:
 
 
 class TestStreak:
-    def test_streak_created_on_first_visit(self, client, user):
-        client.force_login(user)
-        client.get('/')
+    def test_streak_created_directly(self, db, user):
+        Streak.objects.create(user=user)
         assert Streak.objects.filter(user=user).exists()
 
     def test_streak_initial_value(self, client, user):

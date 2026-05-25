@@ -1,5 +1,6 @@
 from django.utils import timezone
-from apps.anime.models import Streak, UserActivity
+from apps.core.models import Streak
+from apps.anime.models import UserActivity
 from apps.core.services.gamification import GamificationEngine
 
 

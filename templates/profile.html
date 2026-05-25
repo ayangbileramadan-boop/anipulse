@@ -1,30 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}{{ profile_user.username }} — AniPulse{% endblock %}
 
-{% block extra_css %}
-<style>
-.profile-cover{height:200px;background-size:cover;background-position:center;position:relative;border-radius:0 0 20px 20px;overflow:hidden}
-.profile-cover::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,var(--bg),transparent)}
-.profile-avatar{width:100px;height:100px;border-radius:50%;border:4px solid var(--bg);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:2.5rem;font-weight:700;position:relative;z-index:2;margin-top:-50px}
-.profile-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.2rem;text-align:center}
-.stat-card .num{font-size:1.5rem;font-weight:700}
-.badge-sm{padding:6px 14px;border-radius:8px;background:var(--surface);border:1px solid var(--border);font-size:0.8rem;white-space:nowrap}
-.badge-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;background:var(--surface);border:1px solid var(--border);transition:all 0.2s}
-.badge-icon:hover{transform:scale(1.12);border-color:var(--primary)}
-.xp-bar{height:8px;background:var(--border);border-radius:4px;overflow:hidden}
-.xp-bar .fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--primary),#A259FF);transition:width 0.5s}
-@media (max-width:767px){
-  .profile-cover{height:130px}
-  .profile-avatar{width:72px;height:72px;font-size:1.6rem;margin-top:-36px}
-  .profile-avatar+.flex-grow-1 h2{font-size:1.2rem}
-  .stat-card{padding:0.8rem}
-  .stat-card .num{font-size:1.15rem}
-  .stat-card .lbl{font-size:0.7rem}
-  .badge-sm{padding:4px 10px;font-size:0.75rem}
-}
-</style>
-{% endblock %}
+{% block extra_css %}{% endblock %}
 
 {% block content %}
 {% if profile_user.cover_image %}
