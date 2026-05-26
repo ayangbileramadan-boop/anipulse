@@ -5,7 +5,7 @@
 
 {% block content %}
 {% if profile_user.cover_image %}
-<div class="profile-cover" style="background-image:url('{{ profile_user.cover_image }}')"></div>
+<div class="profile-cover" style="background-image:url('{{ profile_user.cover_image|surrogatefree }}')"></div>
 {% endif %}
 
 <div class="container py-4">
@@ -14,7 +14,7 @@
       <div class="d-flex align-items-end gap-3 mb-4">
         <div class="profile-avatar">
           {% if profile_user.avatar %}
-          <img src="{{ profile_user.avatar }}" alt="" loading="lazy">
+          <img src="{{ profile_user.avatar|surrogatefree }}" alt="" loading="lazy">
           {% else %}
           {{ profile_user.username|first|upper }}
           {% endif %}
@@ -108,7 +108,7 @@
       <h5 class="fw-bold mb-3">Recent Reviews</h5>
       {% for review in reviews|slice:":5" %}
       <div class="p-3 rounded-3 mb-2" style="background:var(--surface);border:1px solid var(--border)">
-        <a href="{% url 'anime_detail' review.anime.anilist_id %}" class="text-decoration-none fw-medium text-truncate d-inline-block" style="max-width:80%;vertical-align:middle">{{ review.anime.display_title }}</a>
+        <a href="{% url 'anime_detail' review.anime.anilist_id %}" class="text-decoration-none fw-medium text-truncate d-inline-block" style="max-width:80%;vertical-align:middle">{{ review.anime.display_title|surrogatefree }}</a>
         <span class="text-warning small ms-2">★ {{ review.rating }}/10</span>
         <div class="text-secondary small">{{ review.body|surrogatefree|truncatechars:120 }}</div>
       </div>

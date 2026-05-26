@@ -493,7 +493,7 @@
                 <span class="fw-bold text-danger small text-uppercase" style="letter-spacing:0.5px">Your Review</span>
                 <span class="text-warning fw-bold">★ {{ user_review.rating }}/10</span>
             </div>
-            {% if user_review.title %}<div class="fw-semibold mb-1">{{ user_review.title }}</div>{% endif %}
+            {% if user_review.title %}<div class="fw-semibold mb-1">{{ user_review.title|surrogatefree }}</div>{% endif %}
             <div style="color:var(--text-secondary);font-size:0.9rem;line-height:1.7">{{ user_review.body|surrogatefree|truncatechars:200 }}</div>
             <div style="color:var(--text-muted);font-size:0.75rem" class="mt-2">{{ user_review.created_at|timesince }} ago</div>
         </div>
@@ -518,7 +518,7 @@
                     </a>
                 </div>
             </div>
-            {% if review.title %}<div class="fw-semibold mb-1">{{ review.title }}</div>{% endif %}
+            {% if review.title %}<div class="fw-semibold mb-1">{{ review.title|surrogatefree }}</div>{% endif %}
             <div style="color:var(--text-secondary);font-size:0.9rem;line-height:1.7">{{ review.body|surrogatefree|truncatechars:300 }}</div>
         </div>
         {% endfor %}

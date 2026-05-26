@@ -1,18 +1,13 @@
 import datetime
-import re
 
 from django.utils import timezone
 
-_low = chr(0xD800)
-_high = chr(0xDFFF)
-_SURROGATE_RE = re.compile(f'[{_low}-{_high}]')
-
 
 def surrogatefree(value):
-    """Strip lone surrogate characters from a string."""
+    """Strip lone surrogate characters (U+D800-U+DFFF) from a string."""
     if value is None:
         return ''
-    return _SURROGATE_RE.sub('', str(value))
+    return ''.join(c for c in str(value) if ord(c) not in range(0xD800, 0xE000))
 
 
 def parse_anilist_date(date_dict: dict) -> datetime.date | None:
