@@ -807,22 +807,22 @@ def compare_anime(request):
 
     id1 = request.GET.get('id1', '')
     id2 = request.GET.get('id2', '')
-    data1 = None
-    data2 = None
+    data1 = {}
+    data2 = {}
 
     if id1:
         try:
             result = anilist_client.get_anime_detail(int(id1))
-            data1 = result.get('Media', {})
+            data1 = result.get('Media', {}) or {}
         except (AniListError, ValueError):
-            pass
+            data1 = {}
 
     if id2:
         try:
             result = anilist_client.get_anime_detail(int(id2))
-            data2 = result.get('Media', {})
+            data2 = result.get('Media', {}) or {}
         except (AniListError, ValueError):
-            pass
+            data2 = {}
 
     if request.GET.get('partial') == '1':
         return render(request, 'compare_partial.html', {

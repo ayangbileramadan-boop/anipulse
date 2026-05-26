@@ -419,6 +419,9 @@ window.AniPulseChat = {
     document.getElementById('chatMsgs').appendChild(div);
     div.scrollIntoView({behavior:'smooth'});
   },
+  _getPanelRect() {
+    return document.getElementById('chatPanel').getBoundingClientRect();
+  },
   _restorePosition() {
     try {
       const saved = JSON.parse(localStorage.getItem('anipulse-chat-pos'));
@@ -435,9 +438,10 @@ window.AniPulseChat = {
     const panel = document.getElementById('chatPanel');
     if (!head || !panel) return;
     const onStart = function(e) {
+      const rect = this._getPanelRect();
       const touch = e.touches ? e.touches[0] : e;
-      this.startX = touch.clientX - (parseInt(panel.style.left) || panel.offsetLeft);
-      this.startY = touch.clientY - (parseInt(panel.style.top) || panel.offsetTop);
+      this.startX = touch.clientX - rect.left;
+      this.startY = touch.clientY - rect.top;
       const onMove = function(e) {
         if (window.innerWidth <= 480) return;
         const t = e.touches ? e.touches[0] : e;
@@ -451,10 +455,8 @@ window.AniPulseChat = {
         panel.style.bottom = 'auto';
       }.bind(this);
       const onEnd = function() {
-        localStorage.setItem('anipulse-chat-pos', JSON.stringify({
-          x: parseInt(panel.style.left) || panel.offsetLeft,
-          y: parseInt(panel.style.top) || panel.offsetTop
-        }));
+        const r = this._getPanelRect();
+        localStorage.setItem('anipulse-chat-pos', JSON.stringify({ x: r.left, y: r.top }));
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onEnd);
         document.removeEventListener('touchmove', onMove);
