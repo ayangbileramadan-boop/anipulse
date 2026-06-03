@@ -2,7 +2,8 @@ import time
 import logging
 from datetime import datetime, timezone
 
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import redirect, get_object_or_404
+from apps.core.utils import safe_render as render
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.conf import settings

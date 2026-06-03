@@ -10,6 +10,14 @@ def surrogatefree(value):
     return ''.join(c for c in str(value) if ord(c) not in range(0xD800, 0xE000))
 
 
+def safe_render(request, template_name, context=None, content_type=None, status=None, using=None):
+    """Like django.shortcuts.render but strips surrogates from the entire output."""
+    from django.template import loader
+    from django.http import HttpResponse
+    content = loader.render_to_string(template_name, context, request, using=using)
+    return HttpResponse(surrogatefree(content), content_type, status)
+
+
 def parse_anilist_date(date_dict: dict) -> datetime.date | None:
     """Parse AniList {year, month, day} dict into a Python date."""
     if not date_dict:
