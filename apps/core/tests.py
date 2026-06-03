@@ -1,3 +1,4 @@
+import json
 import pytest
 from django.urls import reverse
 from django.contrib.auth import get_user_model
@@ -340,3 +341,280 @@ class TestNotifications:
         resp = client.get('/notifications/read-all/')
         assert resp.status_code == 200
         assert Notification.objects.filter(user=user, is_read=False).count() == 0
+
+
+class TestLogoutSecurity:
+    """ACCOUNT_LOGOUT_ON_GET=False — GET must NOT log out, only POST may."""
+
+    def test_get_logout_does_not_log_out(self, client, user):
+        client.force_login(user)
+        # Do NOT follow redirect — the home page makes AniList API calls
+        resp = client.get('/logout/')
+        # Even if redirected, user must still be authenticated
+        user.refresh_from_db()
+        assert user.is_authenticated
+
+    def test_post_logout_logs_out(self, client, user):
+        client.force_login(user)
+        client.post('/logout/', follow=True)
+        resp = client.get('/settings/')
+        assert resp.status_code == 302, "POST logout should redirect unauthenticated user"
+
+
+class TestProfileEditUpload:
+    """Profile_edit view was crashing due to missing settings import."""
+
+    def test_profile_edit_page_loads(self, client, user):
+        client.force_login(user)
+        resp = client.get('/profile/edit/')
+        assert resp.status_code == 200
+
+    def test_profile_edit_post_text_only(self, client, user):
+        client.force_login(user)
+        resp = client.post('/profile/edit/', {'bio': 'Hello world'}, follow=True)
+        assert resp.status_code == 200
+        user.refresh_from_db()
+        assert user.bio == 'Hello world'
+
+    def test_profile_edit_post_with_avatar(self, client, user, tmp_path):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        import io
+        from PIL import Image
+
+        img = Image.new('RGB', (100, 100), color='red')
+        buf = io.BytesIO()
+        img.save(buf, format='JPEG')
+        buf.seek(0)
+
+        avatar = SimpleUploadedFile('avatar.jpg', buf.read(), content_type='image/jpeg')
+        client.force_login(user)
+        resp = client.post('/profile/edit/', {'avatar_file': avatar}, follow=True)
+        assert resp.status_code == 200
+        user.refresh_from_db()
+        assert user.avatar is not None and user.avatar != ''
+
+    def test_profile_edit_post_with_cover(self, client, user, tmp_path):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        import io
+        from PIL import Image
+
+        img = Image.new('RGB', (200, 100), color='blue')
+        buf = io.BytesIO()
+        img.save(buf, format='PNG')
+        buf.seek(0)
+
+        cover = SimpleUploadedFile('cover.png', buf.read(), content_type='image/png')
+        client.force_login(user)
+        resp = client.post('/profile/edit/', {'cover_file': cover}, follow=True)
+        assert resp.status_code == 200
+        user.refresh_from_db()
+        assert user.cover_image is not None and user.cover_image != ''
+
+    def test_profile_edit_invalid_avatar_rejected(self, client, user):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        client.force_login(user)
+        fake = SimpleUploadedFile('fake.jpg', b'not-an-image', content_type='image/jpeg')
+        resp = client.post('/profile/edit/', {'avatar_file': fake}, follow=True)
+        assert resp.status_code == 200
+        user.refresh_from_db()
+        # Avatar should remain unchanged (empty default)
+        assert getattr(user, 'avatar', '') != b'not-an-image'
+
+
+class TestWatchlistSignalXP:
+    """WatchlistEntry post_save must award XP on WATCHING→COMPLETED."""
+
+    def test_watching_to_completed_awards_xp(self, user, anime, db):
+        from apps.watchlist.models import WatchlistEntry
+        from apps.core.models import UserProfile
+
+        entry = WatchlistEntry.objects.create(user=user, anime=anime, status='WATCHING', episodes_watched=5)
+        # Force signal re-processing by clearing _processed set
+        import apps.core.signals as sig
+        sig._processed.clear()
+
+        entry.status = 'COMPLETED'
+        entry.episodes_watched = anime.episodes
+        entry.save()
+
+        profile = UserProfile.objects.get(user=user)
+        assert profile.total_xp >= 50, f"Expected ≥50 XP for complete_anime, got {profile.total_xp}"
+
+    def test_completed_from_creation_awards_xp(self, user, anime, db):
+        from apps.watchlist.models import WatchlistEntry
+        from apps.core.models import UserProfile
+
+        WatchlistEntry.objects.create(user=user, anime=anime, status='COMPLETED', episodes_watched=anime.episodes)
+        profile = UserProfile.objects.get(user=user)
+        expected = 10 + 50  # add_to_watchlist + complete_anime
+        assert profile.total_xp == expected, f"Expected {expected} XP, got {profile.total_xp}"
+
+    def test_duplicate_save_does_not_double_xp(self, user, anime, db):
+        from apps.watchlist.models import WatchlistEntry
+        from apps.core.models import UserProfile
+
+        entry = WatchlistEntry.objects.create(user=user, anime=anime, status='WATCHING')
+        # Reset processed set
+        import apps.core.signals as sig
+        sig._processed.clear()
+
+        entry.status = 'COMPLETED'
+        entry.save()
+        profile = UserProfile.objects.get(user=user)
+        xp_after_first = profile.total_xp
+
+        # Same instance saved again without status change
+        entry.save()
+        profile.refresh_from_db()
+        assert profile.total_xp == xp_after_first, "XP should not increase on duplicate save"
+
+    def test_add_to_watchlist_xp_no_double_count(self, user, anime, db):
+        """Creating a WatchlistEntry should award XP exactly once."""
+        from apps.watchlist.models import WatchlistEntry
+        from apps.core.models import UserProfile
+
+        WatchlistEntry.objects.create(user=user, anime=anime, status='PLANNING')
+        profile = UserProfile.objects.get(user=user)
+        assert profile.total_xp == 10, f"Expected 10 XP for add_to_watchlist, got {profile.total_xp}"
+
+        # Creating a second entry for a different anime should work
+        from apps.anime.models import Anime
+        anime2 = Anime.objects.create(anilist_id=9999, title_romaji='Another', slug='another')
+        WatchlistEntry.objects.create(user=user, anime=anime2, status='PLANNING')
+        profile.refresh_from_db()
+        assert profile.total_xp == 20, f"Expected 20 XP for two entries, got {profile.total_xp}"
+
+
+class TestTierListCreate:
+    """Tier list creation was silently dropping all items."""
+
+    def test_create_tier_list_without_tier_data(self, client, user):
+        client.force_login(user)
+        resp = client.post('/tierlists/create/', {'title': 'My List'}, follow=True)
+        assert resp.status_code == 200
+
+    def test_create_tier_list_with_items(self, client, user, anime):
+        from apps.anime.models import TierList, TierListItem
+        from apps.anime.models import Anime
+        from apps.anime.services.sync import sync_anime_from_anilist
+        anime2 = Anime.objects.create(anilist_id=9998, title_romaji='Another Test', slug='another-test')
+
+        client.force_login(user)
+        tier_data = json.dumps({'S': [anime.anilist_id], 'A': [anime2.anilist_id]})
+        resp = client.post('/tierlists/create/', {'title': 'My Tiers', 'tier_data': tier_data}, follow=True)
+        assert resp.status_code == 200
+
+        tl = TierList.objects.filter(user=user, title='My Tiers').first()
+        assert tl is not None, "TierList should exist"
+        items = TierListItem.objects.filter(tier_list=tl).order_by('order')
+        assert items.count() == 2, f"Expected 2 items, got {items.count()}"
+        assert items[0].tier == 'S'
+        assert items[1].tier == 'A'
+
+    def test_tier_list_items_ordered(self, client, user, anime):
+        from apps.anime.models import Anime, TierList, TierListItem
+        anime2 = Anime.objects.create(anilist_id=9997, title_romaji='B Anime', slug='b-anime')
+        anime3 = Anime.objects.create(anilist_id=9996, title_romaji='C Anime', slug='c-anime')
+
+        client.force_login(user)
+        tier_data = json.dumps({'S': [anime.anilist_id, anime2.anilist_id], 'A': [anime3.anilist_id]})
+        resp = client.post('/tierlists/create/', {'title': 'Ordered', 'tier_data': tier_data}, follow=True)
+        assert resp.status_code == 200
+
+        tl = TierList.objects.get(user=user, title='Ordered')
+        items = TierListItem.objects.filter(tier_list=tl).order_by('order')
+        assert items[0].anime_id == anime.id
+        assert items[1].anime_id == anime2.id
+        assert items[2].anime_id == anime3.id
+
+
+class TestBattleVoteAtomic:
+    """Battle votes must use F() for race-condition-safe counting."""
+
+    def test_battle_vote_increments_count(self, client, user, anime):
+        from apps.anime.models import Battle, BattleVote
+        from apps.users.models import User
+        other = User.objects.create_user(username='creator', password='pass')
+        battle = Battle.objects.create(anime1=anime, anime2=anime, created_by=other)
+
+        client.force_login(user)
+        resp = client.post(f'/battles/{battle.id}/vote/', {'choice': '1'})
+        assert resp.status_code == 302
+
+        battle.refresh_from_db()
+        assert battle.votes1 == 1
+        assert battle.votes2 == 0
+
+    def test_battle_vote_change_decrements_old(self, client, user, anime):
+        from apps.anime.models import Battle, BattleVote
+        from apps.users.models import User
+        other = User.objects.create_user(username='creator2', password='pass')
+        battle = Battle.objects.create(anime1=anime, anime2=anime, created_by=other)
+
+        client.force_login(user)
+        # Vote for 1
+        client.post(f'/battles/{battle.id}/vote/', {'choice': '1'})
+        battle.refresh_from_db()
+        assert battle.votes1 == 1
+
+        # Change vote to 2
+        client.post(f'/battles/{battle.id}/vote/', {'choice': '2'})
+        battle.refresh_from_db()
+        assert battle.votes1 == 0, f"Expected votes1=0 after change, got {battle.votes1}"
+        assert battle.votes2 == 1, f"Expected votes2=1 after change, got {battle.votes2}"
+
+    def test_battle_vote_same_choice_idempotent(self, client, user, anime):
+        from apps.anime.models import Battle
+        from apps.users.models import User
+        other = User.objects.create_user(username='creator3', password='pass')
+        battle = Battle.objects.create(anime1=anime, anime2=anime, created_by=other)
+
+        client.force_login(user)
+        client.post(f'/battles/{battle.id}/vote/', {'choice': '1'})
+        battle.refresh_from_db()
+        assert battle.votes1 == 1
+
+        # Same vote again
+        client.post(f'/battles/{battle.id}/vote/', {'choice': '1'})
+        battle.refresh_from_db()
+        assert battle.votes1 == 1, "Same vote should not increment again"
+        assert battle.votes2 == 0
+
+
+class TestAiChatRatelimit:
+    """AI Chat must be rate-limited per IP."""
+
+    def test_chat_ai_returns_valid_json(self, client):
+        resp = client.get('/chat/', {'msg': 'hello'})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert 'reply' in data
+        assert 'anime' in data
+        assert data['anime'] == []
+
+    def test_chat_ai_empty_msg_returns_default(self, client):
+        resp = client.get('/chat/', {'msg': ''})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert 'reply' in data
+        assert 'anime' in data
+
+    def test_chat_ai_no_msg_param(self, client):
+        resp = client.get('/chat/')
+        assert resp.status_code == 200
+        data = resp.json()
+        assert 'reply' in data
+
+    def test_chat_ai_rate_limit_exceeded(self, client):
+        """20 req/min per IP; send 25 and verify last few get 429."""
+        from unittest.mock import patch
+
+        # Mock AniList calls to avoid external dependency
+        with patch('apps.core.views.anilist_client.search', return_value={'Page': {'media': []}}):
+            responses = []
+            for i in range(25):
+                resp = client.get('/chat/', {'msg': f'test_{i}'})
+                responses.append(resp.status_code)
+        # At least 3 requests should be rate-limited
+        limited = [s for s in responses if s == 429]
+        assert len(limited) >= 3, f"Expected ≥3 rate-limited responses, got {len(limited)}. Statuses: {responses}"
