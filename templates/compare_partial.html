@@ -1,3 +1,4 @@
+{% load core_extras %}
 {% if data1 and data2 %}
 {% with t1=data1.title t2=data2.title %}
 {% with title1=t1.english|default:t1.romaji title2=t2.english|default:t2.romaji %}

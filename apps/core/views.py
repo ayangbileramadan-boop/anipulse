@@ -816,14 +816,14 @@ def compare_anime(request):
         try:
             result = anilist_client.get_anime_detail(int(id1))
             data1 = result.get('Media', {}) or {}
-        except (AniListError, ValueError):
+        except (AniListError, ValueError, TypeError, AttributeError):
             data1 = {}
 
     if id2:
         try:
             result = anilist_client.get_anime_detail(int(id2))
             data2 = result.get('Media', {}) or {}
-        except (AniListError, ValueError):
+        except (AniListError, ValueError, TypeError, AttributeError):
             data2 = {}
 
     if request.GET.get('partial') == '1':
