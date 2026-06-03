@@ -2178,7 +2178,56 @@ def import_anilist(request):
                 if not data.get('data', {}).get('Page', {}).get('pageInfo', {}).get('hasNextPage'):
                     break
                 page += 1
-            messages.success(request, f'Imported {imported} anime from {username}!')
+            # Import reviews
+            review_query = '''
+            query($userId: Int, $page: Int) {
+              Page(page: $page, perPage: 50) {
+                pageInfo { hasNextPage }
+                reviews(userId: $userId, sort: CREATED_ID_DESC) {
+                  id
+                  score
+                  summary
+                  body(asHtml: false)
+                  createdAt
+                  media { id title { romaji english } coverImage { large medium } format status episodes duration averageScore genres }
+                }
+              }
+            }
+            '''
+            page = 1
+            reviews_imported = 0
+            user_id = user_info.get('id')
+            while True:
+                resp = httpx.post('https://graphql.anilist.co', json={'query': review_query, 'variables': {'userId': user_id, 'page': page}}, timeout=15)
+                data = resp.json()
+                entries = data.get('data', {}).get('Page', {}).get('reviews', [])
+                if not entries:
+                    break
+                for entry in entries:
+                    media = entry.get('media')
+                    if not media:
+                        continue
+                    from apps.anime.models import Review
+                    anime = sync_anime_from_anilist(media)
+                    score = entry.get('score')
+                    if score and isinstance(score, (int, float)):
+                        score = round(score / 10) if score > 10 else round(score)
+                    body = entry.get('body', '') or ''
+                    summary = entry.get('summary', '') or ''
+                    Review.objects.update_or_create(
+                        anime=anime, user=request.user,
+                        defaults={
+                            'rating': max(1, min(10, score or 5)),
+                            'title': surrogatefree(summary[:200]),
+                            'body': surrogatefree(body),
+                            'anilist_review_id': entry['id'],
+                        }
+                    )
+                    reviews_imported += 1
+                if not data.get('data', {}).get('Page', {}).get('pageInfo', {}).get('hasNextPage'):
+                    break
+                page += 1
+            messages.success(request, f'Imported {imported} anime and {reviews_imported} reviews from {username}!')
             return redirect('watchlist')
         except Exception as e:
             messages.error(request, f'Import failed: {e}')

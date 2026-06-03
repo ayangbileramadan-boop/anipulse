@@ -188,6 +188,7 @@ class Review(TimeStampedModel):
     body = models.TextField()
     likes = models.PositiveIntegerField(default=0)
     is_spoiler = models.BooleanField(default=False)
+    anilist_review_id = models.IntegerField(null=True, blank=True, unique=True)
 
     class Meta:
         unique_together = ('anime', 'user')

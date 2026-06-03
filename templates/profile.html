@@ -102,6 +102,7 @@
         <a href="{% url 'recommendations' %}" class="badge-sm text-decoration-none">🎯 Recommendations</a>
         <a href="{% url 'quiz' %}" class="badge-sm text-decoration-none">🧠 Anime Quiz</a>
       </div>
+      {% endif %}
 
       {% with reviews=profile_user.reviews.all %}
       {% if reviews %}
@@ -115,7 +116,6 @@
       {% endfor %}
       {% endif %}
       {% endwith %}
-      {% endif %}
     </div>
   </div>
 </div>
