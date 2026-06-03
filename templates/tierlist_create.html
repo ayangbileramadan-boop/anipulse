@@ -105,5 +105,13 @@ function renderPool() {
     '</div>'
   ).join('');
 }
+
+document.getElementById('tierForm').addEventListener('submit', function() {
+  const data = {};
+  for (const [tier, items] of Object.entries(tiers)) {
+    data[tier] = items.map(a => a.id);
+  }
+  document.getElementById('tierData').value = JSON.stringify(data);
+});
 </script>
 {% endblock %}

@@ -55,8 +55,10 @@ def watchlist_entry_pre_save(sender, instance, **kwargs):
 
 @receiver(post_save, sender=WatchlistEntry)
 def watchlist_entry_saved(sender, instance, created, **kwargs):
-    pkey = _mark_processed(instance)
-    if _is_processed(pkey) and not created:
+    pkey = (instance._meta.label, instance.pk)
+    already_processed = pkey in _processed
+    _processed.add(pkey)
+    if already_processed and not created:
         return
 
     try:

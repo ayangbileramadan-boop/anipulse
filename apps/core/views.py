@@ -5,9 +5,11 @@ from datetime import datetime, timezone
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.paginator import Paginator
-from django.db.models import Count, Q
+from django.db.models import Count, F, Q
+from django_ratelimit.decorators import ratelimit
 
 from apps.anime.services.anilist import anilist_client, AniListError
 from apps.anime.services.sync import sync_anime_from_anilist
@@ -1035,16 +1037,29 @@ def battle_vote(request, battle_id):
     if request.method == 'POST':
         choice = request.POST.get('choice')
         if choice in ('1', '2'):
-            vote, created = BattleVote.objects.get_or_create(battle=battle, user=request.user, defaults={'choice': int(choice)})
+            choice = int(choice)
+            vote, created = BattleVote.objects.get_or_create(
+                battle=battle, user=request.user,
+                defaults={'choice': choice}
+            )
             if not created:
-                vote.choice = int(choice)
-                vote.save()
+                old_choice = vote.choice
+                if old_choice != choice:
+                    vote.choice = choice
+                    vote.save(update_fields=['choice'])
+                    if old_choice == 1:
+                        Battle.objects.filter(id=battle.id).update(votes1=F('votes1') - 1)
+                    else:
+                        Battle.objects.filter(id=battle.id).update(votes2=F('votes2') - 1)
+                    if choice == 1:
+                        Battle.objects.filter(id=battle.id).update(votes1=F('votes1') + 1)
+                    else:
+                        Battle.objects.filter(id=battle.id).update(votes2=F('votes2') + 1)
             else:
-                if choice == '1':
-                    battle.votes1 += 1
+                if choice == 1:
+                    Battle.objects.filter(id=battle.id).update(votes1=F('votes1') + 1)
                 else:
-                    battle.votes2 += 1
-                battle.save()
+                    Battle.objects.filter(id=battle.id).update(votes2=F('votes2') + 1)
             UserActivity.objects.create(user=request.user, activity_type='BATTLE', description=f"Voted in {battle}")
         return redirect('battle_list')
     return redirect('battle_list')
@@ -1067,6 +1082,7 @@ def tier_list_create(request):
             slug = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
             tl = TierList.objects.create(user=request.user, title=title, slug=slug)
 
+            tier_data_raw = request.POST.get('tier_data', '')
             if tier_data_raw:
                 try:
                     tier_data = json.loads(tier_data_raw)
@@ -1415,9 +1431,13 @@ def _format_info(a, title=None):
     ), t
 
 
+@ratelimit(key='ip', rate='20/m', method='GET', block=False)
 def chat_ai(request):
-    from django.http import JsonResponse
+    from django.http import JsonResponse, HttpResponse
     import random, re
+
+    if getattr(request, 'limited', False):
+        return JsonResponse({'reply': '⏳ Whoa there! You\'re asking too fast. Slow down a bit and try again in a moment.', 'anime': []}, status=429)
 
     msg = request.GET.get('msg', '').strip()
     if not msg:
