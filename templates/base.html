@@ -36,7 +36,7 @@
     <nav class="navbar navbar-expand-lg navbar-custom sticky-top py-3">
         <div class="container">
             <a class="navbar-brand fw-bold fs-4" href="{% url 'home' %}">Ani<span>Pulse</span></a>
-            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="mainNav">
@@ -353,15 +353,16 @@
 
 <div class="chat-panel" id="chatPanel">
   <div class="chat-head" id="chatHead">
-    <i class="fas fa-sparkles"></i> AniPulse AI
-    <button class="chat-close" onclick="AniPulseChat.toggle()">&times;</button>
+    <i class="fas fa-sparkles"></i> <span>AniPulse AI</span>
+    <button class="chat-minimize" id="chatMinimize" onclick="AniPulseChat.minimize()" title="Minimize"><i class="fas fa-minus"></i></button>
+    <button class="chat-close" onclick="AniPulseChat.toggle()" title="Close">&times;</button>
   </div>
   <div class="chat-msgs" id="chatMsgs">
     <div class="chat-msg bot">Hey! 🎬 I can help you find anime. Try:<br>• <strong>tell me about AoT</strong><br>• <strong>recommend something funny</strong><br>• <strong>what's trending?</strong><br>• <strong>compare Naruto vs One Piece</strong></div>
   </div>
   <div class="chat-input-wrap">
-    <input type="text" id="chatInput" placeholder="Ask for anime..." onkeydown="if(event.key==='Enter')AniPulseChat.send()">
-    <button onclick="AniPulseChat.send()"><i class="fas fa-paper-plane"></i></button>
+    <input type="text" id="chatInput" placeholder="Ask for anime..." autocomplete="off" onkeydown="if(event.key==='Enter')AniPulseChat.send()">
+    <button onclick="AniPulseChat.send()" aria-label="Send"><i class="fas fa-paper-plane"></i></button>
   </div>
 </div>
 
@@ -369,18 +370,28 @@
 window.AniPulseChat = {
   open: false,
   minimized: false,
-  startX: 0, startY: 0, offsetX: 0, offsetY: 0,
+  startX: 0, startY: 0,
+  keyboardHeight: 0,
+
   toggle() {
     this.open = !this.open;
     const panel = document.getElementById('chatPanel');
     const btn = document.getElementById('chatBtn');
     panel.classList.toggle('open', this.open);
+    panel.classList.remove('minimized');
     btn.classList.toggle('open', this.open);
+    this.minimized = false;
     if (this.open) {
       setTimeout(() => document.getElementById('chatInput').focus(), 300);
       this._restorePosition();
     }
   },
+
+  minimize() {
+    this.minimized = !this.minimized;
+    document.getElementById('chatPanel').classList.toggle('minimized', this.minimized);
+  },
+
   send() {
     const input = document.getElementById('chatInput');
     const msg = input.value.trim();
@@ -388,29 +399,31 @@ window.AniPulseChat = {
     input.value = '';
     this._addMsg(msg, 'user');
     this._addMsg('Typing...', 'bot', 'typing');
+    const div = document.getElementById('chatMsgs');
     fetch('/chat/?msg=' + encodeURIComponent(msg))
       .then(r => r.json())
       .then(d => {
         document.querySelector('.typing')?.remove();
         this._addMsg(d.reply, 'bot');
         if (d.anime && d.anime.length) {
-          const div = document.createElement('div');
-          div.className = 'chat-msg bot';
-          div.style.padding = '8px 4px 4px 4px';
-          div.innerHTML = '<div class="chat-rec">' + d.anime.map(a =>
-            '<a href="/anime/' + a.id + '/" target="_top">' +
+          const el = document.createElement('div');
+          el.className = 'chat-msg bot';
+          el.style.padding = '8px 4px 4px 4px';
+          el.innerHTML = '<div class="chat-rec">' + d.anime.map(function(a) {
+            return '<a href="/anime/' + a.id + '/" target="_top">' +
             '<img src="' + (a.image || '') + '" alt="" loading="lazy">' +
-            '<span>' + (a.title || '').substring(0,14) + '</span></a>'
-          ).join('') + '</div>';
-          document.getElementById('chatMsgs').appendChild(div);
-          div.scrollIntoView({behavior:'smooth'});
+            '<span>' + ((a.title || '').substring(0, 14)) + '</span></a>';
+          }).join('') + '</div>';
+          div.appendChild(el);
+          el.scrollIntoView({behavior:'smooth'});
         }
       })
-      .catch(() => {
+      .catch(function() {
         document.querySelector('.typing')?.remove();
-        this._addMsg('Oops, something went wrong. Try again!', 'bot');
+        AniPulseChat._addMsg('Oops, something went wrong. Try again!', 'bot');
       });
   },
+
   _addMsg(text, cls, id) {
     const div = document.createElement('div');
     div.className = 'chat-msg ' + cls;
@@ -419,60 +432,88 @@ window.AniPulseChat = {
     document.getElementById('chatMsgs').appendChild(div);
     div.scrollIntoView({behavior:'smooth'});
   },
+
   _getPanelRect() {
     return document.getElementById('chatPanel').getBoundingClientRect();
   },
+
   _restorePosition() {
     try {
-      const saved = JSON.parse(localStorage.getItem('anipulse-chat-pos'));
-      if (!saved) return;
-      const panel = document.getElementById('chatPanel');
-      panel.style.left = saved.x + 'px';
-      panel.style.top = saved.y + 'px';
+      var saved = JSON.parse(localStorage.getItem('anipulse-chat-pos'));
+      if (!saved || window.innerWidth <= 480) return;
+      var panel = document.getElementById('chatPanel');
+      panel.style.left = Math.min(saved.x, window.innerWidth - 320) + 'px';
+      panel.style.top = Math.min(saved.y, window.innerHeight - 200) + 'px';
       panel.style.right = 'auto';
       panel.style.bottom = 'auto';
     } catch(e) {}
   },
+
   _initDrag() {
-    const head = document.getElementById('chatHead');
-    const panel = document.getElementById('chatPanel');
+    var head = document.getElementById('chatHead');
+    var panel = document.getElementById('chatPanel');
     if (!head || !panel) return;
-    const onStart = function(e) {
-      const rect = this._getPanelRect();
-      const touch = e.touches ? e.touches[0] : e;
-      this.startX = touch.clientX - rect.left;
-      this.startY = touch.clientY - rect.top;
-      const onMove = function(e) {
-        if (window.innerWidth <= 480) return;
-        const t = e.touches ? e.touches[0] : e;
-        let x = t.clientX - this.startX;
-        let y = t.clientY - this.startY;
-        x = Math.max(0, Math.min(x, window.innerWidth - panel.offsetWidth));
-        y = Math.max(0, Math.min(y, window.innerHeight - panel.offsetHeight));
+
+    function onStart(e) {
+      if (window.innerWidth <= 480) return;
+      var rect = panel.getBoundingClientRect();
+      var touch = e.touches ? e.touches[0] : e;
+      var startX = touch.clientX - rect.left;
+      var startY = touch.clientY - rect.top;
+
+      function onMove(e) {
+        var t = e.touches ? e.touches[0] : e;
+        var x = Math.max(0, Math.min(t.clientX - startX, window.innerWidth - panel.offsetWidth));
+        var y = Math.max(0, Math.min(t.clientY - startY, window.innerHeight - panel.offsetHeight));
         panel.style.left = x + 'px';
         panel.style.top = y + 'px';
         panel.style.right = 'auto';
         panel.style.bottom = 'auto';
-      }.bind(this);
-      const onEnd = function() {
-        const r = this._getPanelRect();
+      }
+
+      function onEnd() {
+        var r = panel.getBoundingClientRect();
         localStorage.setItem('anipulse-chat-pos', JSON.stringify({ x: r.left, y: r.top }));
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onEnd);
         document.removeEventListener('touchmove', onMove);
         document.removeEventListener('touchend', onEnd);
-      }.bind(this);
+      }
+
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onEnd);
       document.addEventListener('touchmove', onMove, {passive: true});
       document.addEventListener('touchend', onEnd);
-    }.bind(this);
+    }
+
     head.addEventListener('mousedown', onStart);
     head.addEventListener('touchstart', onStart, {passive: true});
   }
 };
+
 document.addEventListener('DOMContentLoaded', function() {
   AniPulseChat._initDrag();
+
+  // Mobile keyboard handling: scroll input into view
+  var chatInput = document.getElementById('chatInput');
+  if (chatInput) {
+    chatInput.addEventListener('focus', function() {
+      setTimeout(function() {
+        if (window.innerWidth <= 480) {
+          document.getElementById('chatMsgs').scrollTop = document.getElementById('chatMsgs').scrollHeight;
+        }
+      }, 300);
+    });
+  }
+
+  // Auto-resize text input for long messages
+  var input = document.getElementById('chatInput');
+  if (input) {
+    input.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    });
+  }
 });
 </script>
 </body>

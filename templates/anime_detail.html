@@ -62,13 +62,25 @@
         .review-highlight { padding:14px }
         .detail-section-title { font-size:1rem }
         [class*="col-"] .cover-wrapper { text-align:center }
+        h1.fw-bold.display-6 { font-size:1.5rem !important; line-height:1.2 !important; }
+        .action-btn, .download-btn { min-height:44px; }
+        .stream-btn { min-height:44px; }
     }
     @media (max-width: 480px) {
         .meta-grid { grid-template-columns:repeat(2, 1fr) !important }
         .detail-banner { height:160px !important }
         .cover-wrapper img { max-width:110px }
         .detail-section-title { font-size:0.95rem }
+        h1.fw-bold.display-6 { font-size:1.3rem !important; }
     }
+    @media (max-width: 360px) {
+        .meta-grid { grid-template-columns:repeat(2, 1fr) !important; gap:6px !important; }
+        .info-card { padding:8px; }
+        .info-card .num { font-size:0.9rem; }
+        .char-card { padding:8px; }
+        .character-img { width:48px !important; height:48px !important; }
+    }
+    button, a, .btn, .action-btn, .stream-btn, .download-btn { touch-action: manipulation; }
 </style>
 {% endblock %}
 
