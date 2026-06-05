@@ -380,6 +380,7 @@ window.AniPulseChat = {
     panel.classList.toggle('open', this.open);
     panel.classList.remove('minimized');
     btn.classList.toggle('open', this.open);
+    document.body.classList.toggle('chat-active', this.open);
     this.minimized = false;
     if (this.open) {
       setTimeout(() => document.getElementById('chatInput').focus(), 300);

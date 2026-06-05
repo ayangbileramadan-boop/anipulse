@@ -46,25 +46,44 @@
         success: 'check-circle', error: 'exclamation-circle',
         info: 'info-circle', warning: 'exclamation-triangle'
       };
-      const el = document.createElement('div');
-      el.className = 'toast-item animate-slide-in';
-      el.innerHTML =
-        '<div class="toast-icon ' + type + '"><i class="fas fa-' + (icons[type] || icons.info) + '"></i></div>' +
-        '<div class="toast-body">' +
-        (title ? '<div class="toast-title">' + this._esc(title) + '</div>' : '') +
-        (message ? '<div class="toast-message">' + this._esc(message) + '</div>' : '') +
-        '</div>' +
-        '<button class="toast-close" onclick="this.closest(\'.toast-item\').remove()">&times;</button>';
-      this.container.appendChild(el);
+      const toastItem = document.createElement('div');
+      toastItem.className = 'toast-item animate-slide-in';
+      const iconDiv = document.createElement('div');
+      iconDiv.className = 'toast-icon ' + type;
+      const icon = document.createElement('i');
+      icon.className = 'fas fa-' + (icons[type] || icons.info);
+      iconDiv.appendChild(icon);
+      const bodyDiv = document.createElement('div');
+      bodyDiv.className = 'toast-body';
+      if (title) {
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'toast-title';
+        titleDiv.textContent = title;
+        bodyDiv.appendChild(titleDiv);
+      }
+      if (message) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'toast-message';
+        msgDiv.textContent = message;
+        bodyDiv.appendChild(msgDiv);
+      }
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'toast-close';
+      closeBtn.innerHTML = '&times;';
+      closeBtn.onclick = function(){ toastItem.remove(); };
+      toastItem.appendChild(iconDiv);
+      toastItem.appendChild(bodyDiv);
+      toastItem.appendChild(closeBtn);
+      this.container.appendChild(toastItem);
       if (duration > 0) {
         setTimeout(() => {
-          if (el.isConnected) {
-            el.classList.add('removing');
-            setTimeout(() => { if (el.isConnected) el.remove(); }, 300);
+          if (toastItem.isConnected) {
+            toastItem.classList.add('removing');
+            setTimeout(() => { if (toastItem.isConnected) toastItem.remove(); }, 300);
           }
         }, duration);
       }
-      return el;
+      return toastItem;
     },
     success(title, msg, dur) { return this.show(title, msg, 'success', dur); },
     error(title, msg, dur) { return this.show(title, msg, 'error', dur); },
@@ -73,7 +92,7 @@
     _esc(s) {
       const d = document.createElement('div');
       d.textContent = s;
-      return d.innerHTML;
+      return d.textContent;
     }
   };
 
@@ -277,9 +296,23 @@
                 el.className = 'dropdown-item notif-item' + (n.is_read ? '' : ' fw-bold');
                 el.href = n.url || '#';
                 el.style.cssText = 'white-space:normal;padding:10px 14px;border-bottom:1px solid var(--border);font-size:0.85rem';
-                el.innerHTML = '<div>' + n.title + '</div>' +
-                  (n.message ? '<div class="text-secondary" style="font-size:0.75rem">' + n.message + '</div>' : '') +
-                  '<div class="text-secondary" style="font-size:0.65rem;margin-top:2px">' + new Date(n.created_at).toLocaleDateString() + '</div>';
+                const titleDiv = document.createElement('div');
+                titleDiv.textContent = n.title;
+                let msgDiv;
+                if (n.message) {
+                  msgDiv = document.createElement('div');
+                  msgDiv.className = 'text-secondary';
+                  msgDiv.style.fontSize = '0.75rem';
+                  msgDiv.textContent = n.message;
+                }
+                const dateDiv = document.createElement('div');
+                dateDiv.className = 'text-secondary';
+                dateDiv.style.fontSize = '0.65rem';
+                dateDiv.style.marginTop = '2px';
+                dateDiv.textContent = new Date(n.created_at).toLocaleDateString();
+                el.appendChild(titleDiv);
+                if (msgDiv) el.appendChild(msgDiv);
+                el.appendChild(dateDiv);
                 menu.appendChild(el);
               });
             } else {
