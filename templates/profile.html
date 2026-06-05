@@ -11,20 +11,20 @@
 <div class="container py-4">
   <div class="row justify-content-center">
     <div class="col-lg-10">
-      <div class="d-flex align-items-end gap-3 mb-4">
-        <div class="profile-avatar">
+      <div class="d-flex align-items-end gap-3 mb-4 flex-wrap">
+        <div class="profile-avatar flex-shrink-0">
           {% if profile_user.avatar %}
           <img src="{{ profile_user.avatar|surrogatefree }}" alt="" loading="lazy">
           {% else %}
           {{ profile_user.username|first|upper }}
           {% endif %}
         </div>
-        <div class="flex-grow-1">
-          <h2 class="fw-bold mb-0">{{ profile_user.username }}</h2>
+        <div class="flex-grow-1" style="min-width:0;overflow:hidden">
+          <h2 class="fw-bold mb-0 text-truncate">{{ profile_user.username }}</h2>
           <p class="text-secondary small mb-0">Joined {{ profile_user.date_joined|date:"F Y" }}</p>
         </div>
         {% if is_me %}
-        <a href="{% url 'profile_edit' %}" class="btn btn-sm btn-outline-light px-3">Edit Profile</a>
+        <a href="{% url 'profile_edit' %}" class="btn btn-sm btn-outline-light px-3 flex-shrink-0">Edit Profile</a>
         {% endif %}
       </div>
 

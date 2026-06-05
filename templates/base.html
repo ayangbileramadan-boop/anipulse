@@ -133,7 +133,7 @@
     <div id="installBanner" class="position-fixed bottom-0 start-50 translate-middle-x mb-4 px-3 install-banner" style="display:none">
         <div class="d-flex align-items-center gap-3 p-3 rounded-4 shadow-lg surface-card">
             <span class="fs-4">📲</span>
-            <div class="flex-grow-1">
+            <div class="flex-grow-1 min-w-0">
                 <div class="fw-bold small">Install AniPulse</div>
                 <div class="text-secondary small text-small">Add to home screen for quick access</div>
             </div>
@@ -228,9 +228,21 @@
                             el.className = 'dropdown-item notif-item' + (n.is_read ? '' : ' fw-bold');
                             el.href = n.url || '#';
                             el.style.cssText = 'white-space:normal;padding:10px 14px;border-bottom:1px solid var(--border);font-size:0.85rem';
-                            el.innerHTML = '<div>' + n.title + '</div>' +
-                                (n.message ? '<div class="text-secondary" style="font-size:0.75rem">' + n.message + '</div>' : '') +
-                                '<div class="text-secondary" style="font-size:0.65rem;margin-top:2px">' + new Date(n.created_at).toLocaleDateString() + '</div>';
+                            const titleDiv = document.createElement('div');
+                            titleDiv.textContent = n.title;
+                            el.appendChild(titleDiv);
+                            if (n.message) {
+                                const msgDiv = document.createElement('div');
+                                msgDiv.className = 'text-secondary';
+                                msgDiv.style.fontSize = '0.75rem';
+                                msgDiv.textContent = n.message;
+                                el.appendChild(msgDiv);
+                            }
+                            const dateDiv = document.createElement('div');
+                            dateDiv.className = 'text-secondary';
+                            dateDiv.style.cssText = 'font-size:0.65rem;margin-top:2px';
+                            dateDiv.textContent = new Date(n.created_at).toLocaleDateString();
+                            el.appendChild(dateDiv);
                             menu.appendChild(el);
                         });
                     } else {
@@ -410,11 +422,23 @@ window.AniPulseChat = {
           const el = document.createElement('div');
           el.className = 'chat-msg bot';
           el.style.padding = '8px 4px 4px 4px';
-          el.innerHTML = '<div class="chat-rec">' + d.anime.map(function(a) {
-            return '<a href="/anime/' + a.id + '/" target="_top">' +
-            '<img src="' + (a.image || '') + '" alt="" loading="lazy">' +
-            '<span>' + ((a.title || '').substring(0, 14)) + '</span></a>';
-          }).join('') + '</div>';
+          const rec = document.createElement('div');
+          rec.className = 'chat-rec';
+          d.anime.forEach(function(a) {
+            const link = document.createElement('a');
+            link.href = '/anime/' + encodeURIComponent(a.id) + '/';
+            link.target = '_top';
+            const img = document.createElement('img');
+            img.src = a.image || '';
+            img.alt = '';
+            img.loading = 'lazy';
+            const lbl = document.createElement('span');
+            lbl.textContent = (a.title || '').substring(0, 14);
+            link.appendChild(img);
+            link.appendChild(lbl);
+            rec.appendChild(link);
+          });
+          el.appendChild(rec);
           div.appendChild(el);
           el.scrollIntoView({behavior:'smooth'});
         }
@@ -429,9 +453,29 @@ window.AniPulseChat = {
     const div = document.createElement('div');
     div.className = 'chat-msg ' + cls;
     if (id) div.classList.add(id);
-    div.innerHTML = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+    // Safely render markdown-like bold and newlines without innerHTML XSS
+    const safe = this._renderSafe(text);
+    div.appendChild(safe);
     document.getElementById('chatMsgs').appendChild(div);
     div.scrollIntoView({behavior:'smooth'});
+  },
+
+  _renderSafe(text) {
+    // Split on **bold** markers and \n newlines, build DOM nodes safely
+    const frag = document.createDocumentFragment();
+    const parts = String(text).split(/(\*\*.+?\*\*|\n)/g);
+    parts.forEach(part => {
+      if (part === '\n') {
+        frag.appendChild(document.createElement('br'));
+      } else if (part.startsWith('**') && part.endsWith('**')) {
+        const strong = document.createElement('strong');
+        strong.textContent = part.slice(2, -2);
+        frag.appendChild(strong);
+      } else {
+        frag.appendChild(document.createTextNode(part));
+      }
+    });
+    return frag;
   },
 
   _getPanelRect() {
@@ -457,38 +501,50 @@ window.AniPulseChat = {
 
     function onStart(e) {
       if (window.innerWidth <= 480) return;
+      e.preventDefault();
+
+      // Bake any existing transform into left/top before starting drag
       var rect = panel.getBoundingClientRect();
-      var touch = e.touches ? e.touches[0] : e;
-      var startX = touch.clientX - rect.left;
-      var startY = touch.clientY - rect.top;
+      panel.style.left = rect.left + 'px';
+      panel.style.top = rect.top + 'px';
+      panel.style.right = 'auto';
+      panel.style.bottom = 'auto';
+      panel.style.transform = '';
 
-      function onMove(e) {
-        var t = e.touches ? e.touches[0] : e;
-        var x = Math.max(0, Math.min(t.clientX - startX, window.innerWidth - panel.offsetWidth));
-        var y = Math.max(0, Math.min(t.clientY - startY, window.innerHeight - panel.offsetHeight));
-        panel.style.left = x + 'px';
-        panel.style.top = y + 'px';
-        panel.style.right = 'auto';
-        panel.style.bottom = 'auto';
+      // Record initial pointer offset from panel origin
+      var origX = rect.left;
+      var origY = rect.top;
+      var startOffX = e.clientX - origX;
+      var startOffY = e.clientY - origY;
+
+      function onMove(ev) {
+        ev.preventDefault();
+        var dx = ev.clientX - startOffX - origX;
+        var dy = ev.clientY - startOffY - origY;
+        var clampedX = Math.max(0, Math.min(origX + dx, window.innerWidth - panel.offsetWidth));
+        var clampedY = Math.max(0, Math.min(origY + dy, window.innerHeight - panel.offsetHeight));
+        panel.style.transform = 'translate3d(' + (clampedX - origX) + 'px, ' + (clampedY - origY) + 'px, 0)';
       }
 
-      function onEnd() {
+      function onEnd(ev) {
+        // Auto-releases pointer capture on pointerup/pointercancel
         var r = panel.getBoundingClientRect();
+        panel.style.left = r.left + 'px';
+        panel.style.top = r.top + 'px';
+        panel.style.transform = '';
         localStorage.setItem('anipulse-chat-pos', JSON.stringify({ x: r.left, y: r.top }));
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onEnd);
-        document.removeEventListener('touchmove', onMove);
-        document.removeEventListener('touchend', onEnd);
+        panel.removeEventListener('pointermove', onMove);
+        panel.removeEventListener('pointerup', onEnd);
+        panel.removeEventListener('pointercancel', onEnd);
       }
 
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onEnd);
-      document.addEventListener('touchmove', onMove, {passive: true});
-      document.addEventListener('touchend', onEnd);
+      panel.setPointerCapture(e.pointerId);
+      panel.addEventListener('pointermove', onMove);
+      panel.addEventListener('pointerup', onEnd);
+      panel.addEventListener('pointercancel', onEnd);
     }
 
-    head.addEventListener('mousedown', onStart);
-    head.addEventListener('touchstart', onStart, {passive: true});
+    head.addEventListener('pointerdown', onStart);
   }
 };
 
