@@ -103,7 +103,7 @@
 
 /* ─── 3. BASE ──────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; overflow-x: hidden; }
+html { -webkit-text-size-adjust: 100%; }
 body {
   font-family: var(--font-sans);
   background: var(--bg);
