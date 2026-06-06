@@ -113,5 +113,49 @@ document.getElementById('tierForm').addEventListener('submit', function() {
   }
   document.getElementById('tierData').value = JSON.stringify(data);
 });
+
+function initTierSort() {
+  Sortable.create(document.getElementById('pool'), {
+    group: 'tiers',
+    animation: 150,
+    onEnd: function(evt) {
+      const id = parseInt(evt.item.dataset.id);
+      if (evt.to.id === 'pool') {
+        for (const [, items] of Object.entries(tiers)) {
+          const idx = items.indexOf(id);
+          if (idx > -1) { items.splice(idx, 1); break; }
+        }
+        if (animePool[id]) animePool[id].tier = '';
+      }
+    }
+  });
+  document.querySelectorAll('.tier-items').forEach(function(el) {
+    Sortable.create(el, {
+      group: 'tiers',
+      animation: 150,
+      onAdd: function(evt) {
+        const id = parseInt(evt.item.dataset.id);
+        const tier = evt.to.dataset.tier;
+        for (const [t, items] of Object.entries(tiers)) {
+          const idx = items.indexOf(id);
+          if (idx > -1) items.splice(idx, 1);
+        }
+        if (!tiers[tier]) tiers[tier] = [];
+        tiers[tier].push(id);
+        animePool[id].tier = tier;
+      },
+      onRemove: function(evt) {
+        const id = parseInt(evt.item.dataset.id);
+        const fromTier = evt.from.dataset.tier;
+        if (tiers[fromTier]) {
+          const idx = tiers[fromTier].indexOf(id);
+          if (idx > -1) tiers[fromTier].splice(idx, 1);
+        }
+        animePool[id].tier = '';
+      }
+    });
+  });
+}
+if (typeof Sortable !== 'undefined') initTierSort();
 </script>
 {% endblock %}

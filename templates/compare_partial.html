@@ -2,37 +2,59 @@
 {% if data1 and data2 %}
 {% with t1=data1.title t2=data2.title %}
 {% with title1=t1.english|default:t1.romaji title2=t2.english|default:t2.romaji %}
-<div class="row g-4 align-items-start">
+{% with s1=data1.averageScore|default:0 s2=data2.averageScore|default:0 p1=data1.popularity|default:0 p2=data2.popularity|default:0 f1=data1.favourites|default:0 f2=data2.favourites|default:0 e1=data1.episodes|default:0 e2=data2.episodes|default:0 %}
+{% with max_score=100 max_pop=p1|add:p2|default:1 max_fav=f1|add:f2|default:1 %}
+<div class="row g-3 g-md-4 align-items-start">
   <div class="col-md-5">
     <div class="compare-card">
-      <img src="{{ data1.coverImage.large|default:data1.coverImage.medium }}" style="width:140px;aspect-ratio:2/3;object-fit:cover;border-radius:12px;margin-bottom:1rem" alt="" loading="lazy">
-      <h4 class="fw-bold text-truncate" title="{{ title1 }}">{{ title1 }}</h4>
-      {% if data1.format %}<span class="badge bg-secondary bg-opacity-20">{{ data1.format }}</span>{% endif %}
-      <div class="compare-stat"><div class="label">Score</div><div class="value {% if data1.averageScore and data2.averageScore and data1.averageScore > data2.averageScore %}winner{% endif %}">{% if data1.averageScore %}★ {{ data1.averageScore|div:10|floatformat:1 }}{% else %}N/A{% endif %}</div></div>
-      <div class="compare-stat"><div class="label">Popularity</div><div class="value {% if data1.popularity and data2.popularity and data1.popularity > data2.popularity %}winner{% endif %}">{% if data1.popularity %}{{ data1.popularity|floatformat:0 }}{% else %}N/A{% endif %}</div>{% if data1.popularity and data2.popularity %}<div class="bar-compare mt-2"><div class="fill" style="width:{% widthratio data1.popularity data2.popularity 100 %}%"></div></div>{% endif %}</div>
-      <div class="compare-stat"><div class="label">Episodes</div><div class="value {% if data1.episodes and data2.episodes and data1.episodes > data2.episodes %}winner{% endif %}">{% if data1.episodes %}{{ data1.episodes }}{% else %}?{% endif %}</div></div>
-      <div class="compare-stat"><div class="label">Duration</div><div class="value">{{ data1.duration|default:"?" }} min</div></div>
-      <div class="compare-stat"><div class="label">Favourites</div><div class="value {% if data1.favourites and data2.favourites and data1.favourites > data2.favourites %}winner{% endif %}">{% if data1.favourites %}{{ data1.favourites }}{% else %}0{% endif %}</div></div>
-      <div class="compare-stat"><div class="label">Status</div><div class="value" style="font-size:1rem">{{ data1.status|default:"?" }}</div></div>
-      <div class="compare-stat"><div class="label">Genres</div><div class="d-flex flex-wrap gap-1 justify-content-center mt-1">{% for g in data1.genres|slice:":4" %}<span class="badge bg-secondary bg-opacity-10" style="font-size:0.7rem">{{ g }}</span>{% endfor %}</div></div>
+      <img src="{{ data1.coverImage.large|default:data1.coverImage.medium }}" style="width:120px;aspect-ratio:2/3;object-fit:cover;border-radius:12px;margin-bottom:0.75rem" alt="" loading="lazy">
+      <h5 class="fw-bold text-truncate mb-1" title="{{ title1 }}">{{ title1 }}</h5>
+      {% if data1.format %}<span class="badge bg-secondary bg-opacity-20 mb-2">{{ data1.format }}</span>{% endif %}
+      <div class="compare-stat">
+        <div class="d-flex justify-content-between"><span class="label">Score</span><span class="fw-bold" style="color:{% if s1 > s2 %}var(--primary){% else %}var(--text-secondary){% endif %}">★ {{ s1|div:10|floatformat:1 }}</span></div>
+        <div class="bar-compare mt-1"><div class="fill" style="width:{% widthratio s1 max_score 100 %}%;background:{% if s1 > s2 %}var(--primary){% else %}var(--text-muted){% endif %}"></div></div>
+      </div>
+      <div class="compare-stat">
+        <div class="d-flex justify-content-between"><span class="label">Popularity</span><span class="fw-bold" style="color:{% if p1 > p2 %}var(--primary){% else %}var(--text-secondary){% endif %}">{{ p1|floatformat:0 }}</span></div>
+        <div class="bar-compare mt-1"><div class="fill" style="width:{% widthratio p1 max_pop 100 %}%;background:{% if p1 > p2 %}var(--primary){% else %}var(--text-muted){% endif %}"></div></div>
+      </div>
+      <div class="compare-stat">
+        <div class="d-flex justify-content-between"><span class="label">Favourites</span><span class="fw-bold" style="color:{% if f1 > f2 %}var(--primary){% else %}var(--text-secondary){% endif %}">{{ f1 }}</span></div>
+        <div class="bar-compare mt-1"><div class="fill" style="width:{% widthratio f1 max_fav 100 %}%;background:{% if f1 > f2 %}var(--primary){% else %}var(--text-muted){% endif %}"></div></div>
+      </div>
+      <div class="compare-stat"><div class="d-flex justify-content-between"><span class="label">Episodes</span><span class="fw-bold">{{ e1|default:"?" }}</span></div></div>
+      <div class="compare-stat"><div class="d-flex justify-content-between"><span class="label">Duration</span><span class="fw-bold">{{ data1.duration|default:"?" }} min</span></div></div>
+      <div class="compare-stat"><div class="d-flex justify-content-between"><span class="label">Status</span><span class="fw-bold" style="font-size:0.9rem">{{ data1.status|default:"?" }}</span></div></div>
+      <div class="compare-stat"><div class="label mb-1">Genres</div><div class="d-flex flex-wrap gap-1 justify-content-center">{% for g in data1.genres|slice:":4" %}<span class="badge bg-secondary bg-opacity-10" style="font-size:0.65rem">{{ g }}</span>{% endfor %}</div></div>
     </div>
   </div>
-  <div class="col-md-2 d-flex justify-content-center compare-vs-wrap" style="padding-top:200px"><div class="compare-vs">VS</div></div>
+  <div class="col-md-2 d-flex justify-content-center compare-vs-wrap"><div class="compare-vs">VS</div></div>
   <div class="col-md-5">
     <div class="compare-card">
-      <img src="{{ data2.coverImage.large|default:data2.coverImage.medium }}" style="width:140px;aspect-ratio:2/3;object-fit:cover;border-radius:12px;margin-bottom:1rem" alt="" loading="lazy">
-      <h4 class="fw-bold text-truncate" title="{{ title2 }}">{{ title2 }}</h4>
-      {% if data2.format %}<span class="badge bg-secondary bg-opacity-20">{{ data2.format }}</span>{% endif %}
-      <div class="compare-stat"><div class="label">Score</div><div class="value {% if data1.averageScore and data2.averageScore and data2.averageScore > data1.averageScore %}winner{% endif %}">{% if data2.averageScore %}★ {{ data2.averageScore|div:10|floatformat:1 }}{% else %}N/A{% endif %}</div></div>
-      <div class="compare-stat"><div class="label">Popularity</div><div class="value {% if data1.popularity and data2.popularity and data2.popularity > data1.popularity %}winner{% endif %}">{% if data2.popularity %}{{ data2.popularity|floatformat:0 }}{% else %}N/A{% endif %}</div>{% if data1.popularity and data2.popularity %}<div class="bar-compare mt-2"><div class="fill" style="width:{% widthratio data2.popularity data1.popularity 100 %}%"></div></div>{% endif %}</div>
-      <div class="compare-stat"><div class="label">Episodes</div><div class="value {% if data1.episodes and data2.episodes and data2.episodes > data1.episodes %}winner{% endif %}">{% if data2.episodes %}{{ data2.episodes }}{% else %}?{% endif %}</div></div>
-      <div class="compare-stat"><div class="label">Duration</div><div class="value">{{ data2.duration|default:"?" }} min</div></div>
-      <div class="compare-stat"><div class="label">Favourites</div><div class="value {% if data1.favourites and data2.favourites and data2.favourites > data1.favourites %}winner{% endif %}">{% if data2.favourites %}{{ data2.favourites }}{% else %}0{% endif %}</div></div>
-      <div class="compare-stat"><div class="label">Status</div><div class="value" style="font-size:1rem">{{ data2.status|default:"?" }}</div></div>
-      <div class="compare-stat"><div class="label">Genres</div><div class="d-flex flex-wrap gap-1 justify-content-center mt-1">{% for g in data2.genres|slice:":4" %}<span class="badge bg-secondary bg-opacity-10" style="font-size:0.7rem">{{ g }}</span>{% endfor %}</div></div>
+      <img src="{{ data2.coverImage.large|default:data2.coverImage.medium }}" style="width:120px;aspect-ratio:2/3;object-fit:cover;border-radius:12px;margin-bottom:0.75rem" alt="" loading="lazy">
+      <h5 class="fw-bold text-truncate mb-1" title="{{ title2 }}">{{ title2 }}</h5>
+      {% if data2.format %}<span class="badge bg-secondary bg-opacity-20 mb-2">{{ data2.format }}</span>{% endif %}
+      <div class="compare-stat">
+        <div class="d-flex justify-content-between"><span class="label">Score</span><span class="fw-bold" style="color:{% if s2 > s1 %}var(--primary){% else %}var(--text-secondary){% endif %}">★ {{ s2|div:10|floatformat:1 }}</span></div>
+        <div class="bar-compare mt-1"><div class="fill" style="width:{% widthratio s2 max_score 100 %}%;background:{% if s2 > s1 %}var(--primary){% else %}var(--text-muted){% endif %}"></div></div>
+      </div>
+      <div class="compare-stat">
+        <div class="d-flex justify-content-between"><span class="label">Popularity</span><span class="fw-bold" style="color:{% if p2 > p1 %}var(--primary){% else %}var(--text-secondary){% endif %}">{{ p2|floatformat:0 }}</span></div>
+        <div class="bar-compare mt-1"><div class="fill" style="width:{% widthratio p2 max_pop 100 %}%;background:{% if p2 > p1 %}var(--primary){% else %}var(--text-muted){% endif %}"></div></div>
+      </div>
+      <div class="compare-stat">
+        <div class="d-flex justify-content-between"><span class="label">Favourites</span><span class="fw-bold" style="color:{% if f2 > f1 %}var(--primary){% else %}var(--text-secondary){% endif %}">{{ f2 }}</span></div>
+        <div class="bar-compare mt-1"><div class="fill" style="width:{% widthratio f2 max_fav 100 %}%;background:{% if f2 > f1 %}var(--primary){% else %}var(--text-muted){% endif %}"></div></div>
+      </div>
+      <div class="compare-stat"><div class="d-flex justify-content-between"><span class="label">Episodes</span><span class="fw-bold">{{ e2|default:"?" }}</span></div></div>
+      <div class="compare-stat"><div class="d-flex justify-content-between"><span class="label">Duration</span><span class="fw-bold">{{ data2.duration|default:"?" }} min</span></div></div>
+      <div class="compare-stat"><div class="d-flex justify-content-between"><span class="label">Status</span><span class="fw-bold" style="font-size:0.9rem">{{ data2.status|default:"?" }}</span></div></div>
+      <div class="compare-stat"><div class="label mb-1">Genres</div><div class="d-flex flex-wrap gap-1 justify-content-center">{% for g in data2.genres|slice:":4" %}<span class="badge bg-secondary bg-opacity-10" style="font-size:0.65rem">{{ g }}</span>{% endfor %}</div></div>
     </div>
   </div>
 </div>
+{% endwith %}
+{% endwith %}
 {% endwith %}
 {% endwith %}
 {% else %}

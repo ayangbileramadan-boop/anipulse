@@ -19,6 +19,7 @@ XP_RATES = {
     'complete_anime': 50,
     'add_review': 30,
     'like_review': 2,
+    'like_post': 2,
     'create_post': 15,
     'create_battle': 20,
     'vote_battle': 5,

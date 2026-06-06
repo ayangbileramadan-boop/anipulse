@@ -1,53 +1,103 @@
 {% extends 'base.html' %}{% load core_extras %}
 {% block title %}Anime Battles — AniPulse{% endblock %}
 {% block extra_css %}<style>
-.battle-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:24px; display:flex; align-items:center; gap:20px; transition:all 0.2s }
+.battle-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:20px; transition:all 0.2s }
 .battle-card:hover { border-color:rgba(232,54,93,0.2) }
-.battle-img { width:80px; height:112px; object-fit:cover; border-radius:10px }
-.vs-badge { width:44px; height:44px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.85rem; flex-shrink:0 }
+.battle-img { width:70px; height:100px; object-fit:cover; border-radius:10px }
+.vs-badge { width:40px; height:40px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.75rem; flex-shrink:0; z-index:2; border:3px solid var(--surface) }
 .bar-bg { height:8px; border-radius:4px; background:var(--surface-2); overflow:hidden }
 .bar-fill { height:100%; border-radius:4px; transition:width 0.5s }
+.trending-badge { background:linear-gradient(135deg,var(--primary),#A259FF); color:#fff; border-radius:20px; padding:4px 14px; font-size:0.7rem; font-weight:600 }
+@media(max-width:576px){
+  .battle-card { padding:14px }
+  .battle-img { width:56px; height:80px }
+  .vs-badge { width:32px; height:32px; font-size:0.6rem }
+}
 </style>{% endblock %}
 {% block content %}
 <div class="container py-5">
-  <div class="d-flex justify-content-between align-items-center mb-4">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <h2 class="fw-bold">⚔️ Anime Battles</h2>
     <a href="{% url 'battle_create' %}" class="btn btn-primary-custom px-4" style="border-radius:12px">+ Create Battle</a>
   </div>
-    {% include 'includes/pagination.html' with items=battles %}
+
+  {% if trending %}
+  <div class="mb-5">
+    <h5 class="fw-bold mb-3">🔥 Trending Battles</h5>
+    <div class="row g-3">
+      {% for b in trending %}
+      <div class="col-md-4">
+        <div class="battle-card">
+          <div class="d-flex align-items-center justify-content-center gap-2 mb-3">
+            <div class="text-center" style="min-width:0;flex:1">
+              <img src="{{ b.anime1.cover_image_large|default:b.anime1.cover_image_medium }}" class="battle-img" alt="" loading="lazy">
+              <div class="small fw-medium mt-1 text-truncate" style="color:var(--text)">{{ b.anime1.display_title|truncatechars:16 }}</div>
+            </div>
+            <div class="vs-badge">VS</div>
+            <div class="text-center" style="min-width:0;flex:1">
+              <img src="{{ b.anime2.cover_image_large|default:b.anime2.cover_image_medium }}" class="battle-img" alt="" loading="lazy">
+              <div class="small fw-medium mt-1 text-truncate" style="color:var(--text)">{{ b.anime2.display_title|truncatechars:16 }}</div>
+            </div>
+          </div>
+          <div class="d-flex justify-content-between mb-1 small">
+            <span class="text-danger fw-bold">{{ b.pct1 }}%</span>
+            <span class="text-secondary">{{ b.total_votes }} votes</span>
+            <span class="text-primary fw-bold">{{ b.pct2 }}%</span>
+          </div>
+          <div class="bar-bg"><div class="bar-fill" style="width:{{ b.pct1 }}%;background:var(--primary)"></div></div>
+          {% if user.is_authenticated %}
+          <form method="post" action="{% url 'battle_vote' b.id %}" class="d-flex gap-2 mt-3">
+            {% csrf_token %}
+            <button name="choice" value="1" class="btn btn-sm btn-outline-light flex-grow-1" style="border-radius:8px">Vote 1</button>
+            <button name="choice" value="2" class="btn btn-sm btn-outline-light flex-grow-1" style="border-radius:8px">Vote 2</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+    <h5 class="fw-bold mb-0">All Battles <span class="text-secondary fw-normal" style="font-size:0.85rem">({{ total_battles }})</span></h5>
+  </div>
+  {% include 'includes/pagination.html' with items=battles %}
   {% if battles %}
   <div class="d-flex flex-column gap-3">
     {% for b in battles %}
     <div class="battle-card">
-      <div class="d-flex align-items-center gap-3 flex-grow-1">
-        <div class="text-center" style="width:80px">
-          <img src="{{ b.anime1.cover_image_large|default:b.anime1.cover_image_medium }}" class="battle-img" alt="" loading="lazy">
-          <div class="small fw-medium mt-1 text-truncate" style="color:var(--text)">{{ b.anime1.display_title|truncatechars:14 }}</div>
+      <div class="d-flex align-items-center gap-3">
+        <div class="d-flex align-items-center gap-2 flex-grow-1" style="min-width:0">
+          <div class="text-center" style="min-width:0;flex:1">
+            <img src="{{ b.anime1.cover_image_large|default:b.anime1.cover_image_medium }}" class="battle-img" alt="" loading="lazy">
+            <div class="small fw-medium mt-1 text-truncate" style="color:var(--text)">{{ b.anime1.display_title|truncatechars:16 }}</div>
+          </div>
+          <div class="vs-badge">VS</div>
+          <div class="text-center" style="min-width:0;flex:1">
+            <img src="{{ b.anime2.cover_image_large|default:b.anime2.cover_image_medium }}" class="battle-img" alt="" loading="lazy">
+            <div class="small fw-medium mt-1 text-truncate" style="color:var(--text)">{{ b.anime2.display_title|truncatechars:16 }}</div>
+          </div>
         </div>
-        <div class="vs-badge">VS</div>
-        <div class="text-center" style="width:80px">
-          <img src="{{ b.anime2.cover_image_large|default:b.anime2.cover_image_medium }}" class="battle-img" alt="" loading="lazy">
-          <div class="small fw-medium mt-1 text-truncate" style="color:var(--text)">{{ b.anime2.display_title|truncatechars:14 }}</div>
+        <div class="flex-grow-1" style="max-width:250px">
+          <div class="d-flex justify-content-between mb-1 small"><span class="text-danger fw-bold">{{ b.pct1 }}%</span><span class="text-secondary">{{ b.total_votes }} votes</span><span class="text-primary fw-bold">{{ b.pct2 }}%</span></div>
+          <div class="bar-bg"><div class="bar-fill" style="width:{{ b.pct1 }}%;background:var(--primary)"></div></div>
         </div>
-      </div>
-      <div class="flex-grow-1">
-        <div class="d-flex justify-content-between mb-1 small"><span class="text-danger fw-bold">{{ b.pct1 }}%</span><span class="text-secondary">{{ b.total_votes }} votes</span><span class="text-primary fw-bold">{{ b.pct2 }}%</span></div>
-        <div class="bar-bg"><div class="bar-fill" style="width:{{ b.pct1 }}%;background:var(--primary)"></div></div>
-      </div>
-      <div>
-        {% if user.is_authenticated %}
-        <form method="post" action="{% url 'battle_vote' b.id %}" class="d-flex gap-2">
-          {% csrf_token %}
-          <button name="choice" value="1" class="btn btn-sm btn-outline-light" style="border-radius:8px">Vote 1</button>
-          <button name="choice" value="2" class="btn btn-sm btn-outline-light" style="border-radius:8px">Vote 2</button>
-        </form>
-        {% endif %}
+        <div class="flex-shrink-0">
+          {% if user.is_authenticated %}
+          <form method="post" action="{% url 'battle_vote' b.id %}" class="d-flex gap-1">
+            {% csrf_token %}
+            <button name="choice" value="1" class="btn btn-sm btn-outline-light" style="border-radius:8px;font-size:0.75rem">Vote 1</button>
+            <button name="choice" value="2" class="btn btn-sm btn-outline-light" style="border-radius:8px;font-size:0.75rem">Vote 2</button>
+          </form>
+          {% endif %}
+        </div>
       </div>
     </div>
     {% endfor %}
   </div>
   {% else %}
-  <div class="text-center py-5"><div style="font-size:3rem" class="mb-3">⚔️</div><h5>No battles yet</h5><p class="text-secondary small">Be the first to create one!</p></div>
+  <div class="text-center py-5"><div style="font-size:3rem" class="mb-3">⚔️</div><h5>No battles yet</h5><p class="text-secondary small">Be the first to create one or run the seed command!</p></div>
   {% endif %}
   {% include 'includes/pagination.html' with items=battles %}
 </div>

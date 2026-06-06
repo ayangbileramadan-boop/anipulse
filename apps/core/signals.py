@@ -5,7 +5,7 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.contrib.auth.signals import user_logged_in
 
-from apps.anime.models import Review, Battle, BattleVote
+from apps.anime.models import Review, Battle, BattleVote, SocialPost, SocialLike, DiscussionComment
 from apps.core.models import UserFollow
 from apps.watchlist.models import WatchlistEntry
 from apps.core.services.gamification import GamificationEngine
@@ -63,6 +63,14 @@ def watchlist_entry_saved(sender, instance, created, **kwargs):
 
     try:
         with transaction.atomic():
+            old_eps = getattr(instance, '_old_episodes', 0) or 0
+            new_eps = max(instance.episodes_watched or 0, 0)
+            eps_diff = new_eps - old_eps
+            if eps_diff > 0:
+                for _ in range(eps_diff):
+                    engine.award_xp(instance.user, 'complete_episode')
+                progress_quest(instance.user, 'daily_episode')
+
             is_newly_completed = (
                 instance.status == 'COMPLETED' and
                 not created and
@@ -124,12 +132,45 @@ def battle_vote_cast(sender, instance, created, **kwargs):
         logger.error(f"Vote signal error for {instance.id}: {e}")
 
 
+@receiver(post_save, sender=SocialPost)
+def social_post_created(sender, instance, created, **kwargs):
+    if not created:
+        return
+    try:
+        with transaction.atomic():
+            engine.award_xp(instance.user, 'create_post')
+    except Exception as e:
+        logger.error(f"Social post signal error for {instance.id}: {e}")
+
+
+@receiver(post_save, sender=SocialLike)
+def social_like_created(sender, instance, created, **kwargs):
+    if not created:
+        return
+    try:
+        with transaction.atomic():
+            engine.award_xp(instance.user, 'like_post')
+    except Exception as e:
+        logger.error(f"Social like signal error for {instance.id}: {e}")
+
+
+@receiver(post_save, sender=DiscussionComment)
+def discussion_comment_created(sender, instance, created, **kwargs):
+    if not created:
+        return
+    try:
+        with transaction.atomic():
+            engine.award_xp(instance.user, 'comment')
+    except Exception as e:
+        logger.error(f"Comment signal error for {instance.id}: {e}")
+
+
 @receiver(post_save, sender=UserFollow)
 def user_followed(sender, instance, created, **kwargs):
     if not created:
         return
     try:
         with transaction.atomic():
-            engine.award_xp(instance.follower, 'daily_login')
+            engine.award_xp(instance.follower, 'share_activity')
     except Exception as e:
         logger.error(f"Follow signal error for {instance.id}: {e}")

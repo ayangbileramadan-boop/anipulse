@@ -1,8 +1,11 @@
 {% extends 'base.html' %}{% load core_extras %}
 {% block title %}{{ profile_user.username }} — AniPulse{% endblock %}
-
-{% block extra_css %}{% endblock %}
-
+{% block extra_css %}
+<style>
+.profile-mini-img { width:56px; height:80px; object-fit:cover; border-radius:8px }
+@media(max-width:576px){ .profile-mini-img { width:44px; height:64px } }
+</style>
+{% endblock %}
 {% block content %}
 {% if profile_user.cover_image %}
 <div class="profile-cover" style="background-image:url('{{ profile_user.cover_image|surrogatefree }}')"></div>
@@ -25,6 +28,10 @@
         </div>
         {% if is_me %}
         <a href="{% url 'profile_edit' %}" class="btn btn-sm btn-outline-light px-3 flex-shrink-0">Edit Profile</a>
+        {% elif user.is_authenticated %}
+        <a href="{% url 'social_follow' profile_user.username %}" class="btn btn-sm {% if is_following %}btn-outline-secondary{% else %}btn-primary-custom{% endif %} px-3 flex-shrink-0" style="border-radius:10px">
+          {% if is_following %}Unfollow{% else %}Follow{% endif %}
+        </a>
         {% endif %}
       </div>
 
@@ -44,7 +51,7 @@
 
       {% if game_profile %}
       <div class="p-4 rounded-4 mb-4" style="background:var(--surface);border:1px solid var(--border)">
-        <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
           <div>
             <span class="fw-bold fs-5">Lv.{{ level_progress.level }}</span>
             <span class="text-secondary small ms-2">{{ level_progress.xp }} XP</span>
@@ -89,6 +96,34 @@
             <div class="num text-info">{{ stats.total }}</div>
             <div class="text-secondary small">Total</div>
           </div>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if currently_watching %}
+      <div class="mb-4">
+        <h5 class="fw-bold mb-3">📺 Currently Watching</h5>
+        <div class="d-flex flex-wrap gap-3">
+          {% for entry in currently_watching %}
+          <a href="{% url 'anime_detail' entry.anime.anilist_id %}" class="text-decoration-none text-center" style="width:56px">
+            <img src="{{ entry.anime.cover_image_medium|default:entry.anime.cover_image_large }}" class="profile-mini-img" alt="" loading="lazy">
+            <div class="small text-truncate text-light mt-1" style="max-width:56px">{{ entry.anime.display_title|truncatechars:10 }}</div>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if recently_completed %}
+      <div class="mb-4">
+        <h5 class="fw-bold mb-3">✅ Recently Completed</h5>
+        <div class="d-flex flex-wrap gap-3">
+          {% for entry in recently_completed %}
+          <a href="{% url 'anime_detail' entry.anime.anilist_id %}" class="text-decoration-none text-center" style="width:56px">
+            <img src="{{ entry.anime.cover_image_medium|default:entry.anime.cover_image_large }}" class="profile-mini-img" alt="" loading="lazy">
+            <div class="small text-truncate text-light mt-1" style="max-width:56px">{{ entry.anime.display_title|truncatechars:10 }}</div>
+          </a>
+          {% endfor %}
         </div>
       </div>
       {% endif %}

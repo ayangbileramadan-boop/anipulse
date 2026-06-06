@@ -33,6 +33,13 @@ DAILY_QUESTS = [
         'xp_reward': XP_RATES['daily_login'] * 2,
     },
     {
+        'quest_id': 'daily_episode',
+        'title': 'Episode Watcher',
+        'description': 'Watch 1 episode',
+        'target': 1,
+        'xp_reward': XP_RATES['complete_episode'] * 2,
+    },
+    {
         'quest_id': 'daily_review',
         'title': 'Share Your Thoughts',
         'description': 'Write a review for an anime',

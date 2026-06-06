@@ -703,6 +703,9 @@ def profile_view(request, username):
     User = get_user_model()
     profile_user = get_object_or_404(User, username=username)
     is_me = request.user == profile_user if request.user.is_authenticated else False
+    is_following = False
+    if request.user.is_authenticated and not is_me:
+        is_following = UserFollow.objects.filter(follower=request.user, following=profile_user).exists()
 
     stats = {
         'watching': WatchlistEntry.objects.filter(user=profile_user, status='WATCHING').count(),
@@ -721,6 +724,14 @@ def profile_view(request, username):
 
     streak = Streak.objects.filter(user=profile_user).first()
 
+    currently_watching = WatchlistEntry.objects.filter(
+        user=profile_user, status='WATCHING'
+    ).select_related('anime').order_by('-updated_at')[:6]
+
+    recently_completed = WatchlistEntry.objects.filter(
+        user=profile_user, status='COMPLETED'
+    ).select_related('anime').order_by('-updated_at')[:6]
+
     game_engine = GamificationEngine()
     game_profile = game_engine.get_profile(profile_user)
     level_progress = game_profile.level_progress
@@ -729,12 +740,15 @@ def profile_view(request, username):
     return render(request, 'profile.html', {
         'profile_user': profile_user,
         'is_me': is_me,
+        'is_following': is_following,
         'stats': stats,
         'total_watch_hours': round(total_hours, 1),
         'profile_streak': streak,
         'game_profile': game_profile,
         'level_progress': level_progress,
         'unlocked_badges': unlocked_badges,
+        'currently_watching': currently_watching,
+        'recently_completed': recently_completed,
     })
 
 
@@ -1001,10 +1015,15 @@ def quiz_view(request):
 
 def battle_list(request):
     battles_qs = Battle.objects.filter(is_active=True).select_related('anime1', 'anime2', 'created_by')
+    trending = battles_qs.annotate(total_votes=F('votes1') + F('votes2')).order_by('-total_votes')[:3]
     paginator = Paginator(battles_qs, 20)
     page_number = request.GET.get('page', 1)
     battles = paginator.get_page(page_number)
-    return render(request, 'battles.html', {'battles': battles})
+    return render(request, 'battles.html', {
+        'battles': battles,
+        'trending': trending,
+        'total_battles': battles_qs.count(),
+    })
 
 
 @login_required
@@ -1158,11 +1177,17 @@ def tier_list_add_item(request, slug):
 
 
 def social_feed(request):
-    posts_qs = SocialPost.objects.filter(reply_to__isnull=True).select_related('user', 'anime').prefetch_related('liked_by')
+    posts_qs = SocialPost.objects.filter(reply_to__isnull=True).select_related('user', 'anime').prefetch_related('liked_by', 'replies__user')
     paginator = Paginator(posts_qs, 20)
     page_number = request.GET.get('page', 1)
     posts = paginator.get_page(page_number)
-    return render(request, 'social_feed.html', {'posts': posts})
+    liked_post_ids = set()
+    if request.user.is_authenticated:
+        liked_post_ids = set(SocialLike.objects.filter(
+            user=request.user,
+            post__in=[p.id for p in posts],
+        ).values_list('post_id', flat=True))
+    return render(request, 'social_feed.html', {'posts': posts, 'liked_post_ids': liked_post_ids})
 
 
 @login_required
@@ -1183,13 +1208,56 @@ def social_like_post(request, post_id):
     like, created = SocialLike.objects.get_or_create(post=post, user=request.user)
     if not created:
         like.delete()
-        post.likes = max(0, post.likes - 1)
+        SocialPost.objects.filter(id=post.id).update(likes=F('likes') - 1)
     else:
-        post.likes += 1
+        SocialPost.objects.filter(id=post.id).update(likes=F('likes') + 1)
         if post.user != request.user:
             _create_notification(post.user, f'{request.user.username} liked your post',
                                  url='/social/')
-    post.save()
+    return redirect('social_feed')
+
+
+@login_required
+def social_like_json(request, post_id):
+    from django.http import JsonResponse
+    post = get_object_or_404(SocialPost, id=post_id)
+    like, created = SocialLike.objects.get_or_create(post=post, user=request.user)
+    if not created:
+        like.delete()
+        SocialPost.objects.filter(id=post.id).update(likes=F('likes') - 1)
+    else:
+        SocialPost.objects.filter(id=post.id).update(likes=F('likes') + 1)
+        if post.user != request.user:
+            _create_notification(post.user, f'{request.user.username} liked your post',
+                                 url='/social/')
+    post.refresh_from_db()
+    return JsonResponse({'likes': post.likes, 'liked': not created})
+
+
+@login_required
+def social_comment(request, post_id):
+    if request.method == 'POST':
+        body = request.POST.get('body', '').strip()
+        if body:
+            parent_id = request.POST.get('parent')
+            reply_to = None
+            if parent_id:
+                try:
+                    reply_to = SocialPost.objects.get(id=int(parent_id))
+                except (SocialPost.DoesNotExist, ValueError):
+                    pass
+            SocialPost.objects.create(
+                user=request.user,
+                body=body,
+                reply_to=reply_to,
+            )
+    return redirect('social_feed')
+
+
+@login_required
+def social_delete_post(request, post_id):
+    post = get_object_or_404(SocialPost, id=post_id, user=request.user)
+    post.delete()
     return redirect('social_feed')
 
 
