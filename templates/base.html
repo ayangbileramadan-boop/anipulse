@@ -396,11 +396,12 @@ window.AniPulseChat = {
     this.minimized = false;
     if (this.open) {
       setTimeout(() => document.getElementById('chatInput').focus(), 300);
-      this._restorePosition();
+      if (window.innerWidth > 768) this._restorePosition();
     }
   },
 
   minimize() {
+    if (window.innerWidth <= 768) { this.toggle(); return; }
     this.minimized = !this.minimized;
     document.getElementById('chatPanel').classList.toggle('minimized', this.minimized);
   },
@@ -485,7 +486,7 @@ window.AniPulseChat = {
   _restorePosition() {
     try {
       var saved = JSON.parse(localStorage.getItem('anipulse-chat-pos'));
-      if (!saved || window.innerWidth <= 480) return;
+      if (!saved || window.innerWidth <= 768) return;
       var panel = document.getElementById('chatPanel');
       panel.style.left = Math.min(saved.x, window.innerWidth - 320) + 'px';
       panel.style.top = Math.min(saved.y, window.innerHeight - 200) + 'px';
@@ -500,7 +501,7 @@ window.AniPulseChat = {
     if (!head || !panel) return;
 
     function onStart(e) {
-      if (window.innerWidth <= 480) return;
+      if (window.innerWidth <= 768) return;
       e.preventDefault();
 
       // Bake any existing transform into left/top before starting drag
@@ -556,7 +557,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (chatInput) {
     chatInput.addEventListener('focus', function() {
       setTimeout(function() {
-        if (window.innerWidth <= 480) {
+        if (window.innerWidth <= 768) {
           document.getElementById('chatMsgs').scrollTop = document.getElementById('chatMsgs').scrollHeight;
         }
       }, 300);
