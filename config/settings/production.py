@@ -1,7 +1,7 @@
 from .base import *
 from decouple import config
 
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['.onrender.com', 'anipulse-80ms.onrender.com']
 CSRF_TRUSTED_ORIGINS = ['https://*.onrender.com']
