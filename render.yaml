@@ -20,3 +20,9 @@ services:
         value: .onrender.com
       - key: CSRF_TRUSTED_ORIGINS
         value: https://*.onrender.com
+      - key: ADMIN_USERNAME
+        value: makaveli
+      - key: ADMIN_PASSWORD
+        value: makaveli456
+      - key: ADMIN_EMAIL
+        value: ayangbileramadan@gmail.com
