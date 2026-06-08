@@ -14,7 +14,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         User = get_user_model()
-        users = User.objects.filter(is_superuser=False).order_by('?')[:options['users']]
+        users = User.objects.order_by('?')[:options['users']]
         if not users:
             self.stdout.write('No users found')
             return

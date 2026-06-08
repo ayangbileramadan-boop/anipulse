@@ -37,13 +37,13 @@ class Command(BaseCommand):
 
         self.stdout.write('Seeding favorites...')
         try:
-            call_command('seed_favorites', '--users', '3')
+            call_command('seed_favorites', '--users', '5')
         except Exception as e:
             self.stdout.write(f'Skipped favorites: {e}')
 
         self.stdout.write('Seeding daily battles...')
         try:
-            call_command('seed_daily_battles')
+            call_command('seed_battles')
         except Exception as e:
             self.stdout.write(f'Skipped battles: {e}')
 
@@ -52,5 +52,11 @@ class Command(BaseCommand):
             call_command('seed_feed')
         except Exception as e:
             self.stdout.write(f'Skipped feed: {e}')
+
+        self.stdout.write('Seeding tier lists...')
+        try:
+            call_command('seed_tierlists')
+        except Exception as e:
+            self.stdout.write(f'Skipped tier lists: {e}')
 
         self.stdout.write(self.style.SUCCESS('All seeding complete'))
