@@ -18,13 +18,11 @@ CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='https://anipulse.
 # Static files (Whitenoise for production)
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Database — use pg8000 driver (pure Python, works on Python 3.14+)
+# Database
 import dj_database_url
 DATABASES = {
     'default': dj_database_url.config(conn_max_age=600),
 }
-if DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
-    DATABASES['default']['OPTIONS'] = {'driver': 'pg8000'}
 
 # Cache (local memory — upgrade to Redis when needed)
 CACHES = {
