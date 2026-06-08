@@ -19,7 +19,7 @@ from apps.anime.services.sync import sync_anime_from_anilist
 from apps.watchlist.models import WatchlistEntry
 from apps.watchlist.models import ACHIEVEMENT_DEFS
 from apps.core.models import UserFollow, Streak
-from apps.anime.models import Anime, Battle, BattleVote, TierList, TierListItem, SocialPost, SocialLike, UserActivity, Comment, CommentLike, FavoriteAnime
+from apps.anime.models import Anime, Battle, BattleVote, TierList, TierListItem, TierListLike, SocialPost, SocialLike, UserActivity, Comment, CommentLike, FavoriteAnime
 from apps.recommendations.engine import get_recommendations_for_user
 from apps.core.services.personalization import PersonalizationEngine
 from apps.core.services.gamification import GamificationEngine
@@ -1124,12 +1124,12 @@ def battle_list(request):
     if not active_qs.exists():
         try:
             from django.core.management import call_command
-            call_command('seed_daily_battles')
+            call_command('seed_battles')
             active_qs = Battle.objects.filter(is_active=True).select_related('anime1', 'anime2', 'created_by')[:20]
         except Exception:
             pass
 
-    trending = active_qs.annotate(total_votes=F('votes1') + F('votes2')).order_by('-total_votes')[:3]
+    trending = list(active_qs.annotate(total=F('votes1') + F('votes2')).order_by('-total')[:3])
     paginator = Paginator(active_qs, 20)
     page_number = request.GET.get('page', 1)
     battles = paginator.get_page(page_number)
@@ -1149,7 +1149,6 @@ def battle_list(request):
         'total_battles': active_qs.count(),
         'user_votes': user_votes,
     }
-    cache.set('battle_list_data', context, 300)
     return render(request, 'battles.html', context)
 
 

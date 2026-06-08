@@ -110,7 +110,7 @@ class FeedBuilder:
         result = {
             'id': f'post_{post.id}',
             'type': 'system_post' if is_system else 'post',
-            'timestamp': post.created_at.isoformat(),
+            'timestamp': post.created_at,
             'user': user_data,
             'content': {
                 'body': post.body,
@@ -207,7 +207,7 @@ class FeedBuilder:
                 items.append({
                     'id': f'trending_{anime.get("id", i)}',
                     'type': 'system_trending',
-                    'timestamp': self.now.isoformat(),
+                    'timestamp': self.now,
                     'user': {'id': 0, 'username': 'AniPulse', 'avatar': '', 'is_system': True},
                     'content': {
                         'title': title,
@@ -244,7 +244,7 @@ class FeedBuilder:
                 items.append({
                     'id': f'seasonal_{anime.get("id", i)}',
                     'type': 'system_seasonal',
-                    'timestamp': self.now.isoformat(),
+                    'timestamp': self.now,
                     'user': {'id': 0, 'username': 'AniPulse', 'avatar': '', 'is_system': True},
                     'content': {
                         'title': title,
@@ -274,7 +274,7 @@ class FeedBuilder:
                 items.append({
                     'id': f'watched_{a.anilist_id}',
                     'type': 'system_most_watched',
-                    'timestamp': self.now.isoformat(),
+                    'timestamp': self.now,
                     'user': {'id': 0, 'username': 'AniPulse', 'avatar': '', 'is_system': True},
                     'content': {
                         'title': a.display_title,
