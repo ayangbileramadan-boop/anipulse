@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Anime, Episode, Genre, Studio, ExternalLink, Tag, AnimeTag, Review, DiscussionThread, DiscussionComment
+from .models import Anime, Episode, Genre, Studio, ExternalLink, Tag, AnimeTag, Review, DiscussionThread, DiscussionComment, FavoriteAnime
 
 
 @admin.register(Genre)
@@ -96,3 +96,10 @@ class DiscussionCommentAdmin(admin.ModelAdmin):
     list_filter = ['is_spoiler']
     search_fields = ['user__username', 'thread__title', 'body']
     readonly_fields = ['created_at', 'updated_at']
+
+
+@admin.register(FavoriteAnime)
+class FavoriteAnimeAdmin(admin.ModelAdmin):
+    list_display = ['user', 'anime', 'created_at']
+    search_fields = ['user__username', 'anime__title']
+    autocomplete_fields = ['user', 'anime']

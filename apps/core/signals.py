@@ -5,7 +5,7 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.contrib.auth.signals import user_logged_in
 
-from apps.anime.models import Review, Battle, BattleVote, SocialPost, SocialLike, DiscussionComment
+from apps.anime.models import Review, Battle, BattleVote, SocialPost, SocialLike, DiscussionComment, UserActivity
 from apps.core.models import UserFollow
 from apps.watchlist.models import WatchlistEntry
 from apps.core.services.gamification import GamificationEngine
@@ -116,6 +116,9 @@ def battle_created(sender, instance, created, **kwargs):
     try:
         with transaction.atomic():
             engine.award_xp(instance.created_by, 'create_battle')
+        from apps.feed.services import FeedBuilder
+        builder = FeedBuilder(instance.created_by)
+        builder.invalidate()
     except Exception as e:
         logger.error(f"Battle signal error for {instance.id}: {e}")
 
@@ -174,3 +177,57 @@ def user_followed(sender, instance, created, **kwargs):
             engine.award_xp(instance.follower, 'share_activity')
     except Exception as e:
         logger.error(f"Follow signal error for {instance.id}: {e}")
+
+
+@receiver(post_save, sender=SocialPost, weak=False)
+def invalidate_feed_on_post(sender, instance, created, **kwargs):
+    if not created:
+        return
+    from apps.feed.services import FeedBuilder
+    try:
+        builder = FeedBuilder(instance.user)
+        builder.invalidate()
+        if instance.reply_to and instance.reply_to.user:
+            builder2 = FeedBuilder(instance.reply_to.user)
+            builder2.invalidate()
+    except Exception as e:
+        logger.error(f"Feed invalidation error (post): {e}")
+
+
+@receiver(post_save, sender=SocialLike, weak=False)
+def invalidate_feed_on_like(sender, instance, created, **kwargs):
+    if not created:
+        return
+    from apps.feed.services import FeedBuilder
+    try:
+        builder = FeedBuilder(instance.user)
+        builder.invalidate()
+        if instance.post and instance.post.user:
+            builder2 = FeedBuilder(instance.post.user)
+            builder2.invalidate()
+    except Exception as e:
+        logger.error(f"Feed invalidation error (like): {e}")
+
+
+@receiver(post_save, sender=BattleVote, weak=False)
+def invalidate_feed_on_vote(sender, instance, created, **kwargs):
+    if not created:
+        return
+    from apps.feed.services import FeedBuilder
+    try:
+        builder = FeedBuilder(instance.user)
+        builder.invalidate()
+    except Exception as e:
+        logger.error(f"Feed invalidation error (vote): {e}")
+
+
+@receiver(post_save, sender=UserActivity, weak=False)
+def invalidate_feed_on_activity(sender, instance, created, **kwargs):
+    if not created:
+        return
+    from apps.feed.services import FeedBuilder
+    try:
+        builder = FeedBuilder(instance.user)
+        builder.invalidate()
+    except Exception as e:
+        logger.error(f"Feed invalidation error (activity): {e}")

@@ -16,7 +16,7 @@
             <h2 class="fw-bold mb-2">Notification Settings</h2>
             <p class="text-secondary mb-5">Choose when you want to receive email alerts about your anime</p>
 
-            <form method="post">
+            <form method="post" onsubmit="var btn=this.querySelector('button[type=submit],input[type=submit]');if(btn)btn.disabled=true">
                 {% csrf_token %}
 
                 <div class="toggle-wrapper">

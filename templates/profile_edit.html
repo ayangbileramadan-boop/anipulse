@@ -20,13 +20,13 @@
   <div class="row justify-content-center">
     <div class="col-lg-6">
       <h2 class="fw-bold mb-4">Edit Profile</h2>
-      <form method="post" enctype="multipart/form-data">
+      <form method="post" enctype="multipart/form-data" onsubmit="var btn=this.querySelector('button[type=submit],input[type=submit]');if(btn)btn.disabled=true">
         {% csrf_token %}
         <div class="text-center mb-4">
           <label class="d-block fw-medium mb-2 text-secondary" style="font-size:0.85rem">Profile Picture</label>
           <div class="drop-zone" id="avatarDrop" onclick="document.getElementById('avatarInput').click()">
             {% if user.avatar %}
-            <img src="{{ user.avatar }}" id="avatarPreview" alt="">
+            <img src="{{ user.avatar }}" id="avatarPreview" alt="Your current avatar">
             {% else %}
             <div class="placeholder" id="avatarPlaceholder">📷</div>
             {% endif %}
@@ -38,7 +38,7 @@
           <label class="d-block fw-medium mb-2 text-secondary" style="font-size:0.85rem">Cover Image</label>
           <div class="drop-zone-cover" id="coverDrop" onclick="document.getElementById('coverInput').click()">
             {% if user.cover_image %}
-            <img src="{{ user.cover_image }}" id="coverPreview" alt="">
+            <img src="{{ user.cover_image }}" id="coverPreview" alt="Your current cover image">
             {% else %}
             <div class="placeholder" id="coverPlaceholder">🖼️</div>
             {% endif %}

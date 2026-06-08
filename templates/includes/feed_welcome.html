@@ -1,0 +1,9 @@
+<div class="text-center py-4">
+  <div style="font-size:3rem" class="mb-2">🎉</div>
+  <h5 class="fw-bold" style="color:var(--text)">{{ item.content.title }}</h5>
+  <p style="color:var(--text-secondary);font-size:0.9rem;max-width:400px;margin:0 auto">{{ item.content.body }}</p>
+  <div class="d-flex justify-content-center gap-2 mt-3">
+    <a href="{% url 'discover' %}" class="btn btn-sm" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:6px 18px">Discover Anime</a>
+    <a href="{% url 'battles' %}" class="btn btn-sm btn-outline-light" style="border-radius:8px;padding:6px 18px">Join Battles</a>
+  </div>
+</div>

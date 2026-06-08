@@ -49,3 +49,8 @@ def url_replace(context, **kwargs):
     for k, v in kwargs.items():
         query[k] = v
     return query.urlencode()
+
+
+@register.filter
+def dictlookup(d, key):
+    return d.get(key)

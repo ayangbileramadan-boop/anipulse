@@ -2,8 +2,21 @@
 {% block title %}{{ profile_user.username }} — AniPulse{% endblock %}
 {% block extra_css %}
 <style>
+.tab-btn { background:none; border:none; color:var(--text-secondary); padding:0.5rem 1rem; border-radius:8px; font-size:0.9rem; transition:all .2s; white-space:nowrap }
+.tab-btn:hover { background:var(--surface); color:var(--text) }
+.tab-btn.active { background:var(--primary); color:#fff }
 .profile-mini-img { width:56px; height:80px; object-fit:cover; border-radius:8px }
-@media(max-width:576px){ .profile-mini-img { width:44px; height:64px } }
+@media(max-width:576px){ .profile-mini-img { width:48px; height:68px } }
+.activity-icon { width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:50%; flex-shrink:0; font-size:0.85rem }
+.tier-badge { display:inline-block; width:28px; height:28px; line-height:28px; text-align:center; border-radius:6px; font-weight:700; font-size:0.75rem; flex-shrink:0 }
+.tier-S { background:#ffd700; color:#000 }
+.tier-A { background:#e74c3c; color:#fff }
+.tier-B { background:#3498db; color:#fff }
+.tier-C { background:#2ecc71; color:#fff }
+.tier-D { background:#95a5a6; color:#fff }
+.tier-F { background:#7f8c8d; color:#fff }
+.tab-content > .tab-pane { display:none }
+.tab-content > .tab-pane.active { display:block }
 </style>
 {% endblock %}
 {% block content %}
@@ -14,7 +27,8 @@
 <div class="container py-4">
   <div class="row justify-content-center">
     <div class="col-lg-10">
-      <div class="d-flex align-items-end gap-3 mb-4 flex-wrap">
+
+      <div class="d-flex align-items-end gap-3 mb-3 flex-wrap">
         <div class="profile-avatar flex-shrink-0">
           {% if profile_user.avatar %}
           <img src="{{ profile_user.avatar|surrogatefree }}" alt="" loading="lazy">
@@ -26,23 +40,34 @@
           <h2 class="fw-bold mb-0 text-truncate">{{ profile_user.username }}</h2>
           <p class="text-secondary small mb-0">Joined {{ profile_user.date_joined|date:"F Y" }}</p>
         </div>
-        {% if is_me %}
-        <a href="{% url 'profile_edit' %}" class="btn btn-sm btn-outline-light px-3 flex-shrink-0">Edit Profile</a>
-        {% elif user.is_authenticated %}
-        <a href="{% url 'social_follow' profile_user.username %}" class="btn btn-sm {% if is_following %}btn-outline-secondary{% else %}btn-primary-custom{% endif %} px-3 flex-shrink-0" style="border-radius:10px">
-          {% if is_following %}Unfollow{% else %}Follow{% endif %}
-        </a>
-        {% endif %}
+        <div class="d-flex gap-2 flex-shrink-0">
+          {% if is_me %}
+          <a href="{% url 'profile_edit' %}" class="btn btn-sm btn-outline-light px-3">Edit Profile</a>
+          {% elif user.is_authenticated %}
+          <button class="btn btn-sm px-3 profile-follow-btn" style="border-radius:10px;{% if is_following %}background:var(--surface);border:1px solid var(--border);color:var(--text-secondary){% else %}background:var(--primary);color:#fff;border:none{% endif %}" data-username="{{ profile_user.username }}">
+            {% if is_following %}Following{% else %}Follow{% endif %}
+          </button>
+          {% endif %}
+        </div>
       </div>
 
-      <div class="d-flex flex-wrap gap-2 mb-3">
+      <div class="d-flex flex-wrap gap-3 mb-3 text-center">
+        <a href="{% url 'profile_followers' profile_user.username %}" class="text-decoration-none text-secondary small">
+          <span class="fw-bold text-light d-block">{{ follower_count }}</span>Followers
+        </a>
+        <a href="{% url 'profile_following' profile_user.username %}" class="text-decoration-none text-secondary small">
+          <span class="fw-bold text-light d-block">{{ following_count }}</span>Following
+        </a>
         {% if total_watch_hours %}
-        <span class="badge-sm"><span class="text-primary fw-bold">{{ total_watch_hours }}h</span> watched</span>
+        <div class="text-secondary small">
+          <span class="fw-bold text-light d-block">{{ total_watch_hours }}h</span>Watched
+        </div>
         {% endif %}
         {% if profile_streak and profile_streak.current_streak > 0 %}
-        <span class="badge-sm">🔥 {{ profile_streak.current_streak }} day streak</span>
+        <div class="text-secondary small">
+          <span class="fw-bold text-light d-block">{{ profile_streak.current_streak }}</span>Day Streak
+        </div>
         {% endif %}
-        <span class="badge-sm">Joined {{ profile_user.date_joined|date:"Y" }}</span>
       </div>
 
       {% if profile_user.bio %}
@@ -71,87 +96,237 @@
       </div>
       {% endif %}
 
-      {% if stats %}
-      <div class="row g-3 mb-4">
-        <div class="col-6 col-md-3">
-          <div class="stat-card">
-            <div class="num text-primary">{{ stats.watching }}</div>
-            <div class="text-secondary small">Watching</div>
-          </div>
-        </div>
-        <div class="col-6 col-md-3">
-          <div class="stat-card">
-            <div class="num text-success">{{ stats.completed }}</div>
-            <div class="text-secondary small">Completed</div>
-          </div>
-        </div>
-        <div class="col-6 col-md-3">
-          <div class="stat-card">
-            <div class="num text-warning">{{ stats.planning }}</div>
-            <div class="text-secondary small">Planning</div>
-          </div>
-        </div>
-        <div class="col-6 col-md-3">
-          <div class="stat-card">
-            <div class="num text-info">{{ stats.total }}</div>
-            <div class="text-secondary small">Total</div>
-          </div>
-        </div>
-      </div>
-      {% endif %}
-
-      {% if currently_watching %}
-      <div class="mb-4">
-        <h5 class="fw-bold mb-3">📺 Currently Watching</h5>
-        <div class="d-flex flex-wrap gap-3">
-          {% for entry in currently_watching %}
-          <a href="{% url 'anime_detail' entry.anime.anilist_id %}" class="text-decoration-none text-center" style="width:56px">
-            <img src="{{ entry.anime.cover_image_medium|default:entry.anime.cover_image_large }}" class="profile-mini-img" alt="" loading="lazy">
-            <div class="small text-truncate text-light mt-1" style="max-width:56px">{{ entry.anime.display_title|truncatechars:10 }}</div>
-          </a>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-
-      {% if recently_completed %}
-      <div class="mb-4">
-        <h5 class="fw-bold mb-3">✅ Recently Completed</h5>
-        <div class="d-flex flex-wrap gap-3">
-          {% for entry in recently_completed %}
-          <a href="{% url 'anime_detail' entry.anime.anilist_id %}" class="text-decoration-none text-center" style="width:56px">
-            <img src="{{ entry.anime.cover_image_medium|default:entry.anime.cover_image_large }}" class="profile-mini-img" alt="" loading="lazy">
-            <div class="small text-truncate text-light mt-1" style="max-width:56px">{{ entry.anime.display_title|truncatechars:10 }}</div>
-          </a>
-          {% endfor %}
-        </div>
+      {% if show_watchlist and stats %}
+      <div class="row g-2 mb-4">
+        <div class="col-4 col-md"><div class="stat-card"><div class="num text-primary">{{ stats.WATCHING|default:"-" }}</div><div class="small text-secondary">Watching</div></div></div>
+        <div class="col-4 col-md"><div class="stat-card"><div class="num text-success">{{ stats.COMPLETED|default:"-" }}</div><div class="small text-secondary">Completed</div></div></div>
+        <div class="col-4 col-md"><div class="stat-card"><div class="num text-warning">{{ stats.PLANNING|default:"-" }}</div><div class="small text-secondary">Planning</div></div></div>
+        <div class="col-4 col-md"><div class="stat-card"><div class="num" style="color:#e67e22">{{ stats.PAUSED|default:"-" }}</div><div class="small text-secondary">Paused</div></div></div>
+        <div class="col-4 col-md"><div class="stat-card"><div class="num text-danger">{{ stats.DROPPED|default:"-" }}</div><div class="small text-secondary">Dropped</div></div></div>
+        <div class="col-4 col-md"><div class="stat-card"><div class="num text-info">{{ stats.total|default:"-" }}</div><div class="small text-secondary">Total</div></div></div>
       </div>
       {% endif %}
 
       {% if is_me %}
       <div class="d-flex flex-wrap gap-2 mb-4">
-        <a href="{% url 'dashboard' %}" class="badge-sm text-decoration-none">📊 Dashboard</a>
-        <a href="{% url 'my_lists' %}" class="badge-sm text-decoration-none">📋 My Lists</a>
-        <a href="{% url 'achievements' %}" class="badge-sm text-decoration-none">🏆 Achievements</a>
-        <a href="{% url 'watch_time' %}" class="badge-sm text-decoration-none">⏰ Watch Time</a>
-        <a href="{% url 'recommendations' %}" class="badge-sm text-decoration-none">🎯 Recommendations</a>
-        <a href="{% url 'quiz' %}" class="badge-sm text-decoration-none">🧠 Anime Quiz</a>
+        <a href="{% url 'dashboard' %}" class="badge-sm text-decoration-none">Dashboard</a>
+        <a href="{% url 'my_lists' %}" class="badge-sm text-decoration-none">My Lists</a>
+        <a href="{% url 'achievements' %}" class="badge-sm text-decoration-none">Achievements</a>
+        <a href="{% url 'watch_time' %}" class="badge-sm text-decoration-none">Watch Time</a>
+        <a href="{% url 'recommendations' %}" class="badge-sm text-decoration-none">Recommendations</a>
+        <a href="{% url 'quiz' %}" class="badge-sm text-decoration-none">Anime Quiz</a>
       </div>
       {% endif %}
 
-      {% with reviews=profile_user.reviews.all %}
-      {% if reviews %}
-      <h5 class="fw-bold mb-3">Recent Reviews</h5>
-      {% for review in reviews|slice:":5" %}
-      <div class="p-3 rounded-3 mb-2" style="background:var(--surface);border:1px solid var(--border)">
-        <a href="{% url 'anime_detail' review.anime.anilist_id %}" class="text-decoration-none fw-medium text-truncate d-inline-block" style="max-width:80%;vertical-align:middle">{{ review.anime.display_title|surrogatefree }}</a>
-        <span class="text-warning small ms-2">★ {{ review.rating }}/10</span>
-        <div class="text-secondary small">{{ review.body|surrogatefree|truncatechars:120 }}</div>
+      <div class="d-flex gap-1 mb-4 overflow-x-auto pb-1" id="profileTabs">
+        {% if show_watchlist %}<button class="tab-btn active" data-tab="watching">Watching</button>{% endif %}
+        {% if show_watchlist %}<button class="tab-btn" data-tab="completed">Completed</button>{% endif %}
+        <button class="tab-btn" data-tab="favorites">Favorites</button>
+        <button class="tab-btn" data-tab="tierlists">Tier Lists</button>
+        <button class="tab-btn" data-tab="activity">Activity</button>
+        <button class="tab-btn" data-tab="reviews">Reviews</button>
       </div>
-      {% endfor %}
-      {% endif %}
-      {% endwith %}
+
+      <div class="tab-content">
+        {% if show_watchlist %}
+        <div class="tab-pane active" id="tab-watching">
+          {% if currently_watching %}
+          <div class="d-flex flex-wrap gap-3 justify-content-center justify-content-md-start">
+            {% for entry in currently_watching %}
+            <a href="{% url 'anime_detail' entry.anime.anilist_id %}" class="text-decoration-none text-center" style="width:60px">
+              <img src="{{ entry.anime.cover_image_medium|default:entry.anime.cover_image_large }}" class="profile-mini-img" alt="" loading="lazy">
+              <div class="small text-truncate text-light mt-1" style="max-width:60px">{{ entry.anime.display_title|truncatechars:12 }}</div>
+            </a>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-secondary small text-center py-4">Nothing watching yet</p>
+          {% endif %}
+        </div>
+
+        <div class="tab-pane" id="tab-completed">
+          {% if recently_completed %}
+          <div class="d-flex flex-wrap gap-3 justify-content-center justify-content-md-start">
+            {% for entry in recently_completed %}
+            <a href="{% url 'anime_detail' entry.anime.anilist_id %}" class="text-decoration-none text-center" style="width:60px">
+              <img src="{{ entry.anime.cover_image_medium|default:entry.anime.cover_image_large }}" class="profile-mini-img" alt="" loading="lazy">
+              <div class="small text-truncate text-light mt-1" style="max-width:60px">{{ entry.anime.display_title|truncatechars:12 }}</div>
+            </a>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-secondary small text-center py-4">Nothing completed yet</p>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="tab-pane" id="tab-favorites">
+          <h6 class="fw-bold mb-3">Favorite Anime</h6>
+          {% if favorite_anime_list %}
+          <div class="d-flex flex-wrap gap-3 mb-4 justify-content-center justify-content-md-start">
+            {% for fav in favorite_anime_list %}
+            <a href="{% url 'anime_detail' fav.anime.anilist_id %}" class="text-decoration-none text-center" style="width:60px">
+              <img src="{{ fav.anime.cover_image_medium|default:fav.anime.cover_image_large }}" class="profile-mini-img" alt="" loading="lazy">
+              <div class="small text-truncate text-light mt-1" style="max-width:60px">{{ fav.anime.display_title|truncatechars:12 }}</div>
+            </a>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-secondary small text-center mb-4">No favorite anime yet</p>
+          {% endif %}
+
+          {% with char_favs=profile_user.character_favorites.all %}
+          {% if char_favs %}
+          <h6 class="fw-bold mb-3">Favorite Characters</h6>
+          <div class="d-flex flex-wrap gap-3 mb-4 justify-content-center justify-content-md-start">
+            {% for cf in char_favs|slice:":8" %}
+            <div class="text-center" style="width:60px;min-width:0">
+              <div style="width:48px;height:48px;margin:0 auto;border-radius:50%;overflow:hidden;background:var(--surface)">
+                <img src="{{ cf.character.image_url|default:cf.character.image }}" class="w-100 h-100" style="object-fit:cover" alt="" loading="lazy">
+              </div>
+              <div class="small text-truncate text-light mt-1" style="max-width:60px;min-width:0">{{ cf.character.name|truncatechars:10 }}</div>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+          {% endwith %}
+
+          {% with staff_favs=profile_user.staff_favorites.all %}
+          {% if staff_favs %}
+          <h6 class="fw-bold mb-3">Favorite Staff</h6>
+          <div class="d-flex flex-wrap gap-3 justify-content-center justify-content-md-start">
+            {% for sf in staff_favs|slice:":8" %}
+            <div class="text-center" style="width:60px;min-width:0">
+              <div style="width:48px;height:48px;margin:0 auto;border-radius:50%;overflow:hidden;background:var(--surface)">
+                <img src="{{ sf.staff.image_url|default:sf.staff.image }}" class="w-100 h-100" style="object-fit:cover" alt="" loading="lazy">
+              </div>
+              <div class="small text-truncate text-light mt-1" style="max-width:60px;min-width:0">{{ sf.staff.name|truncatechars:10 }}</div>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+          {% endwith %}
+        </div>
+
+        <div class="tab-pane" id="tab-tierlists">
+          {% if tier_lists %}
+          <div class="row g-3">
+            {% for tl in tier_lists %}
+            <div class="col-12">
+              <div class="p-3 rounded-3" style="background:var(--surface);border:1px solid var(--border)">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <div>
+                    <a href="{% url 'tierlist_detail' tl.id %}" class="fw-medium text-light text-decoration-none">{{ tl.title }}</a>
+                    <span class="small text-secondary ms-2">{{ tl.items.count }} items</span>
+                  </div>
+                  <span class="small text-secondary">{{ tl.likes }} likes</span>
+                </div>
+                {% with items=tl.items.all|slice:":10" %}
+                {% if items %}
+                <div class="d-flex flex-wrap gap-1">
+                  {% for item in items %}
+                  <div class="d-flex align-items-center gap-1" style="font-size:0.75rem;min-width:0">
+                    <span class="tier-badge tier-{{ item.tier }}">{{ item.tier }}</span>
+                    <span class="small text-secondary text-truncate" style="max-width:80px;min-width:0">{{ item.anime.display_title|truncatechars:12 }}</span>
+                  </div>
+                  {% endfor %}
+                </div>
+                {% endif %}
+                {% endwith %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-secondary small text-center py-4">No tier lists yet</p>
+          {% endif %}
+        </div>
+
+        <div class="tab-pane" id="tab-activity">
+          {% if recent_activity %}
+          <div class="d-flex flex-column gap-2">
+            {% for act in recent_activity %}
+            <div class="d-flex align-items-center gap-3 p-2 rounded-3" style="background:var(--surface);border:1px solid var(--border)">
+              <div class="activity-icon" style="background:{% if act.activity_type == 'watched' %}var(--primary){% elif act.activity_type == 'completed' %}#2ecc71{% elif act.activity_type == 'rated' %}#f1c40f{% elif act.activity_type == 'reviewed' %}#9b59b6{% else %}var(--text-secondary){% endif %}">
+                {% if act.activity_type == 'watched' %}▶{% elif act.activity_type == 'completed' %}✓{% elif act.activity_type == 'rated' %}★{% elif act.activity_type == 'reviewed' %}✎{% elif act.activity_type == 'added' %}⊕{% else %}•{% endif %}
+              </div>
+              <div class="flex-grow-1" style="min-width:0">
+                <div class="small text-truncate">
+                  {% if act.anime %}
+                  <a href="{% url 'anime_detail' act.anime.anilist_id %}" class="text-decoration-none fw-medium">{{ act.anime.display_title|surrogatefree }}</a>
+                  {% endif %}
+                  {% if act.description %}
+                  <span class="text-secondary">{{ act.description }}</span>
+                  {% endif %}
+                </div>
+                <div class="small text-secondary">{{ act.created_at|timesince }} ago</div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-secondary small text-center py-4">No recent activity</p>
+          {% endif %}
+        </div>
+
+        <div class="tab-pane" id="tab-reviews">
+          {% with reviews=profile_user.reviews.all %}
+          {% if reviews %}
+          {% for review in reviews|slice:":10" %}
+          <div class="p-3 rounded-3 mb-2" style="background:var(--surface);border:1px solid var(--border)">
+            <div class="d-flex justify-content-between align-items-start">
+              <a href="{% url 'anime_detail' review.anime.anilist_id %}" class="text-decoration-none fw-medium text-truncate d-inline-block" style="max-width:70%;vertical-align:middle">{{ review.anime.display_title|surrogatefree }}</a>
+              <span class="text-warning small">★ {{ review.rating }}/10</span>
+            </div>
+            <div class="text-secondary small mt-1">{{ review.body|surrogatefree|truncatechars:200 }}</div>
+          </div>
+          {% endfor %}
+          {% else %}
+          <p class="text-secondary small text-center py-4">No reviews yet</p>
+          {% endif %}
+          {% endwith %}
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function(){
+  var csrf = document.querySelector('[name=csrfmiddlewaretoken]');
+  function getCSRF(){ return csrf ? csrf.value : ''; }
+
+  var tabs = document.querySelectorAll('.tab-btn');
+  tabs.forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      tabs.forEach(function(t){ t.classList.remove('active'); });
+      btn.classList.add('active');
+      document.querySelectorAll('.tab-pane').forEach(function(p){ p.classList.remove('active'); });
+      var target = document.getElementById('tab-' + btn.getAttribute('data-tab'));
+      if(target) target.classList.add('active');
+    });
+  });
+
+  var followBtn = document.querySelector('.profile-follow-btn');
+  if(followBtn){
+    followBtn.addEventListener('click', function(){
+      var btn = this;
+      fetch('/profile/' + btn.getAttribute('data-username') + '/follow/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCSRF(), 'Content-Type':'application/x-www-form-urlencoded'},
+        body: ''
+      }).then(function(r){ return r.json(); }).then(function(data){
+        btn.textContent = data.following ? 'Following' : 'Follow';
+        btn.style.background = data.following ? 'var(--surface)' : 'var(--primary)';
+        btn.style.color = data.following ? 'var(--text-secondary)' : '#fff';
+        btn.style.border = data.following ? '1px solid var(--border)' : 'none';
+        var fc = document.querySelector('a[href^="/profile/{{ profile_user.username }}/followers/"] span');
+        if(fc) fc.textContent = data.followers;
+      });
+    });
+  }
+})();
+</script>
 {% endblock %}

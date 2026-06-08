@@ -206,7 +206,7 @@
                         <a href="{% url 'anime_detail' entry.anime.anilist_id %}" class="text-decoration-none text-light fw-medium d-block text-truncate w-100">
                             {{ entry.anime.title_english|default:entry.anime.title_romaji }}
                         </a>
-                        <small class="text-secondary" style="white-space:nowrap">{{ entry.get_status_display }}{% if entry.episodes_watched %} · Ep {{ entry.episodes_watched }}{% endif %}</small>
+                        <small class="text-secondary" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:inline-block;vertical-align:middle">{{ entry.get_status_display }}{% if entry.episodes_watched %} · Ep {{ entry.episodes_watched }}{% endif %}</small>
                     </div>
                     <small class="text-secondary">{{ entry.updated_at|timesince }} ago</small>
                 </div>

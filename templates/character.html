@@ -72,15 +72,15 @@
   <div class="appear-grid">
     {% for m in media_appearances %}
     <a href="{% url 'anime_detail' m.id %}" class="appear-card">
-      <img src="{{ m.cover }}" alt="" loading="lazy">
+      <img src="{{ m.cover }}" alt="{{ m.title_english|default:m.title_romaji }}" loading="lazy">
       <div class="appear-info">
         <div class="title">{{ m.title_english|default:m.title_romaji }}</div>
         <div class="role">{{ m.role|title }}</div>
         {% if m.voice_actors %}
         <div class="va-row">
           {% for va in m.voice_actors %}
-          <span class="va-chip" onclick="event.stopPropagation();window.location.href='{% url 'staff' va.id %}'" title="{{ va.language }}">
-            <img src="{{ va.image }}" alt="">{{ va.name }}
+          <span class="va-chip" data-href="{% url 'staff' va.id %}" title="{{ va.language }}" role="link" tabindex="0">
+            <img src="{{ va.image }}" alt="{{ va.name }}">{{ va.name }}
           </span>
           {% endfor %}
         </div>
@@ -107,4 +107,19 @@ fetch(`/favorite/character/{{ char.id }}/check/`).then(r=>r.json()).then(d=>{
 }).catch(()=>{});
 </script>
 {% endif %}
+<script>
+document.querySelectorAll('.va-chip[data-href]').forEach(function(el) {
+  el.addEventListener('click', function(e) {
+    e.stopPropagation();
+    window.location.href = this.dataset.href;
+  });
+  el.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      e.stopPropagation();
+      window.location.href = this.dataset.href;
+    }
+  });
+});
+</script>
 {% endblock %}

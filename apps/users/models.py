@@ -8,6 +8,7 @@ class User(AbstractUser):
     avatar = models.URLField(max_length=500, blank=True)
     cover_image = models.URLField(max_length=500, blank=True)
     timezone = models.CharField(max_length=50, default='UTC')
+    is_watchlist_public = models.BooleanField(default=True)
 
     # Notification prefs
     notify_new_episodes = models.BooleanField(default=True)

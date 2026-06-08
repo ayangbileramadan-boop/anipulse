@@ -44,7 +44,7 @@
     <li class="nav-item"><a class="nav-link {% if status_filter == 'DROPPED' %}active{% endif %} bg-dark text-light" href="{% url 'watchlist' %}?status=DROPPED">Dropped ({{ stats.dropped }})</a></li>
   </ul>
   {% if entries %}
-  <form method="post" action="{% url 'bulk_update_watchlist' %}" id="bulkForm">
+  <form method="post" action="{% url 'bulk_update_watchlist' %}" id="bulkForm" onsubmit="var btn=this.querySelector('button[type=submit],input[type=submit]');if(btn)btn.disabled=true">
     {% csrf_token %}
     <div class="bulk-bar" id="bulkBar">
       <input type="checkbox" id="selectAll" onchange="toggleAll(this)">

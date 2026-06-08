@@ -44,6 +44,11 @@
         </div>
         <div class="text-secondary small">{{ item.episodes }} eps × {{ item.duration }}min</div>
     </div>
+    {% empty %}
+    <div class="text-center py-4">
+        <p class="text-secondary">Start tracking episodes to see your top anime by watch time.</p>
+        <a href="{% url 'discover' %}" class="btn btn-sm btn-primary-custom">Discover Anime</a>
+    </div>
     {% endfor %}
 </div>
 {% endblock %}

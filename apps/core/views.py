@@ -9,7 +9,9 @@ from django.contrib import messages
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.paginator import Paginator
+from django.db import models, transaction
 from django.db.models import Count, F, Q
+from django.core.cache import cache
 from django_ratelimit.decorators import ratelimit
 
 from apps.anime.services.anilist import anilist_client, AniListError
@@ -17,7 +19,7 @@ from apps.anime.services.sync import sync_anime_from_anilist
 from apps.watchlist.models import WatchlistEntry
 from apps.watchlist.models import ACHIEVEMENT_DEFS
 from apps.core.models import UserFollow, Streak
-from apps.anime.models import Anime, Battle, BattleVote, TierList, TierListItem, SocialPost, SocialLike, UserActivity
+from apps.anime.models import Anime, Battle, BattleVote, TierList, TierListItem, SocialPost, SocialLike, UserActivity, Comment, CommentLike, FavoriteAnime
 from apps.recommendations.engine import get_recommendations_for_user
 from apps.core.services.personalization import PersonalizationEngine
 from apps.core.services.gamification import GamificationEngine
@@ -553,7 +555,7 @@ def dashboard_view(request):
     }
 
     genre_counts = {}
-    for entry in WatchlistEntry.objects.filter(user=request.user, status__in=['WATCHING', 'COMPLETED']).select_related('anime'):
+    for entry in WatchlistEntry.objects.filter(user=request.user, status__in=['WATCHING', 'COMPLETED']).select_related('anime').prefetch_related('anime__genres'):
         for g in entry.anime.genres.all():
             genre_counts[g.name] = genre_counts.get(g.name, 0) + 1
     genre_chart = sorted(genre_counts.items(), key=lambda x: x[1], reverse=True)[:8]
@@ -608,6 +610,7 @@ def dashboard_view(request):
 
 
 @login_required
+@transaction.atomic
 def update_watchlist_entry(request, entry_id):
     entry = get_object_or_404(WatchlistEntry, id=entry_id, user=request.user)
     if request.method == 'POST':
@@ -635,7 +638,9 @@ def watchlist_view(request):
     if status_filter:
         qs = qs.filter(status=status_filter)
 
-    entries = qs.order_by('-updated_at')
+    paginator = Paginator(qs.order_by('-updated_at'), 20)
+    page = request.GET.get('page', 1)
+    entries = paginator.get_page(page)
 
     stats = {
         'watching': WatchlistEntry.objects.filter(user=request.user, status='WATCHING').count(),
@@ -655,6 +660,7 @@ def watchlist_view(request):
 
 
 @login_required
+@transaction.atomic
 def add_to_watchlist(request):
     if request.method == 'POST':
         anilist_id = request.POST.get('anilist_id')
@@ -686,6 +692,7 @@ def add_to_watchlist(request):
 
 
 @login_required
+@transaction.atomic
 def notification_settings(request):
     user = request.user
     if request.method == 'POST':
@@ -707,30 +714,56 @@ def profile_view(request, username):
     if request.user.is_authenticated and not is_me:
         is_following = UserFollow.objects.filter(follower=request.user, following=profile_user).exists()
 
-    stats = {
-        'watching': WatchlistEntry.objects.filter(user=profile_user, status='WATCHING').count(),
-        'completed': WatchlistEntry.objects.filter(user=profile_user, status='COMPLETED').count(),
-        'paused': WatchlistEntry.objects.filter(user=profile_user, status='PAUSED').count(),
-        'dropped': WatchlistEntry.objects.filter(user=profile_user, status='DROPPED').count(),
-        'planning': WatchlistEntry.objects.filter(user=profile_user, status='PLANNING').count(),
-        'total': WatchlistEntry.objects.filter(user=profile_user).count(),
-    }
+    show_watchlist = is_me or profile_user.is_watchlist_public
 
+    stats = {'watching': 0, 'completed': 0, 'paused': 0, 'dropped': 0, 'planning': 0, 'total': 0}
     total_hours = 0
-    for entry in WatchlistEntry.objects.filter(user=profile_user, status__in=['COMPLETED', 'WATCHING']).select_related('anime'):
-        if entry.anime.episodes and entry.anime.duration:
-            ep = entry.episodes_watched if entry.status == 'WATCHING' else entry.anime.episodes
-            total_hours += (ep * entry.anime.duration) / 60
+    currently_watching = []
+    recently_completed = []
+    favorite_anime_list = []
+
+    if show_watchlist:
+        stats_qs = WatchlistEntry.objects.filter(user=profile_user).values('status').annotate(cnt=models.Count('id'))
+        stats = {s['status']: s['cnt'] for s in stats_qs}
+        stats.setdefault('total', sum(stats.values()))
+
+        total_hours = WatchlistEntry.objects.filter(
+            user=profile_user, status__in=['COMPLETED', 'WATCHING']
+        ).select_related('anime').annotate(
+            watched_ep=models.Case(
+                models.When(status='WATCHING', then=models.F('episodes_watched')),
+                default=models.F('anime__episodes'),
+                output_field=models.IntegerField(),
+            )
+        ).aggregate(
+            total=models.Sum(models.F('watched_ep') * models.F('anime__duration'), output_field=models.FloatField())
+        )['total'] or 0
+        total_hours = round(total_hours / 60, 1)
+
+        currently_watching = WatchlistEntry.objects.filter(
+            user=profile_user, status='WATCHING'
+        ).select_related('anime').order_by('-updated_at')[:6]
+
+        recently_completed = WatchlistEntry.objects.filter(
+            user=profile_user, status='COMPLETED'
+        ).select_related('anime').order_by('-updated_at')[:6]
+
+    favorite_anime_list = FavoriteAnime.objects.filter(
+        user=profile_user
+    ).select_related('anime').order_by('-created_at')[:6]
+
+    tier_lists = TierList.objects.filter(
+        user=profile_user, is_public=True
+    ).prefetch_related('items')[:6]
+
+    recent_activity = UserActivity.objects.filter(
+        user=profile_user
+    ).select_related('anime').order_by('-created_at')[:10]
+
+    follower_count = UserFollow.objects.filter(following=profile_user).count()
+    following_count = UserFollow.objects.filter(follower=profile_user).count()
 
     streak = Streak.objects.filter(user=profile_user).first()
-
-    currently_watching = WatchlistEntry.objects.filter(
-        user=profile_user, status='WATCHING'
-    ).select_related('anime').order_by('-updated_at')[:6]
-
-    recently_completed = WatchlistEntry.objects.filter(
-        user=profile_user, status='COMPLETED'
-    ).select_related('anime').order_by('-updated_at')[:6]
 
     game_engine = GamificationEngine()
     game_profile = game_engine.get_profile(profile_user)
@@ -741,18 +774,69 @@ def profile_view(request, username):
         'profile_user': profile_user,
         'is_me': is_me,
         'is_following': is_following,
+        'show_watchlist': show_watchlist,
         'stats': stats,
-        'total_watch_hours': round(total_hours, 1),
+        'total_watch_hours': total_hours,
         'profile_streak': streak,
         'game_profile': game_profile,
         'level_progress': level_progress,
         'unlocked_badges': unlocked_badges,
         'currently_watching': currently_watching,
         'recently_completed': recently_completed,
+        'favorite_anime_list': favorite_anime_list,
+        'tier_lists': tier_lists,
+        'recent_activity': recent_activity,
+        'follower_count': follower_count,
+        'following_count': following_count,
     })
 
 
 @login_required
+@transaction.atomic
+def profile_follow_json(request, username):
+    from django.http import JsonResponse
+    User = get_user_model()
+    target = get_object_or_404(User, username=username)
+    if target == request.user:
+        return JsonResponse({'error': 'Cannot follow yourself'}, status=400)
+    follow, created = UserFollow.objects.get_or_create(follower=request.user, following=target)
+    if not created:
+        follow.delete()
+        return JsonResponse({'following': False, 'followers': UserFollow.objects.filter(following=target).count()})
+    _create_notification(target, f'{request.user.username} started following you', url=f'/profile/{request.user.username}/', ntype='FOLLOW')
+    return JsonResponse({'following': True, 'followers': UserFollow.objects.filter(following=target).count()})
+
+
+def profile_followers(request, username):
+    User = get_user_model()
+    profile_user = get_object_or_404(User, username=username)
+    followers_qs = UserFollow.objects.filter(following=profile_user).select_related('follower').order_by('-created_at')
+    paginator = Paginator(followers_qs, 20)
+    page = request.GET.get('page', 1)
+    followers = paginator.get_page(page)
+    return render(request, 'profile_follow_list.html', {
+        'profile_user': profile_user,
+        'users': followers,
+        'list_type': 'followers',
+    })
+
+
+def profile_following(request, username):
+    User = get_user_model()
+    profile_user = get_object_or_404(User, username=username)
+    following_qs = UserFollow.objects.filter(follower=profile_user).select_related('following').order_by('-created_at')
+    paginator = Paginator(following_qs, 20)
+    page = request.GET.get('page', 1)
+    following = paginator.get_page(page)
+    return render(request, 'profile_follow_list.html', {
+        'profile_user': profile_user,
+        'users': following,
+        'list_type': 'following',
+    })
+
+
+@login_required
+@transaction.atomic
 def add_review(request, anime_id):
     from apps.anime.models import Anime, Review
     from apps.anime.forms import ReviewForm
@@ -792,14 +876,19 @@ def add_review(request, anime_id):
 
 
 @login_required
+@transaction.atomic
 def like_review(request, review_id):
     from apps.anime.models import Review
     review = get_object_or_404(Review, id=review_id)
     if review.user != request.user:
-        review.likes += 1
-        review.save()
+        Review.objects.filter(id=review.id).update(likes=F('likes') + 1)
         _create_notification(review.user, f'{request.user.username} liked your review',
-                             url=f'/anime/{review.anime.anilist_id}/')
+                             url=f'/anime/{review.anime.anilist_id}/', ntype='LIKE')
+        UserActivity.objects.create(
+            user=request.user,
+            activity_type='LIKE',
+            description='Liked a review',
+        )
     return redirect('anime_detail', anime_id=review.anime.anilist_id)
 
 
@@ -858,6 +947,7 @@ def compare_anime(request):
 
 
 @login_required
+@transaction.atomic
 def profile_edit(request):
     from django.core.files.storage import default_storage
     from django.core.files.base import ContentFile
@@ -906,6 +996,7 @@ def profile_edit(request):
 
 
 @login_required
+@transaction.atomic
 def my_lists(request):
     from apps.watchlist.models import CustomList
     if request.method == 'POST':
@@ -1014,16 +1105,52 @@ def quiz_view(request):
 
 
 def battle_list(request):
-    battles_qs = Battle.objects.filter(is_active=True).select_related('anime1', 'anime2', 'created_by')
-    trending = battles_qs.annotate(total_votes=F('votes1') + F('votes2')).order_by('-total_votes')[:3]
-    paginator = Paginator(battles_qs, 20)
+    cached = cache.get('battle_list_data')
+    if cached is not None:
+        return render(request, 'battles.html', cached)
+
+    from django.utils import timezone
+    now = timezone.now()
+    active_qs = Battle.objects.filter(
+        is_active=True,
+    ).filter(
+        expires_at__isnull=True
+    ) | Battle.objects.filter(
+        is_active=True,
+        expires_at__gte=now,
+    )
+    active_qs = active_qs.select_related('anime1', 'anime2', 'created_by')
+
+    if not active_qs.exists():
+        try:
+            from django.core.management import call_command
+            call_command('seed_daily_battles')
+            active_qs = Battle.objects.filter(is_active=True).select_related('anime1', 'anime2', 'created_by')[:20]
+        except Exception:
+            pass
+
+    trending = active_qs.annotate(total_votes=F('votes1') + F('votes2')).order_by('-total_votes')[:3]
+    paginator = Paginator(active_qs, 20)
     page_number = request.GET.get('page', 1)
     battles = paginator.get_page(page_number)
-    return render(request, 'battles.html', {
+
+    user_votes = {}
+    if request.user.is_authenticated:
+        user_votes = dict(
+            BattleVote.objects.filter(
+                battle__in=[b.id for b in battles],
+                user=request.user,
+            ).values_list('battle_id', 'choice')
+        )
+
+    context = {
         'battles': battles,
         'trending': trending,
-        'total_battles': battles_qs.count(),
-    })
+        'total_battles': active_qs.count(),
+        'user_votes': user_votes,
+    }
+    cache.set('battle_list_data', context, 300)
+    return render(request, 'battles.html', context)
 
 
 @login_required
@@ -1044,7 +1171,14 @@ def battle_create(request):
                 except AniListError:
                     results.append(None)
             if results[0] and results[1]:
-                Battle.objects.create(anime1=results[0], anime2=results[1], created_by=request.user, category=cat)
+                battle = Battle.objects.create(
+                    anime1=results[0], anime2=results[1],
+                    created_by=request.user, category=cat,
+                )
+                UserActivity.objects.create(
+                    user=request.user, activity_type='BATTLE',
+                    description=f'Created battle: {battle.anime1} vs {battle.anime2}',
+                )
                 messages.success(request, 'Battle created!')
                 return redirect('battle_list')
         messages.error(request, 'Could not create battle. Try searching exact titles.')
@@ -1052,15 +1186,25 @@ def battle_create(request):
 
 
 @login_required
+@transaction.atomic
 def battle_vote(request, battle_id):
-    battle = get_object_or_404(Battle, id=battle_id, is_active=True)
+    battle = get_object_or_404(
+        Battle.objects.select_for_update().filter(
+            is_active=True,
+        ).filter(
+            expires_at__isnull=True
+        ) | Battle.objects.select_for_update().filter(
+            is_active=True, expires_at__gte=timezone.now()
+        ),
+        id=battle_id,
+    )
     if request.method == 'POST':
         choice = request.POST.get('choice')
         if choice in ('1', '2'):
             choice = int(choice)
             vote, created = BattleVote.objects.get_or_create(
                 battle=battle, user=request.user,
-                defaults={'choice': choice}
+                defaults={'choice': choice},
             )
             if not created:
                 old_choice = vote.choice
@@ -1080,20 +1224,99 @@ def battle_vote(request, battle_id):
                     Battle.objects.filter(id=battle.id).update(votes1=F('votes1') + 1)
                 else:
                     Battle.objects.filter(id=battle.id).update(votes2=F('votes2') + 1)
-            UserActivity.objects.create(user=request.user, activity_type='BATTLE', description=f"Voted in {battle}")
-        return redirect('battle_list')
+                UserActivity.objects.create(
+                    user=request.user, activity_type='BATTLE',
+                    description=f"Voted in {battle}",
+                )
+            if created and battle.created_by and battle.created_by != request.user:
+                _create_notification(battle.created_by, f'{request.user.username} voted in your battle "{battle.title}"' if battle.title else f'{request.user.username} voted in a battle', url=f'/battles/{battle.id}/', ntype='BATTLE_VOTE')
+            battle.refresh_from_db()
     return redirect('battle_list')
 
 
+@login_required
+def battle_vote_json(request, battle_id):
+    from django.http import JsonResponse
+    battle = get_object_or_404(Battle, id=battle_id, is_active=True)
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    choice = request.POST.get('choice')
+    if choice not in ('1', '2'):
+        return JsonResponse({'error': 'Invalid choice'}, status=400)
+    choice = int(choice)
+
+    with transaction.atomic():
+        battle = Battle.objects.select_for_update().get(id=battle_id)
+        vote, created = BattleVote.objects.get_or_create(
+            battle=battle, user=request.user,
+            defaults={'choice': choice},
+        )
+        if not created:
+            old_choice = vote.choice
+            if old_choice != choice:
+                vote.choice = choice
+                vote.save(update_fields=['choice'])
+                if old_choice == 1:
+                    Battle.objects.filter(id=battle.id).update(votes1=F('votes1') - 1)
+                else:
+                    Battle.objects.filter(id=battle.id).update(votes2=F('votes2') - 1)
+                if choice == 1:
+                    Battle.objects.filter(id=battle.id).update(votes1=F('votes1') + 1)
+                else:
+                    Battle.objects.filter(id=battle.id).update(votes2=F('votes2') + 1)
+        else:
+            if choice == 1:
+                Battle.objects.filter(id=battle.id).update(votes1=F('votes1') + 1)
+            else:
+                Battle.objects.filter(id=battle.id).update(votes2=F('votes2') + 1)
+                UserActivity.objects.create(
+                    user=request.user, activity_type='BATTLE',
+                    description=f"Voted in {battle}",
+                )
+            if created and battle.created_by and battle.created_by != request.user:
+                _create_notification(battle.created_by, f'{request.user.username} voted in your battle "{battle.title}"' if battle.title else f'{request.user.username} voted in a battle', url=f'/battles/{battle.id}/', ntype='BATTLE_VOTE')
+            battle.refresh_from_db()
+
+    return JsonResponse({
+        'votes1': battle.votes1,
+        'votes2': battle.votes2,
+        'total': battle.total_votes,
+        'pct1': battle.pct1,
+        'pct2': battle.pct2,
+        'choice': choice,
+        'liked': True,
+    })
+
+
+def battle_data_json(request, battle_id):
+    from django.http import JsonResponse
+    battle = get_object_or_404(Battle, id=battle_id, is_active=True)
+    return JsonResponse({
+        'votes1': battle.votes1,
+        'votes2': battle.votes2,
+        'total': battle.total_votes,
+        'pct1': battle.pct1,
+        'pct2': battle.pct2,
+    })
+
+
 def tier_list_list(request):
+    cached = cache.get('tier_list_list_data')
+    if cached is not None:
+        return render(request, 'tierlists.html', cached)
+
     tls_qs = TierList.objects.filter(is_public=True).select_related('user').prefetch_related('items__anime')
     paginator = Paginator(tls_qs, 24)
     page_number = request.GET.get('page', 1)
     tier_lists = paginator.get_page(page_number)
-    return render(request, 'tierlists.html', {'tier_lists': tier_lists})
+    context = {'tier_lists': tier_lists}
+    cache.set('tier_list_list_data', context, 300)
+    return render(request, 'tierlists.html', context)
 
 
 @login_required
+@transaction.atomic
 def tier_list_create(request):
     if request.method == 'POST':
         title = request.POST.get('title', '').strip()
@@ -1101,6 +1324,11 @@ def tier_list_create(request):
             import string, random, json
             slug = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
             tl = TierList.objects.create(user=request.user, title=title, slug=slug)
+            UserActivity.objects.create(
+                user=request.user,
+                activity_type='TIER_LIST',
+                description=title,
+            )
 
             tier_data_raw = request.POST.get('tier_data', '')
             if tier_data_raw:
@@ -1137,6 +1365,8 @@ def tier_list_create(request):
 
 def tier_list_view(request, slug):
     tl = get_object_or_404(TierList, slug=slug, is_public=True)
+    TierList.objects.filter(id=tl.id).update(view_count=F('view_count') + 1)
+    tl.refresh_from_db()
     items = tl.items.select_related('anime').all()
     tiers = {'S': [], 'A': [], 'B': [], 'C': [], 'D': [], 'F': []}
     for item in items:
@@ -1149,10 +1379,16 @@ def tier_list_view(request, slug):
         ('D', 'D Tier', '#3b82f6'),
         ('F', 'F Tier', '#6b7280'),
     ]
-    return render(request, 'tierlist_view.html', {'tier_list': tl, 'tiers': tiers, 'tier_cfg': tier_cfg})
+    user_liked = False
+    if request.user.is_authenticated:
+        user_liked = TierListLike.objects.filter(tier_list=tl, user=request.user).exists()
+    return render(request, 'tierlist_view.html', {
+        'tier_list': tl, 'tiers': tiers, 'tier_cfg': tier_cfg, 'user_liked': user_liked,
+    })
 
 
 @login_required
+@transaction.atomic
 def tier_list_add_item(request, slug):
     tl = get_object_or_404(TierList, slug=slug, user=request.user)
     if request.method == 'POST':
@@ -1176,21 +1412,170 @@ def tier_list_add_item(request, slug):
     return redirect('tier_list_view', slug=slug)
 
 
-def social_feed(request):
-    posts_qs = SocialPost.objects.filter(reply_to__isnull=True).select_related('user', 'anime').prefetch_related('liked_by', 'replies__user')
-    paginator = Paginator(posts_qs, 20)
-    page_number = request.GET.get('page', 1)
-    posts = paginator.get_page(page_number)
-    liked_post_ids = set()
-    if request.user.is_authenticated:
-        liked_post_ids = set(SocialLike.objects.filter(
+@login_required
+@transaction.atomic
+def tier_list_like_json(request, slug):
+    from django.http import JsonResponse
+    from django.db.models import F
+    tl = get_object_or_404(TierList, slug=slug)
+    like, created = TierListLike.objects.get_or_create(tier_list=tl, user=request.user)
+    if created:
+        TierList.objects.filter(id=tl.id).update(likes=F('likes') + 1)
+        UserActivity.objects.create(
             user=request.user,
-            post__in=[p.id for p in posts],
-        ).values_list('post_id', flat=True))
-    return render(request, 'social_feed.html', {'posts': posts, 'liked_post_ids': liked_post_ids})
+            activity_type='LIKE',
+            description='Liked a tier list',
+        )
+        if tl.user != request.user:
+            _create_notification(tl.user, f'{request.user.username} liked your tier list "{tl.title}"', url=f'/tierlists/{tl.slug}/', ntype='LIKE')
+        tl_likes = TierList.objects.filter(id=tl.id).values_list('likes', flat=True).first() or 0
+        return JsonResponse({'liked': True, 'likes': tl_likes})
+    else:
+        like.delete()
+        TierList.objects.filter(id=tl.id).update(likes=F('likes') - 1)
+        tl_likes = TierList.objects.filter(id=tl.id).values_list('likes', flat=True).first() or 0
+        return JsonResponse({'liked': False, 'likes': tl_likes})
 
 
 @login_required
+@transaction.atomic
+def tier_list_save_json(request, slug):
+    from django.http import JsonResponse
+    import json
+    tl = get_object_or_404(TierList, slug=slug, user=request.user)
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, TypeError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    valid_tiers = set(dict(TierList.TIERS).keys())
+    tl.items.all().delete()
+    order = 0
+    for tier, anime_ids in data.items():
+        tier = tier.upper()
+        if tier not in valid_tiers:
+            continue
+        for aid in anime_ids:
+            try:
+                anime = Anime.objects.filter(anilist_id=int(aid)).first()
+                if not anime:
+                    from apps.anime.services.anilist import anilist_client
+                    try:
+                        d = anilist_client.get_anime_detail(int(aid))
+                        m = d.get('Media', {})
+                        if m:
+                            from apps.anime.services.sync import sync_anime_from_anilist
+                            anime = sync_anime_from_anilist(m)
+                    except Exception:
+                        pass
+                if anime:
+                    TierListItem.objects.create(
+                        tier_list=tl, anime=anime, tier=tier, order=order
+                    )
+                    order += 1
+            except Exception:
+                pass
+
+    tl.save(update_fields=['updated_at'])
+    return JsonResponse({'ok': True, 'slug': tl.slug, 'count': order})
+
+
+@login_required
+def tier_list_prefill_api(request):
+    from django.http import JsonResponse
+    from apps.anime.models import Anime
+    from apps.anime.services.anilist import anilist_client
+    import json
+
+    cache_key = 'tierlist_prefill'
+    cached = cache.get(cache_key)
+    if cached:
+        return JsonResponse({'results': cached})
+
+    pool = []
+    seen = set()
+    try:
+        data = anilist_client.get_trending(page=1, per_page=15)
+        for m in data.get('data', {}).get('Page', {}).get('media', []):
+            aid = m['id']
+            if aid not in seen:
+                pool.append(m)
+                seen.add(aid)
+    except Exception:
+        pass
+
+    if len(pool) < 15:
+        try:
+            data = anilist_client.get_popular_this_season(False, page=1, per_page=15)
+            for m in data.get('data', {}).get('Page', {}).get('media', []):
+                aid = m['id']
+                if aid not in seen:
+                    pool.append(m)
+                    seen.add(aid)
+        except Exception:
+            pass
+
+    results = []
+    for m in pool:
+        anime = Anime.objects.filter(anilist_id=m['id']).first()
+        if not anime:
+            try:
+                from apps.anime.services.sync import sync_anime_from_anilist
+                anime = sync_anime_from_anilist(m)
+            except Exception:
+                pass
+        if anime:
+            results.append({
+                'id': anime.anilist_id,
+                'title': anime.display_title,
+                'image': anime.cover_image_medium or (anime.cover_image_large or ''),
+            })
+        else:
+            title = m.get('title', {}).get('romaji', m.get('title', {}).get('english', 'Unknown'))
+            results.append({
+                'id': m['id'],
+                'title': title,
+                'image': m.get('coverImage', {}).get('medium', ''),
+            })
+
+    cache.set(cache_key, results, 3600)
+    return JsonResponse({'results': results})
+
+
+def social_feed(request):
+    from apps.feed.services import FeedBuilder
+    from apps.anime.models import SocialPost
+
+    builder = FeedBuilder(request.user)
+    feed_data = builder.build(page=1)
+
+    page_obj = SocialPost.objects.filter(reply_to__isnull=True).select_related('user', 'anime').order_by('-created_at')[:1]
+    return render(request, 'social_feed.html', {
+        'feed_items': feed_data['results'],
+        'feed_meta': {
+            'has_next': feed_data['has_next'],
+            'next_page': feed_data['next_page'],
+            'total': feed_data['total'],
+        },
+    })
+
+
+@login_required
+def feed_api(request):
+    from django.http import JsonResponse
+    from apps.feed.services import FeedBuilder
+
+    page = int(request.GET.get('page', 1))
+    page_size = int(request.GET.get('size', 20))
+    builder = FeedBuilder(request.user)
+    data = builder.build(page=page, page_size=page_size)
+    return JsonResponse(data)
+
+
+@login_required
+@transaction.atomic
 def social_create_post(request):
     if request.method == 'POST':
         body = request.POST.get('body', '').strip()
@@ -1203,6 +1588,7 @@ def social_create_post(request):
 
 
 @login_required
+@transaction.atomic
 def social_like_post(request, post_id):
     post = get_object_or_404(SocialPost, id=post_id)
     like, created = SocialLike.objects.get_or_create(post=post, user=request.user)
@@ -1213,11 +1599,17 @@ def social_like_post(request, post_id):
         SocialPost.objects.filter(id=post.id).update(likes=F('likes') + 1)
         if post.user != request.user:
             _create_notification(post.user, f'{request.user.username} liked your post',
-                                 url='/social/')
+                                 url='/social/', ntype='LIKE')
+        UserActivity.objects.create(
+            user=request.user,
+            activity_type='LIKE',
+            description='Liked a post',
+        )
     return redirect('social_feed')
 
 
 @login_required
+@transaction.atomic
 def social_like_json(request, post_id):
     from django.http import JsonResponse
     post = get_object_or_404(SocialPost, id=post_id)
@@ -1229,7 +1621,12 @@ def social_like_json(request, post_id):
         SocialPost.objects.filter(id=post.id).update(likes=F('likes') + 1)
         if post.user != request.user:
             _create_notification(post.user, f'{request.user.username} liked your post',
-                                 url='/social/')
+                                 url='/social/', ntype='LIKE')
+        UserActivity.objects.create(
+            user=request.user,
+            activity_type='LIKE',
+            description='Liked a post',
+        )
     post.refresh_from_db()
     return JsonResponse({'likes': post.likes, 'liked': not created})
 
@@ -1251,6 +1648,8 @@ def social_comment(request, post_id):
                 body=body,
                 reply_to=reply_to,
             )
+            if reply_to and reply_to.user != request.user:
+                _create_notification(reply_to.user, f'{request.user.username} replied to your post', url='/social/', ntype='COMMENT')
     return redirect('social_feed')
 
 
@@ -1262,6 +1661,7 @@ def social_delete_post(request, post_id):
 
 
 @login_required
+@transaction.atomic
 def social_follow(request, username):
     User = get_user_model()
     target = get_object_or_404(User, username=username)
@@ -1271,13 +1671,13 @@ def social_follow(request, username):
             follow.delete()
         else:
             _create_notification(target, f'{request.user.username} started following you',
-                                 url='/social/')
+                                 url='/social/', ntype='FOLLOW')
     return redirect('social_feed')
 
 
 @login_required
 def anime_wrapped(request):
-    entries = WatchlistEntry.objects.filter(user=request.user).select_related('anime')
+    entries = WatchlistEntry.objects.filter(user=request.user).select_related('anime').prefetch_related('anime__genres')
     total_completed = entries.filter(status='COMPLETED').count()
     total_watching = entries.filter(status='WATCHING').count()
     total_episodes = sum(e.anime.episodes or 0 for e in entries.filter(status='COMPLETED'))
@@ -1379,7 +1779,7 @@ def watch_time(request):
     entries = WatchlistEntry.objects.filter(
         user=request.user,
         status__in=['COMPLETED', 'WATCHING'],
-    ).select_related('anime')
+    ).select_related('anime').prefetch_related('anime__genres')
 
     total_hours = 0
     breakdown = []
@@ -1857,9 +2257,9 @@ def chat_ai(request):
         return JsonResponse({'reply': 'Something went wrong. Try asking differently!', 'anime': []})
 
 
-def _create_notification(user, title, message='', url=''):
+def _create_notification(user, title, message='', url='', ntype='SYSTEM'):
     from apps.anime.models import Notification
-    Notification.objects.create(user=user, title=title, message=message, url=url)
+    Notification.objects.create(user=user, title=title, message=message, url=url, notification_type=ntype)
 
 
 def _check_achievements(user):
@@ -1946,13 +2346,14 @@ def anime_discussions(request, anime_id):
     })
 
 
+@transaction.atomic
 def discussion_thread(request, thread_id):
     from apps.anime.models import DiscussionThread, DiscussionComment
     from apps.anime.forms import DiscussionCommentForm
 
     thread = get_object_or_404(DiscussionThread.objects.select_related('user', 'anime'), id=thread_id)
-    thread.views += 1
-    thread.save(update_fields=['views'])
+    DiscussionThread.objects.filter(id=thread.id).update(views=F('views') + 1)
+    thread.refresh_from_db()
 
     comments = thread.comments.select_related('user').prefetch_related('replies').order_by('created_at')
 
@@ -1978,6 +2379,7 @@ def discussion_thread(request, thread_id):
 
 
 @login_required
+@transaction.atomic
 def add_comment(request, thread_id):
     from apps.anime.models import DiscussionThread, DiscussionComment
 
@@ -1992,6 +2394,11 @@ def add_comment(request, thread_id):
                 body=body,
                 is_spoiler=request.POST.get('is_spoiler') == 'on',
                 parent_id=request.POST.get('parent') or None,
+            )
+            UserActivity.objects.create(
+                user=request.user,
+                activity_type='COMMENT',
+                description='Posted a comment',
             )
     return redirect('discussion_thread', thread_id=thread.id)
 
@@ -2098,14 +2505,22 @@ def seasonal_archive(request, year, season):
 def notifications_json(request):
     from django.http import JsonResponse
     from apps.anime.models import Notification
-    notifs = Notification.objects.filter(user=request.user)[:20]
+    page = max(1, int(request.GET.get('page', 1)))
+    limit = 50
+    offset = (page - 1) * limit
+    notifs = Notification.objects.filter(user=request.user).order_by('-created_at')[offset:offset + limit]
     unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
+    total = Notification.objects.filter(user=request.user).count()
     data = [{
         'id': n.id, 'title': n.title, 'message': n.message,
         'url': n.url, 'is_read': n.is_read,
+        'notification_type': n.notification_type,
         'created_at': n.created_at.isoformat(),
     } for n in notifs]
-    return JsonResponse({'notifications': data, 'unread_count': unread_count})
+    return JsonResponse({
+        'notifications': data, 'unread_count': unread_count,
+        'total': total, 'page': page, 'has_more': total > offset + limit,
+    })
 
 
 @login_required
@@ -2122,6 +2537,22 @@ def mark_all_read(request):
     from apps.anime.models import Notification
     Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
     return JsonResponse({'ok': True})
+
+
+@login_required
+def notification_list(request):
+    from apps.anime.models import Notification
+    from django.core.paginator import Paginator
+    notif_qs = Notification.objects.filter(user=request.user).order_by('-created_at')
+    paginator = Paginator(notif_qs, 30)
+    page = request.GET.get('page', 1)
+    notifications = paginator.get_page(page)
+    unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
+    return render(request, 'notification_list.html', {
+        'notifications': notifications,
+        'unread_count': unread_count,
+        'paginator': paginator,
+    })
 
 
 @login_required
@@ -2158,6 +2589,205 @@ def sitemap_view(request):
         lines.append(f'  <url><loc>https://anipulse.com/anime/{anime.anilist_id}/</loc><priority>0.5</priority></url>')
     lines.append('</urlset>')
     return HttpResponse('\n'.join(lines), content_type='application/xml')
+
+
+@login_required
+def comment_list(request):
+    from django.http import JsonResponse
+    from django.contrib.contenttypes.models import ContentType
+    ctype = request.GET.get('ctype')
+    oid = request.GET.get('oid')
+    if not ctype or not oid:
+        return JsonResponse({'error': 'Missing params'}, status=400)
+    try:
+        app_label, model = ctype.split('.')
+        ct = ContentType.objects.get_by_natural_key(app_label, model)
+        obj = ct.get_object_for_this_type(id=int(oid))
+    except Exception:
+        return JsonResponse({'error': 'Invalid content type'}, status=400)
+
+    comments = Comment.objects.filter(
+        content_type=ct, object_id=obj.id, parent__isnull=True
+    ).select_related('user').prefetch_related(
+        'replies__user', 'replies__replies__user',
+        'likes', 'replies__likes', 'replies__replies__likes',
+    ).order_by('created_at')
+
+    liked_ids = set()
+    if request.user.is_authenticated:
+        all_ids = set()
+        for c in comments:
+            all_ids.add(c.id)
+            for r in list(c.replies.all()):
+                all_ids.add(r.id)
+                for rr in list(r.replies.all()):
+                    all_ids.add(rr.id)
+        liked_ids = set(CommentLike.objects.filter(
+            user=request.user, comment_id__in=all_ids
+        ).values_list('comment_id', flat=True))
+
+    def serialize(c, depth=0):
+        replies_list = list(c.replies.all()) if depth < 2 else []
+        return {
+            'id': c.id,
+            'user': c.user.username,
+            'user_id': c.user.id,
+            'avatar': c.user.avatar or '',
+            'body': c.body,
+            'is_spoiler': c.is_spoiler,
+            'is_edited': c.is_edited,
+            'depth': depth,
+            'likes': c.like_count,
+            'liked': c.id in liked_ids,
+            'can_edit': c.can_edit(request.user) if request.user.is_authenticated else False,
+            'created_at': c.created_at.isoformat(),
+            'replies': [serialize(r, depth + 1) for r in replies_list[:3]] if depth < 2 else [],
+            'has_more': len(replies_list) > 3 if depth < 2 else False,
+        }
+    data = [serialize(c) for c in comments]
+    return JsonResponse({'comments': data})
+
+
+@login_required
+@transaction.atomic
+@ratelimit(key='ip', rate='10/m', method='POST', block=False)
+def comment_create(request):
+    from django.http import JsonResponse
+    from django.contrib.contenttypes.models import ContentType
+    if getattr(request, 'limited', False):
+        return JsonResponse({'error': 'Too many comments. Slow down.'}, status=429)
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    body = request.POST.get('body', '').strip()
+    if not body or len(body) > 2000:
+        return JsonResponse({'error': 'Invalid body'}, status=400)
+
+    if len(body) < 2:
+        return JsonResponse({'error': 'Comment too short'}, status=400)
+
+    ctype = request.POST.get('ctype')
+    oid = request.POST.get('oid')
+    parent_id = request.POST.get('parent')
+
+    if not ctype or not oid:
+        return JsonResponse({'error': 'Missing content type'}, status=400)
+
+    try:
+        app_label, model = ctype.split('.')
+        ct = ContentType.objects.get_by_natural_key(app_label, model)
+        obj = ct.get_object_for_this_type(id=int(oid))
+    except Exception:
+        return JsonResponse({'error': 'Invalid content'}, status=400)
+
+    parent = None
+    if parent_id:
+        try:
+            parent = Comment.objects.get(id=int(parent_id))
+            if parent.depth >= Comment.MAX_DEPTH - 1:
+                return JsonResponse({'error': 'Max reply depth reached'}, status=400)
+        except (Comment.DoesNotExist, ValueError):
+            pass
+
+    try:
+        comment = Comment.objects.create(
+            user=request.user,
+            body=body,
+            parent=parent,
+            content_type=ct,
+            object_id=obj.id,
+            is_spoiler=request.POST.get('spoiler') == '1',
+        )
+        from apps.core.signals import engine
+        engine.award_xp(request.user, 'comment')
+        UserActivity.objects.create(
+            user=request.user,
+            activity_type='COMMENT',
+            description='Posted a comment',
+        )
+        if hasattr(comment.content_object, 'user') and comment.content_object.user != request.user:
+            _create_notification(comment.content_object.user, f'{request.user.username} commented on your post', url=comment.content_object.get_absolute_url() if hasattr(comment.content_object, 'get_absolute_url') else '/', ntype='COMMENT')
+    except Exception:
+        return JsonResponse({'error': 'Failed to create comment'}, status=500)
+
+    return JsonResponse({
+        'id': comment.id,
+        'user': comment.user.username,
+        'user_id': comment.user.id,
+        'avatar': comment.user.avatar or '',
+        'body': comment.body,
+        'is_spoiler': comment.is_spoiler,
+        'depth': comment.depth,
+        'likes': 0,
+        'liked': False,
+        'can_edit': True,
+        'created_at': comment.created_at.isoformat(),
+        'replies': [],
+        'has_more': False,
+    })
+
+
+@login_required
+@transaction.atomic
+def comment_edit(request, comment_id):
+    from django.http import JsonResponse
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    comment = get_object_or_404(Comment, id=comment_id)
+    if not comment.can_edit(request.user):
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+
+    body = request.POST.get('body', '').strip()
+    if not body or len(body) > 2000:
+        return JsonResponse({'error': 'Invalid body'}, status=400)
+
+    comment.body = body
+    comment.is_edited = True
+    comment.save(update_fields=['body', 'is_edited', 'updated_at'])
+    return JsonResponse({'ok': True, 'body': comment.body, 'is_edited': True})
+
+
+@login_required
+@transaction.atomic
+def comment_delete(request, comment_id):
+    from django.http import JsonResponse
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    comment = get_object_or_404(Comment, id=comment_id)
+    if not comment.can_edit(request.user):
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+
+    comment.body = '[deleted]'
+    comment.is_edited = False
+    comment.save(update_fields=['body', 'is_edited'])
+    return JsonResponse({'ok': True})
+
+
+@login_required
+@transaction.atomic
+def comment_like(request, comment_id):
+    from django.http import JsonResponse
+    from django.db.models import F
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    comment = get_object_or_404(Comment, id=comment_id)
+    like, created = CommentLike.objects.get_or_create(comment=comment, user=request.user)
+    if created:
+        from apps.core.signals import engine
+        engine.award_xp(request.user, 'like_review')
+        UserActivity.objects.create(
+            user=request.user,
+            activity_type='LIKE',
+            description='Liked a comment',
+        )
+        return JsonResponse({'liked': True, 'likes': comment.like_count + 1})
+    else:
+        like.delete()
+        return JsonResponse({'liked': False, 'likes': max(comment.like_count - 1, 0)})
 
 
 @login_required

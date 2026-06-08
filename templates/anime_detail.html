@@ -88,7 +88,7 @@
 
 {% if banner or trailer.thumbnail %}
 <div class="detail-banner">
-    <img src="{{ trailer.thumbnail|default:banner }}" alt="">
+    <img src="{{ trailer.thumbnail|default:banner }}" alt="{{ title }} banner">
     <div class="overlay"></div>
     {% if trailer.thumbnail %}
     <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2">
@@ -124,7 +124,7 @@
                 <!-- Add to List -->
                 {% if user.is_authenticated %}
                 <div class="mt-3">
-                    <form method="post" action="{% url 'add_to_watchlist' %}" class="dropdown">
+                    <form method="post" action="{% url 'add_to_watchlist' %}" class="dropdown" onsubmit="var btn=this.querySelector('button[type=submit],input[type=submit]');if(btn)btn.disabled=true">
                         {% csrf_token %}
                         <input type="hidden" name="anilist_id" value="{{ anilist_id }}">
                         <button type="button" class="btn btn-primary-custom w-100 dropdown-toggle" data-bs-toggle="dropdown" style="border-radius:12px;font-weight:600">
@@ -323,7 +323,7 @@
         {% if trailer.thumbnail %}
         <div class="d-flex align-items-start gap-4">
             <a href="{{ trailer.watch_url }}" target="_blank" rel="noopener" class="d-block text-decoration-none position-relative rounded-4 overflow-hidden shadow-lg flex-shrink-0" style="max-width:480px;width:100%;aspect-ratio:16/9;background:var(--surface-2)">
-                <img src="{{ trailer.thumbnail }}" alt="" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" loading="lazy">
+                <img src="{{ trailer.thumbnail }}" alt="{{ title }} trailer thumbnail" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" loading="lazy">
                 <div style="position:absolute;inset:0;background:linear-gradient(rgba(0,0,0,0.3),rgba(0,0,0,0.7))"></div>
                 <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
                     <div style="width:56px;height:56px;border-radius:50%;background:rgba(232,54,93,0.9);display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#fff;box-shadow:0 4px 20px rgba(232,54,93,0.4)">▶</div>
@@ -420,8 +420,8 @@
                     {% for va in char.voice_actors|slice:":2" %}
                     <a href="{% url 'staff' va.id %}" class="text-decoration-none">
                         <div class="d-flex align-items-center gap-1 mt-1 justify-content-center">
-                            <img src="{{ va.image }}" alt="" style="width:18px;height:18px;border-radius:50%;object-fit:cover;flex-shrink:0">
-                            <span class="text-light" style="font-size:0.65rem;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">{{ va.name }}</span>
+                            <img src="{{ va.image }}" alt="{{ va.name }}" style="width:18px;height:18px;border-radius:50%;object-fit:cover;flex-shrink:0">
+                            <span class="text-light" style="font-size:0.65rem;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;min-width:0">{{ va.name }}</span>
                         </div>
                     </a>
                     {% endfor %}
@@ -541,6 +541,10 @@
             <p class="text-secondary small mb-0">Be the first to share your thoughts about {{ title }}!</p>
         </div>
         {% endif %}
+    </section>
+
+    <section class="mt-5">
+        {% include 'includes/comment_thread.html' with ctype="anime.anime" oid=anilist_id %}
     </section>
 </div>
 {% endblock %}

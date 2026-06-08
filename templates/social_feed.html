@@ -1,109 +1,230 @@
 {% extends 'base.html' %}{% load core_extras %}
-{% block title %}Social — AniPulse{% endblock %}
+{% block title %}Feed — AniPulse{% endblock %}
 {% block extra_css %}<style>
-.post-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:20px; transition:all 0.2s }
-.post-card:hover { border-color:rgba(232,54,93,0.15) }
-.post-avatar { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; font-size:0.9rem; flex-shrink:0 }
-.comment-box { background:var(--surface-2); border-radius:10px; padding:10px; margin-top:8px }
-.comment-box textarea { width:100%; background:transparent; border:none; outline:none; color:var(--text); font-size:0.85rem; resize:none; min-height:36px; font-family:inherit }
-.comment-item { padding:8px 0; border-bottom:1px solid var(--border); font-size:0.85rem }
-.comment-item:last-child { border-bottom:none }
-.comment-avatar { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; font-size:0.65rem; flex-shrink:0 }
-.like-btn { cursor:pointer; user-select:none }
-.like-btn.liked { color:var(--primary) }
+.feed-item { padding-bottom:16px; margin-bottom:16px; border-bottom:1px solid var(--border) }
+.feed-item:last-child { border-bottom:none !important; margin-bottom:0; padding-bottom:0 }
+.feed-like-btn:hover { border-color:var(--primary); color:var(--primary) }
+.feed-like-btn.liked { border-color:var(--primary); color:var(--primary); background:rgba(232,54,93,0.08) }
+.feed-loading { text-align:center; padding:30px 0; color:var(--text-muted) }
+.feed-loading .spinner { width:24px; height:24px; border:3px solid var(--border); border-top-color:var(--primary); border-radius:50%; animation:spin 0.8s linear infinite; display:inline-block }
+@keyframes spin { to { transform:rotate(360deg) } }
+.feed-end { text-align:center; padding:20px 0; color:var(--text-muted); font-size:0.85rem }
+.feed-head-spinner { display:inline-block; width:16px; height:16px; border:2px solid var(--border); border-top-color:var(--primary); border-radius:50%; animation:spin 0.8s linear infinite; vertical-align:middle; margin-left:8px }
 </style>{% endblock %}
 {% block content %}
 <div class="container py-5" style="max-width:640px">
-  <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-    <h2 class="fw-bold mb-0">💬 Feed</h2>
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h2 class="fw-bold mb-0">Feed <span class="feed-head-spinner" id="feedSpinner"></span></h2>
     {% if user.is_authenticated %}
-    <div class="d-flex gap-2">
-      <a href="{% url 'friend_activity' %}" class="btn btn-sm btn-outline-light" style="border-radius:10px">👥 Friends</a>
-      <form method="post" action="{% url 'social_create_post' %}" class="d-flex gap-2" style="min-width:0">
-        {% csrf_token %}<input type="text" name="body" class="form-control form-control-custom" placeholder="What's on your mind?" required maxlength="1000">
-        <button type="submit" class="btn btn-primary-custom" style="border-radius:10px;white-space:nowrap">Post</button>
+    <div class="d-flex gap-2 align-items-center">
+      <a href="{% url 'friend_activity' %}" class="btn btn-sm btn-outline-light" style="border-radius:10px;font-size:0.8rem">Friends</a>
+      <form method="post" action="{% url 'social_create_post' %}" class="d-flex gap-2" style="min-width:0" onsubmit="var btn=this.querySelector('button[type=submit],input[type=submit]');if(btn)btn.disabled=true">
+        {% csrf_token %}
+        <input type="text" name="body" class="form-control form-control-sm" placeholder="What's on your mind?" required maxlength="1000" style="border-radius:10px;font-size:0.85rem">
+        <button type="submit" class="btn btn-sm btn-primary-custom" style="border-radius:10px;white-space:nowrap;font-size:0.8rem">Post</button>
       </form>
     </div>
     {% endif %}
   </div>
-  {% include 'includes/pagination.html' with items=posts %}
-  {% if posts %}
-  <div class="d-flex flex-column gap-3">
-    {% for post in posts %}
-    <div class="post-card" id="post-{{ post.id }}">
-      <div class="d-flex align-items-center gap-3 mb-2">
-        <div class="post-avatar" style="background:{% cycle 'var(--primary)' '#A259FF' '#22c55e' '#fbbf24' '#06b6d4' %}">{{ post.user.username|first|upper }}</div>
-        <div class="flex-grow-1" style="min-width:0">
-          <a href="{% url 'profile' post.user.username %}" class="fw-medium text-decoration-none" style="color:var(--text);font-size:0.9rem">{{ post.user.username }}</a>
-          <div style="color:var(--text-muted);font-size:0.7rem">{{ post.created_at|timesince }} ago</div>
-        </div>
-        {% if post.anime %}
-        <a href="{% url 'anime_detail' post.anime.anilist_id %}" class="btn btn-sm btn-outline-light" style="border-radius:8px;font-size:0.75rem;flex-shrink:0">{{ post.anime.display_title|truncatechars:20 }}</a>
-        {% endif %}
-        {% if user == post.user %}
-        <a href="{% url 'social_delete_post' post.id %}" class="text-secondary" style="font-size:0.8rem;flex-shrink:0" onclick="return confirm('Delete this post?')">✕</a>
-        {% endif %}
-      </div>
-      <p style="color:var(--text-secondary);font-size:0.9rem;line-height:1.6;margin-bottom:8px">{{ post.body|surrogatefree }}</p>
-      <div class="d-flex gap-3 align-items-center">
-        <span class="text-decoration-none d-flex align-items-center gap-1 like-btn {% if user.is_authenticated and post.id in liked_post_ids %}liked{% endif %}" style="color:var(--text-muted);font-size:0.8rem" data-post="{{ post.id }}" onclick="toggleLike(this)">
-          <span class="like-icon">{% if user.is_authenticated and post.id in liked_post_ids %}❤️{% else %}🤍{% endif %}</span>
-          <span class="like-count">{{ post.likes }}</span>
-        </span>
-        <span class="d-flex align-items-center gap-1" style="color:var(--text-muted);font-size:0.8rem;cursor:pointer" onclick="toggleComments('{{ post.id }}')">
-          💬 {{ post.replies.count }}
-        </span>
-        {% if user.is_authenticated and user != post.user %}
-        <a href="{% url 'social_follow' post.user.username %}" class="text-decoration-none" style="color:var(--text-muted);font-size:0.8rem">+ Follow</a>
-        {% endif %}
-      </div>
-      <div id="comments-{{ post.id }}" class="mt-2" style="display:none">
-        {% for reply in post.replies.all %}
-        <div class="comment-item d-flex gap-2 align-items-start">
-          <div class="comment-avatar" style="background:{% cycle 'var(--primary)' '#A259FF' '#22c55e' '#fbbf24' '#06b6d4' %}">{{ reply.user.username|first|upper }}</div>
-          <div class="flex-grow-1" style="min-width:0">
-            <a href="{% url 'profile' reply.user.username %}" class="fw-medium text-decoration-none" style="color:var(--text);font-size:0.8rem">{{ reply.user.username }}</a>
-            <span style="color:var(--text-secondary);font-size:0.85rem">{{ reply.body }}</span>
-            <div style="color:var(--text-muted);font-size:0.65rem">{{ reply.created_at|timesince }} ago{% if user == reply.user %} · <a href="{% url 'social_delete_post' reply.id %}" class="text-secondary" onclick="return confirm('Delete this comment?')">delete</a>{% endif %}</div>
-          </div>
-        </div>
-        {% empty %}
-        <div class="text-secondary" style="font-size:0.8rem;padding:4px 0">No comments yet.</div>
-        {% endfor %}
-        {% if user.is_authenticated %}
-        <form method="post" action="{% url 'social_comment' post.id %}" class="comment-box d-flex gap-2">
-          {% csrf_token %}
-          <textarea name="body" placeholder="Write a comment..." required oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" rows="1"></textarea>
-          <button type="submit" class="btn btn-sm btn-primary-custom" style="border-radius:8px;align-self:flex-end">Send</button>
-        </form>
-        {% endif %}
+
+  <div id="feed-container">
+    {% for item in feed_items %}
+      {% include 'includes/feed_item.html' with item=item %}
+    {% empty %}
+    <div class="text-center py-5">
+      <div style="font-size:3rem" class="mb-3">🌊</div>
+      <h5 class="fw-bold" style="color:var(--text)">Your feed is empty</h5>
+      <p class="text-secondary small" style="max-width:360px;margin:0 auto">Follow friends, track anime, and vote in battles to see activity here.</p>
+      <div class="d-flex justify-content-center gap-2 mt-3">
+        <a href="{% url 'discover' %}" class="btn btn-sm" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:6px 18px">Discover Anime</a>
+        <a href="{% url 'battles' %}" class="btn btn-sm btn-outline-light" style="border-radius:8px;padding:6px 18px">Join Battles</a>
       </div>
     </div>
     {% endfor %}
   </div>
-  {% else %}
-  <div class="text-center py-5"><div style="font-size:3rem" class="mb-3">💬</div><h5>No posts yet</h5><p class="text-secondary small">Be the first to share something!</p></div>
-  {% endif %}
-  {% include 'includes/pagination.html' with items=posts %}
+
+  <div id="feed-loader" class="feed-loading" style="display:{% if feed_meta.has_next %}block{% else %}none{% endif %}">
+    <div class="spinner"></div>
+    <div class="mt-2 small">Loading more...</div>
+  </div>
+  <div id="feed-end" class="feed-end" style="display:{% if feed_meta.has_next %}none{% else %}block{% endif %}">
+    You're all caught up
+  </div>
 </div>
 <script>
-function toggleLike(el) {
-  {% if user.is_authenticated %}
-  const postId = el.dataset.post;
-  const count = el.querySelector('.like-count');
-  const icon = el.querySelector('.like-icon');
-  fetch('/social/like/' + postId + '/json/')
+let feedNextPage = {{ feed_meta.next_page|default:'null' }};
+let feedLoading = false;
+let feedEnded = !feedNextPage;
+
+function feedLoadMore() {
+  if (feedLoading || feedEnded) return;
+  feedLoading = true;
+  document.getElementById('feed-loader').style.display = 'block';
+
+  fetch('/feed/api/?page=' + feedNextPage + '&size=20')
     .then(r => r.json())
-    .then(d => {
-      count.textContent = d.likes;
-      el.classList.toggle('liked', d.liked);
-      icon.textContent = d.liked ? '❤️' : '🤍';
+    .then(data => {
+      feedNextPage = data.next_page;
+      feedEnded = !data.has_next;
+      const container = document.getElementById('feed-container');
+      const empty = container.querySelector('.text-center.py-5');
+      if (empty) empty.remove();
+
+      data.results.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'feed-item';
+        div.dataset.itemId = item.id;
+        div.dataset.itemType = item.type;
+        div.innerHTML = feedRenderItem(item);
+        container.appendChild(div);
+      });
+
+      document.getElementById('feed-loader').style.display = 'none';
+      document.getElementById('feed-end').style.display = feedEnded ? 'block' : 'none';
+      feedLoading = false;
+    })
+    .catch(() => {
+      document.getElementById('feed-loader').style.display = 'none';
+      feedLoading = false;
     });
-  {% endif %}
 }
-function toggleComments(postId) {
-  const el = document.getElementById('comments-' + postId);
-  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+
+function feedRenderItem(item) {
+  if (item.type === 'post' || item.type === 'system_post') {
+    return feedPost(item);
+  } else if (item.type === 'activity') {
+    return feedActivity(item);
+  } else if (item.type === 'battle_vote') {
+    return feedBattleVote(item);
+  } else if (item.type === 'system_trending' || item.type === 'system_seasonal' || item.type === 'system_most_watched') {
+    const icons = { system_trending: '🔥', system_seasonal: '🌸', system_most_watched: '📺' };
+    return feedSystem(item, icons[item.type] || '📌');
+  } else if (item.type === 'system_welcome') {
+    return feedWelcome(item);
+  }
+  return '';
+}
+
+function feedUserHtml(user) {
+  if (user.avatar) {
+    return '<img src="' + escAttr(user.avatar) + '" alt="" class="rounded-circle" width="36" height="36">';
+  }
+  return '<div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white fw-bold" style="width:36px;height:36px;font-size:14px">' + escAttr(user.username.charAt(0).toUpperCase()) + '</div>';
+}
+
+function escAttr(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function feedPost(item) {
+  var u = item.user;
+  var c = item.content;
+  var likedClass = u.liked ? ' liked' : '';
+  var heartIcon = u.liked ? 'fas' : 'far';
+  var systemBadge = u.is_system ? '<span class="badge" style="background:var(--primary);font-size:0.6rem;font-weight:500">AniPulse</span>' : '';
+  var animeTag = '';
+  if (c.anime && c.anime.title) {
+    animeTag = '<div class="text-muted" style="font-size:0.8rem"><i class="fas fa-film me-1"></i>' + escAttr(c.anime.title) + '</div>';
+  }
+  var imageTag = '';
+  if (c.image) {
+    imageTag = '<img src="' + escAttr(c.image) + '" alt="" class="mt-2 rounded" style="max-width:100%;max-height:300px;border-radius:12px" loading="lazy">';
+  }
+  return '<div class="d-flex gap-3 align-items-start">' +
+    '<a href="/profile/' + escAttr(u.username) + '" class="text-decoration-none flex-shrink-0">' + feedUserHtml(u) + '</a>' +
+    '<div class="flex-grow-1 min-w-0">' +
+    '<div class="d-flex align-items-center gap-2 flex-wrap">' +
+    '<a href="/profile/' + escAttr(u.username) + '" class="fw-semibold text-decoration-none" style="color:var(--text);font-size:0.9rem">' + escAttr(u.username) + '</a>' +
+    systemBadge +
+    '<span class="text-muted" style="font-size:0.75rem">just now</span></div>' +
+    animeTag +
+    '<div class="mt-1" style="color:var(--text-secondary);font-size:0.9rem;line-height:1.5">' + (c.body || '').replace(/\n/g, '<br>') + '</div>' +
+    imageTag +
+    '</div></div>';
+}
+
+function feedActivity(item) {
+  var u = item.user;
+  var c = item.content;
+  var typeLabel = '';
+  var animeName = (c.anime && c.anime.title) ? '<strong style="color:var(--text)">' + escAttr(c.anime.title) + '</strong>' : '';
+  switch (c.activity_type) {
+    case 'WATCHING': typeLabel = 'Started watching ' + animeName; break;
+    case 'COMPLETED': typeLabel = 'Completed ' + animeName; break;
+    case 'REVIEW': typeLabel = 'Reviewed ' + animeName; break;
+    case 'ACHIEVEMENT': typeLabel = '🏆 Earned achievement: <strong style="color:var(--text)">' + escAttr(c.description) + '</strong>'; break;
+    case 'BATTLE': typeLabel = '⚔️ Voted in a battle'; break;
+    case 'STREAK': typeLabel = '🔥 Reached <strong style="color:var(--text)">' + escAttr(c.description) + '</strong>'; break;
+    case 'POST': typeLabel = 'Made a post'; break;
+    default: typeLabel = escAttr(c.description); break;
+  }
+  return '<div class="d-flex gap-3 align-items-start">' +
+    '<a href="/profile/' + escAttr(u.username) + '" class="text-decoration-none flex-shrink-0">' + feedUserHtml(u) + '</a>' +
+    '<div class="flex-grow-1 min-w-0">' +
+    '<div class="d-flex align-items-center gap-2 flex-wrap">' +
+    '<a href="/profile/' + escAttr(u.username) + '" class="fw-semibold text-decoration-none" style="color:var(--text);font-size:0.9rem">' + escAttr(u.username) + '</a>' +
+    '<span class="text-muted" style="font-size:0.75rem">just now</span></div>' +
+    '<div style="font-size:0.9rem;color:var(--text-secondary)">' + typeLabel + '</div>' +
+    '</div></div>';
+}
+
+function feedBattleVote(item) {
+  var u = item.user;
+  var c = item.content;
+  return '<div class="d-flex gap-3 align-items-start">' +
+    '<a href="/profile/' + escAttr(u.username) + '" class="text-decoration-none flex-shrink-0">' + feedUserHtml(u) + '</a>' +
+    '<div class="flex-grow-1 min-w-0">' +
+    '<div class="d-flex align-items-center gap-2 flex-wrap">' +
+    '<a href="/profile/' + escAttr(u.username) + '" class="fw-semibold text-decoration-none" style="color:var(--text);font-size:0.9rem">' + escAttr(u.username) + '</a>' +
+    '<span class="text-muted" style="font-size:0.75rem">just now</span></div>' +
+    '<div style="font-size:0.9rem;color:var(--text-secondary)">⚔️ Voted in battle:</div>' +
+    '<div class="d-flex align-items-center gap-2 mt-1">' +
+    '<span class="small fw-medium" style="color:var(--text);font-size:0.8rem">' + escAttr((c.anime1 && c.anime1.title) || 'Anime') + '</span>' +
+    '<span class="badge" style="background:var(--primary);font-size:0.6rem">VS</span>' +
+    '<span class="small fw-medium" style="color:var(--text);font-size:0.8rem">' + escAttr((c.anime2 && c.anime2.title) || 'Anime') + '</span>' +
+    '</div></div></div>';
+}
+
+function feedSystem(item, icon) {
+  var c = item.content;
+  var imageTag = c.image ? '<img src="' + escAttr(c.image) + '" alt="" class="rounded flex-shrink-0" width="48" height="68" style="object-fit:cover;border-radius:8px" loading="lazy">' : '';
+  var animeLink = c.anime_id ? '<a href="/anime/' + c.anime_id + '/" class="btn btn-sm mt-1" style="background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:0.75rem;padding:4px 12px">View</a>' : '';
+  return '<div class="d-flex gap-3 align-items-start">' +
+    '<div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:36px;height:36px;background:rgba(232,54,93,0.1);color:var(--primary);font-size:16px">' + icon + '</div>' +
+    '<div class="flex-grow-1 min-w-0">' +
+    '<div class="d-flex align-items-center gap-2 flex-wrap">' +
+    '<span class="fw-semibold" style="color:var(--text);font-size:0.9rem">AniPulse</span>' +
+    '<span class="badge" style="background:var(--primary);font-size:0.6rem;font-weight:500">System</span>' +
+    '<span class="text-muted" style="font-size:0.75rem">just now</span></div>' +
+    '<div class="mt-1" style="font-size:0.85rem;color:var(--text-secondary)">' + escAttr(c.subtitle || '') + '</div>' +
+    '<div class="d-flex align-items-center gap-3 mt-2">' +
+    imageTag +
+    '<div><div class="fw-semibold" style="color:var(--text);font-size:0.95rem">' + escAttr(c.title) + '</div>' + animeLink + '</div>' +
+    '</div></div></div>';
+}
+
+function feedWelcome(item) {
+  return '<div class="text-center py-4">' +
+    '<div style="font-size:3rem" class="mb-2">🎉</div>' +
+    '<h5 class="fw-bold" style="color:var(--text)">Welcome to AniPulse!</h5>' +
+    '<p style="color:var(--text-secondary);font-size:0.9rem;max-width:400px;margin:0 auto">Start following friends, track anime, and vote in battles to personalize your feed.</p>' +
+    '<div class="d-flex justify-content-center gap-2 mt-3">' +
+    '<a href="/discover/" class="btn btn-sm" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:6px 18px">Discover Anime</a>' +
+    '<a href="/battles/" class="btn btn-sm btn-outline-light" style="border-radius:8px;padding:6px 18px">Join Battles</a>' +
+    '</div></div>';
+}
+
+const feedSpinner = document.getElementById('feedSpinner');
+if (feedSpinner) feedSpinner.style.display = 'none';
+
+const feedSentinel = document.getElementById('feed-end');
+if (feedSentinel && feedNextPage) {
+  const observer = new IntersectionObserver(function(entries) {
+    if (entries[0].isIntersecting) feedLoadMore();
+  }, { rootMargin: '200px' });
+  observer.observe(feedSentinel);
 }
 </script>
 {% endblock %}

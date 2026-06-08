@@ -1,5 +1,7 @@
 from django.db import models
 from django.utils import timezone
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from apps.core.models import TimeStampedModel, Streak, UserFollow, Notification, CharacterFavorite, StaffFavorite
 
 
@@ -244,6 +246,8 @@ class Battle(models.Model):
     created_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
+    is_daily_featured = models.BooleanField(default=False)
+    expires_at = models.DateTimeField(null=True, blank=True)
     category = models.CharField(max_length=50, default='versus', help_text='versus, villain, opening, etc.')
 
     class Meta:
@@ -260,6 +264,20 @@ class Battle(models.Model):
     @property
     def pct2(self):
         return round((self.votes2 / self.total_votes) * 100) if self.total_votes else 50
+
+    @property
+    def is_expired(self):
+        from django.utils import timezone
+        return self.expires_at and timezone.now() >= self.expires_at
+
+    @property
+    def time_remaining(self):
+        if not self.expires_at:
+            return None
+        remaining = self.expires_at - timezone.now()
+        if remaining.total_seconds() <= 0:
+            return None
+        return remaining
 
     def __str__(self):
         return f"{self.anime1} vs {self.anime2}"
@@ -290,6 +308,8 @@ class TierList(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_public = models.BooleanField(default=True)
+    likes = models.PositiveIntegerField(default=0)
+    view_count = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ['-created_at']
@@ -309,6 +329,31 @@ class TierListItem(models.Model):
 
     def __str__(self):
         return f"{self.anime} - {self.tier}"
+
+
+class TierListLike(models.Model):
+    tier_list = models.ForeignKey(TierList, on_delete=models.CASCADE, related_name='liked_by')
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('tier_list', 'user')
+
+    def __str__(self):
+        return f"{self.user.username} likes {self.tier_list.title}"
+
+
+class FavoriteAnime(models.Model):
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='favorite_anime')
+    anime = models.ForeignKey(Anime, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'anime')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} fav {self.anime}"
 
 
 class SocialPost(TimeStampedModel):
@@ -376,3 +421,54 @@ class AnimeTheme(models.Model):
 
     def __str__(self):
         return f"{self.anime} {self.theme_type}{self.number}: {self.title}"
+
+
+class Comment(models.Model):
+    MAX_DEPTH = 3
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='comments')
+    body = models.TextField(max_length=2000)
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies')
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+    is_spoiler = models.BooleanField(default=False)
+    is_edited = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['content_type', 'object_id']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username}: {self.body[:50]}"
+
+    @property
+    def depth(self):
+        d = 0
+        p = self.parent
+        while p and d < self.MAX_DEPTH:
+            d += 1
+            p = p.parent
+        return d
+
+    @property
+    def like_count(self):
+        return self.likes.count()
+
+    def can_edit(self, user):
+        return user == self.user or user.is_staff
+
+
+class CommentLike(models.Model):
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name='likes')
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('comment', 'user')
+
+    def __str__(self):
+        return f"{self.user.username} likes {self.comment.id}"

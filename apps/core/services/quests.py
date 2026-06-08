@@ -5,6 +5,8 @@ Daily/weekly quest generation and progress tracking.
 import random
 from datetime import timedelta
 
+from django.db import transaction
+from django.db.models import F
 from django.utils.timezone import now
 
 from apps.core.models import UserProfile, UserQuest
@@ -140,6 +142,7 @@ def generate_weekly_quests(user, count=1):
     return created
 
 
+@transaction.atomic
 def progress_quest(user, quest_id_prefix, amount=1):
     """Increment progress for all matching active quests."""
     qs = UserQuest.objects.filter(
@@ -149,11 +152,14 @@ def progress_quest(user, quest_id_prefix, amount=1):
         expires_at__gt=now(),
     )
     for quest in qs:
-        quest.progress = min(quest.progress + amount, quest.target)
+        quest.refresh_from_db()
+        new_progress = min(quest.progress + amount, quest.target)
+        UserQuest.objects.filter(id=quest.id).update(progress=new_progress)
+        quest.refresh_from_db()
         if quest.progress >= quest.target:
             quest.completed = True
             quest.completed_at = now()
             profile, _ = UserProfile.objects.get_or_create(user=user)
-            profile.total_xp = (profile.total_xp or 0) + quest.xp_reward
-            profile.save(update_fields=['total_xp'])
+            UserProfile.objects.filter(user=user).update(total_xp=F('total_xp') + quest.xp_reward)
+            profile.refresh_from_db()
         quest.save(update_fields=['progress', 'completed', 'completed_at'])

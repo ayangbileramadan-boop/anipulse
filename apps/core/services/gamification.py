@@ -4,7 +4,8 @@ Gamification engine: XP, levels, badges, quests, streaks.
 
 import logging
 
-from django.db.models import Sum
+from django.db import transaction
+from django.db.models import F, Sum
 
 from apps.core.models import UserProfile, UserBadge, Streak, Notification
 from apps.watchlist.models import WatchlistEntry
@@ -103,6 +104,7 @@ class GamificationEngine:
     All operations are idempotent and safe to call multiple times.
     """
 
+    @transaction.atomic
     def award_xp(self, user, action):
         """Award XP for an action and check for level-ups."""
         amount = XP_RATES.get(action, 0)
@@ -113,8 +115,8 @@ class GamificationEngine:
         if profile.total_xp is None:
             profile.total_xp = 0
         old_level = level_for_xp(profile.total_xp)[0]
-        profile.total_xp += amount
-        profile.save(update_fields=['total_xp'])
+        UserProfile.objects.filter(user=user).update(total_xp=F('total_xp') + amount)
+        profile.refresh_from_db()
 
         new_level = level_for_xp(profile.total_xp)[0]
         if new_level > old_level:
@@ -180,6 +182,7 @@ class GamificationEngine:
                 title=f'Level {level}!',
                 message=f'You reached level {level}. Keep it up!',
                 url='/profile/',
+                notification_type='LEVEL_UP',
             )
         except Exception:
             pass
@@ -192,6 +195,7 @@ class GamificationEngine:
                 title=f'Badge Unlocked: {defn.get("name", badge_id)}',
                 message=defn.get('desc', ''),
                 url='/profile/',
+                notification_type='BADGE',
             )
         except Exception:
             pass

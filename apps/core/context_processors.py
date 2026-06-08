@@ -1,6 +1,6 @@
 from django.utils import timezone
 from apps.core.models import Streak
-from apps.anime.models import UserActivity
+from apps.anime.models import UserActivity, Notification
 from apps.core.services.gamification import GamificationEngine
 
 
@@ -25,4 +25,6 @@ def user_streak(request):
             ctx['unlocked_badges'] = engine.get_unlocked_badges(request.user)
         except Exception:
             pass
+
+        ctx['notifications'] = {'unread_count': Notification.objects.filter(user=request.user, is_read=False).count()}
     return ctx

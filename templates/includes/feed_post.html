@@ -1,0 +1,31 @@
+<div class="d-flex gap-3 align-items-start">
+  <a href="{% url 'profile' item.user.username %}" class="text-decoration-none flex-shrink-0">
+    {% if item.user.avatar %}
+      <img src="{{ item.user.avatar }}" alt="" class="rounded-circle" width="36" height="36">
+    {% else %}
+      <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white fw-bold" style="width:36px;height:36px;font-size:14px">{{ item.user.username|first|upper }}</div>
+    {% endif %}
+  </a>
+  <div class="flex-grow-1 min-w-0">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <a href="{% url 'profile' item.user.username %}" class="fw-semibold text-decoration-none" style="color:var(--text);font-size:0.9rem">{{ item.user.username }}</a>
+      {% if item.user.is_system %}<span class="badge" style="background:var(--primary);font-size:0.6rem;font-weight:500">AniPulse</span>{% endif %}
+      <span class="text-muted" style="font-size:0.75rem">{{ item.timestamp|timesince }} ago</span>
+    </div>
+    {% if item.content.anime and item.content.anime.title %}
+      <div class="text-muted" style="font-size:0.8rem">
+        <i class="fas fa-film me-1"></i>{{ item.content.anime.title }}
+      </div>
+    {% endif %}
+    <div class="mt-1" style="color:var(--text-secondary);font-size:0.9rem;line-height:1.5">{{ item.content.body|linebreaksbr }}</div>
+    {% if item.content.image %}
+      <img src="{{ item.content.image }}" alt="" class="mt-2 rounded" style="max-width:100%;max-height:300px;border-radius:12px" loading="lazy">
+    {% endif %}
+    <div class="d-flex align-items-center gap-3 mt-2">
+      <button class="feed-like-btn btn btn-sm" data-item-id="{{ item.id }}" data-type="{{ item.type }}" style="font-size:0.8rem;padding:4px 10px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text-muted)">
+        <i class="{% if item.user.liked %}fas{% else %}far{% endif %} fa-heart me-1"></i><span class="like-count">{{ item.content.likes|default:0 }}</span>
+      </button>
+      <span class="text-muted" style="font-size:0.8rem"><i class="far fa-comment me-1"></i>{{ item.content.comments|default:0 }}</span>
+    </div>
+  </div>
+</div>

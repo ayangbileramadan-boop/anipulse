@@ -1,9 +1,10 @@
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.db.models import Count, Q
+from django.db import transaction
+from django.db.models import Count, F, Q
 
-from apps.anime.models import Anime, Review, DiscussionThread, DiscussionComment
+from apps.anime.models import Anime, Review, DiscussionThread, DiscussionComment, UserActivity
 from apps.watchlist.models import WatchlistEntry, CustomList
 from .serializers import (
     AnimeListSerializer, AnimeDetailSerializer,
@@ -116,13 +117,16 @@ class ReviewViewSet(viewsets.ModelViewSet):
         return ReviewSerializer
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        review = serializer.save(user=self.request.user)
+        UserActivity.objects.create(user=self.request.user, activity_type='REVIEW', anime=review.anime, description='Wrote a review')
 
+    @transaction.atomic
     @action(detail=True, methods=['post'])
     def like(self, request, pk=None):
         review = self.get_object()
-        review.likes += 1
-        review.save(update_fields=['likes'])
+        Review.objects.filter(id=review.id).update(likes=F('likes') + 1)
+        review.refresh_from_db()
+        UserActivity.objects.create(user=request.user, activity_type='LIKE', description='Liked a review')
         return Response({'likes': review.likes})
 
 

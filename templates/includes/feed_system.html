@@ -1,0 +1,22 @@
+<div class="d-flex gap-3 align-items-start">
+  <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:36px;height:36px;background:rgba(232,54,93,0.1);color:var(--primary);font-size:16px">{{ icon }}</div>
+  <div class="flex-grow-1 min-w-0">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <span class="fw-semibold" style="color:var(--text);font-size:0.9rem">AniPulse</span>
+      <span class="badge" style="background:var(--primary);font-size:0.6rem;font-weight:500">System</span>
+      <span class="text-muted" style="font-size:0.75rem">just now</span>
+    </div>
+    <div class="mt-1" style="font-size:0.85rem;color:var(--text-secondary)">{{ item.content.subtitle }}</div>
+    <div class="d-flex align-items-center gap-3 mt-2">
+      {% if item.content.image %}
+        <img src="{{ item.content.image }}" alt="" class="rounded flex-shrink-0" width="48" height="68" style="object-fit:cover;border-radius:8px" loading="lazy">
+      {% endif %}
+      <div>
+        <div class="fw-semibold" style="color:var(--text);font-size:0.95rem">{{ item.content.title }}</div>
+        {% if item.content.anime_id %}
+          <a href="{% url 'anime_detail' item.content.anime_id %}" class="btn btn-sm mt-1" style="background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:0.75rem;padding:4px 12px">View</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>

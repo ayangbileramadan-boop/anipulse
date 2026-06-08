@@ -26,7 +26,7 @@
   {% else %}
   <h3 class="fw-bold text-center mb-1">🎭 Which Anime Character Are You?</h3>
   <p class="text-secondary text-center mb-4">Answer 5 questions to find out!</p>
-  <form method="post">
+  <form method="post" onsubmit="var btn=this.querySelector('button[type=submit],input[type=submit]');if(btn)btn.disabled=true">
     {% csrf_token %}
     {% for q_data in questions %}
     <div class="mb-4">

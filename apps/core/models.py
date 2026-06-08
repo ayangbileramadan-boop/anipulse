@@ -129,7 +129,19 @@ class UserFollow(models.Model):
 
 
 class Notification(models.Model):
+    class Type(models.TextChoices):
+        FOLLOW = 'FOLLOW', 'Follow'
+        LIKE = 'LIKE', 'Like'
+        REVIEW = 'REVIEW', 'Review'
+        COMMENT = 'COMMENT', 'Comment'
+        TIER_LIST = 'TIER_LIST', 'Tier List'
+        BATTLE_VOTE = 'BATTLE_VOTE', 'Battle Vote'
+        LEVEL_UP = 'LEVEL_UP', 'Level Up'
+        BADGE = 'BADGE', 'Badge'
+        SYSTEM = 'SYSTEM', 'System'
+
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications')
+    notification_type = models.CharField(max_length=20, choices=Type.choices, default=Type.SYSTEM)
     title = models.CharField(max_length=200)
     message = models.TextField(blank=True)
     url = models.CharField(max_length=500, blank=True)

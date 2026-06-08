@@ -43,6 +43,11 @@
         <p class="text-secondary small">No episodes airing</p>
         {% endif %}
     </div>
+    {% empty %}
+    <div class="text-center py-5">
+        <p class="text-secondary">No airing data available right now.</p>
+        <a href="{% url 'discover' %}" class="btn btn-sm btn-primary-custom">Browse Seasonal</a>
+    </div>
     {% endfor %}
 </div>
 {% endblock %}

@@ -12,7 +12,6 @@
 .tier-row{display:flex;align-items:stretch;margin-bottom:6px;border-radius:10px;overflow:hidden;border:1px solid var(--border);min-height:72px}
 .tier-label{width:60px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.2rem;flex-shrink:0;color:#fff}
 .tier-items{flex:1;display:flex;flex-wrap:wrap;gap:6px;padding:8px;min-height:56px;background:var(--surface);transition:background .2s}
-.tier-items.dragover{background:var(--surface-2)}
 .tier-item{width:52px;height:72px;border-radius:6px;overflow:hidden;cursor:grab;border:2px solid transparent;position:relative;transition:transform .15s,box-shadow .15s}
 .tier-item:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.3)}
 .tier-item img{width:100%;height:100%;object-fit:cover}
@@ -20,16 +19,31 @@
 .tier-item:hover .remove{opacity:1}
 .tier-item.sortable-chosen{transform:scale(1.08);box-shadow:0 8px 24px rgba(0,0,0,0.4);z-index:100}
 .search-pool{display:flex;flex-wrap:wrap;gap:6px;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;min-height:80px}
+.prefill-card{display:flex;align-items:center;gap:10px;padding:6px 8px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all .2s;width:calc(33.33% - 8px);min-width:0}
+.prefill-card:hover{border-color:var(--primary);background:var(--surface)}
+.prefill-card img{width:28px;height:38px;object-fit:cover;border-radius:4px;flex-shrink:0}
+.prefill-card span{font-size:0.75rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:768px){.prefill-card{width:calc(50% - 8px)}}
 @media(max-width:576px){
   .tier-label{width:44px;font-size:0.9rem}
   .tier-item{width:44px;height:60px}
+  .prefill-card{width:100%}
+
+  /* Tap-to-assign on mobile: tier picker overlay */
+  .tier-item.tap-mode{cursor:pointer}
+  .tier-picker{position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:2px solid var(--border);border-radius:16px 16px 0 0;padding:16px;z-index:1000;display:none;box-shadow:0 -8px 32px rgba(0,0,0,0.4)}
+  .tier-picker.open{display:block}
+  .tier-picker h6{margin-bottom:10px}
+  .tier-picker-grid{display:flex;flex-wrap:wrap;gap:8px}
+  .tier-picker-btn{width:calc(33.33% - 6px);padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-weight:700;font-size:0.9rem;text-align:center;cursor:pointer;transition:all .2s}
+  .tier-picker-btn:active{background:var(--primary);color:#fff;border-color:var(--primary)}
 }
 </style>
 {% endblock %}
 {% block content %}
 <div class="container py-4">
   <h3 class="fw-bold mb-1">🏆 Create Tier List</h3>
-  <p class="text-secondary small mb-3">Search anime and drag them into tiers.</p>
+  <p class="text-secondary small mb-3">Search anime or pick from trending, then drag into tiers.</p>
   <form method="post" id="tierForm">
     {% csrf_token %}
     <div class="mb-3">
@@ -37,7 +51,7 @@
     </div>
 
     <div class="mb-3">
-      <label class="fw-medium mb-2 text-secondary" style="font-size:0.85rem">Search anime to add:</label>
+      <label class="fw-medium mb-2 text-secondary" style="font-size:0.85rem">Search anime:</label>
       <div style="position:relative">
         <input type="text" class="search-box" id="tierSearch" placeholder="Search anime..." autocomplete="off">
         <div class="search-dropdown" id="tierSearchRes"></div>
@@ -45,7 +59,17 @@
     </div>
 
     <div class="mb-3">
-      <label class="fw-medium mb-2 text-secondary" style="font-size:0.85rem">Unranked pool (drag to tiers below):</label>
+      <label class="fw-medium mb-2 d-flex align-items-center gap-2 text-secondary" style="font-size:0.85rem">
+        Trending anime
+        <span class="spinner-border spinner-border-sm" id="prefill-spinner" style="display:none" role="status"></span>
+      </label>
+      <div class="d-flex flex-wrap gap-2" id="prefill-container">
+        <div class="text-muted small py-2">Loading trending anime...</div>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="fw-medium mb-2 text-secondary" style="font-size:0.85rem">Unranked <span class="text-muted">(drag to tiers below or tap on mobile)</span>:</label>
       <div class="search-pool" id="pool"></div>
     </div>
 
@@ -61,10 +85,39 @@
   </form>
 </div>
 
+<!-- Tap-to-assign tier picker (mobile) -->
+<div class="tier-picker" id="tierPicker">
+  <h6 class="fw-bold">Assign tier <span id="picker-title" class="text-muted fw-normal"></span></h6>
+  <div class="tier-picker-grid">
+    <div class="tier-picker-btn" style="background:#ef4444;color:#fff" onclick="assignTier('S')">S</div>
+    <div class="tier-picker-btn" style="background:#f97316;color:#fff" onclick="assignTier('A')">A</div>
+    <div class="tier-picker-btn" style="background:#eab308;color:#fff" onclick="assignTier('B')">B</div>
+    <div class="tier-picker-btn" style="background:#22c55e;color:#fff" onclick="assignTier('C')">C</div>
+    <div class="tier-picker-btn" style="background:#3b82f6;color:#fff" onclick="assignTier('D')">D</div>
+    <div class="tier-picker-btn" style="background:#6b7280;color:#fff" onclick="assignTier('F')">F</div>
+    <div class="tier-picker-btn" style="background:var(--surface-2);color:var(--text-muted)" onclick="assignTier('')">Pool</div>
+  </div>
+</div>
+
 <script>
 const animePool = {};
 const tiers = {S:[],A:[],B:[],C:[],D:[],E:[],F:[]};
 let searchTimer;
+let pickerTarget = null;
+
+// Load trending prefill
+fetch('/tierlists/api/prefill/')
+  .then(r => r.json())
+  .then(d => {
+    const container = document.getElementById('prefill-container');
+    container.innerHTML = d.results.map(a =>
+      '<div class="prefill-card" onclick="addToPool(' + a.id + ',\'' + (a.title || '').replace(/'/g,"\\'") + '\',\'' + (a.image || '') + '\')">' +
+      '<img src="' + (a.image || '') + '" alt="" loading="lazy">' +
+      '<span>' + (a.title || '') + '</span></div>'
+    ).join('');
+  }).catch(() => {
+    document.getElementById('prefill-container').innerHTML = '<div class="text-muted small py-2">Could not load trending</div>';
+  });
 
 document.getElementById('tierSearch').addEventListener('input', function() {
   const val = this.value.trim();
@@ -100,16 +153,90 @@ function addToPool(id, title, image) {
 function renderPool() {
   const pool = document.getElementById('pool');
   pool.innerHTML = Object.values(animePool).filter(a => !a.tier).map(a =>
-    '<div class="tier-item" data-id="' + a.id + '" draggable="true">' +
+    '<div class="tier-item" data-id="' + a.id + '" draggable="true" title="' + a.title + '">' +
     '<img src="' + a.image + '" alt="" title="' + a.title + '">' +
+    '<button class="remove" onclick="removeFromPool(' + a.id + ')">✕</button>' +
     '</div>'
   ).join('');
+
+  // Mobile: tap-to-assign
+  if (window.innerWidth <= 576) {
+    document.querySelectorAll('#pool .tier-item, .tier-items .tier-item').forEach(el => {
+      el.classList.add('tap-mode');
+      el.addEventListener('click', function(e) {
+        if (e.target.closest('.remove')) return;
+        pickerTarget = this.dataset.id;
+        document.getElementById('picker-title').textContent = animePool[pickerTarget]?.title || '';
+        document.getElementById('tierPicker').classList.add('open');
+      });
+    });
+  }
+}
+
+function assignTier(tier) {
+  document.getElementById('tierPicker').classList.remove('open');
+  if (!pickerTarget) return;
+  const id = parseInt(pickerTarget);
+  if (!animePool[id]) return;
+  // Remove from old tier
+  for (const [t, items] of Object.entries(tiers)) {
+    const idx = items.indexOf(id);
+    if (idx > -1) items.splice(idx, 1);
+  }
+  animePool[id].tier = tier;
+  if (tier) {
+    if (!tiers[tier]) tiers[tier] = [];
+    tiers[tier].push(id);
+  }
+  renderPool();
+  renderTiers();
+  pickerTarget = null;
+}
+
+function renderTiers() {
+  document.querySelectorAll('.tier-items').forEach(el => {
+    const tier = el.dataset.tier;
+    el.innerHTML = (tiers[tier] || []).map(id => {
+      const a = animePool[id];
+      if (!a) return '';
+      return '<div class="tier-item" data-id="' + a.id + '" draggable="true" title="' + a.title + '">' +
+        '<img src="' + a.image + '" alt="">' +
+        '<button class="remove" onclick="removeFromTier(' + a.id + ')">✕</button></div>';
+    }).join('');
+  });
+}
+
+function removeFromPool(id) {
+  delete animePool[id];
+  renderPool();
+}
+
+function removeFromTier(id) {
+  for (const [t, items] of Object.entries(tiers)) {
+    const idx = items.indexOf(id);
+    if (idx > -1) items.splice(idx, 1);
+  }
+  if (animePool[id]) {
+    animePool[id].tier = '';
+    renderPool();
+  }
+  renderTiers();
 }
 
 document.getElementById('tierForm').addEventListener('submit', function() {
   const data = {};
   for (const [tier, items] of Object.entries(tiers)) {
     data[tier] = items.map(a => a.id);
+    // Also include pool items that have a tier set
+  }
+  // Check items in pool that might have been dropped via drag
+  document.querySelectorAll('.tier-items .tier-item').forEach(el => {
+    const id = parseInt(el.dataset.id);
+    const tier = el.closest('.tier-items').dataset.tier;
+    if (!tiers[tier].includes(id)) tiers[tier].push(id);
+  });
+  for (const [tier, items] of Object.entries(tiers)) {
+    data[tier] = items.map(a => a);
   }
   document.getElementById('tierData').value = JSON.stringify(data);
 });
@@ -142,7 +269,7 @@ function initTierSort() {
         }
         if (!tiers[tier]) tiers[tier] = [];
         tiers[tier].push(id);
-        animePool[id].tier = tier;
+        if (animePool[id]) animePool[id].tier = tier;
       },
       onRemove: function(evt) {
         const id = parseInt(evt.item.dataset.id);
@@ -151,7 +278,7 @@ function initTierSort() {
           const idx = tiers[fromTier].indexOf(id);
           if (idx > -1) tiers[fromTier].splice(idx, 1);
         }
-        animePool[id].tier = '';
+        if (animePool[id]) animePool[id].tier = '';
       }
     });
   });

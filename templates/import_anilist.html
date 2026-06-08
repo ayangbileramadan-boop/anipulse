@@ -9,7 +9,7 @@
     <div class="fs-1 mb-3">📥</div>
     <h5 class="fw-bold mb-2">Import from AniList</h5>
     <p class="text-secondary small mb-4">Enter your AniList username to import your watching list, scores, and progress.</p>
-    <form method="post">
+    <form method="post" onsubmit="var btn=this.querySelector('button[type=submit],input[type=submit]');if(btn)btn.disabled=true">
       {% csrf_token %}
       <input type="text" name="username" class="form-control form-control-custom mb-3" placeholder="AniList username" required autocomplete="off">
       <button type="submit" class="btn btn-primary-custom w-100 py-2">Import My List</button>

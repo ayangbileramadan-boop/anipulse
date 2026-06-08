@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block title %}Notifications — AniPulse{% endblock %}
+{% block extra_css %}
+<style>
+.notif-icon { width:36px; height:36px; display:flex; align-items:center; justify-content:center; border-radius:50%; flex-shrink:0; font-size:0.9rem }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="d-flex align-items-center justify-content-between mb-4">
+        <h4 class="fw-bold mb-0">Notifications</h4>
+        <div class="d-flex gap-2">
+          {% if unread_count %}
+          <button class="btn btn-sm btn-outline-light mark-all-read-btn" style="border-radius:8px">Mark all read</button>
+          {% endif %}
+          <a href="{% url 'notification_settings' %}" class="btn btn-sm btn-outline-light" style="border-radius:8px">Settings</a>
+        </div>
+      </div>
+
+      {% if notifications %}
+      <div class="d-flex flex-column gap-2" id="notifList">
+        {% for n in notifications %}
+        <div class="d-flex align-items-start gap-3 p-3 rounded-3 notif-card {% if not n.is_read %}notif-unread{% endif %}" style="background:var(--surface);border:1px solid var(--border);{% if not n.is_read %}border-left:3px solid var(--primary){% endif %}" data-id="{{ n.id }}">
+          <div class="notif-icon" style="background:{% if n.notification_type == 'FOLLOW' %}rgba(52,152,219,0.15);color:#3498db{% elif n.notification_type == 'LIKE' %}rgba(231,76,60,0.15);color:#e74c3c{% elif n.notification_type == 'REVIEW' %}rgba(155,89,182,0.15);color:#9b59b6{% elif n.notification_type == 'COMMENT' %}rgba(46,204,113,0.15);color:#2ecc71{% elif n.notification_type == 'LEVEL_UP' %}rgba(241,196,15,0.15);color:#f1c40f{% elif n.notification_type == 'BADGE' %}rgba(241,196,15,0.15);color:#f1c40f{% else %}rgba(232,54,93,0.1);color:var(--primary){% endif %}">
+            {% if n.notification_type == 'FOLLOW' %}<i class="fas fa-user-plus"></i>{% elif n.notification_type == 'LIKE' %}<i class="fas fa-heart"></i>{% elif n.notification_type == 'REVIEW' %}<i class="fas fa-star"></i>{% elif n.notification_type == 'COMMENT' %}<i class="fas fa-comment"></i>{% elif n.notification_type == 'TIER_LIST' %}<i class="fas fa-layer-group"></i>{% elif n.notification_type == 'BATTLE_VOTE' %}<i class="fas fa-crosshairs"></i>{% elif n.notification_type == 'LEVEL_UP' %}⬆{% elif n.notification_type == 'BADGE' %}🏅{% else %}<i class="fas fa-bell"></i>{% endif %}
+          </div>
+          <div class="flex-grow-1 min-w-0">
+            <a href="{{ n.url|default:'#' }}" class="text-decoration-none">
+              <div class="fw-medium text-light text-truncate">{{ n.title }}</div>
+              {% if n.message %}
+              <div class="small text-secondary text-truncate">{{ n.message }}</div>
+              {% endif %}
+              <div class="small text-secondary" style="font-size:0.7rem">{{ n.created_at|timesince }} ago</div>
+            </a>
+          </div>
+          {% if not n.is_read %}
+          <button class="btn btn-sm mark-read-btn" style="background:none;border:none;color:var(--primary);padding:0;font-size:0.75rem;flex-shrink:0" data-id="{{ n.id }}">Mark read</button>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+
+      {% if notifications.has_other_pages %}
+      <div class="d-flex justify-content-center gap-2 mt-4">
+        {% if notifications.has_previous %}
+        <a href="?page={{ notifications.previous_page_number }}" class="btn btn-sm btn-outline-light" style="border-radius:8px">&larr; Previous</a>
+        {% endif %}
+        <span class="btn btn-sm text-secondary" style="border-radius:8px">Page {{ notifications.number }} of {{ notifications.paginator.num_pages }}</span>
+        {% if notifications.has_next %}
+        <a href="?page={{ notifications.next_page_number }}" class="btn btn-sm btn-outline-light" style="border-radius:8px">Next &rarr;</a>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% else %}
+      <div class="text-center py-5">
+        <div style="font-size:3rem;color:var(--text-secondary)">🔔</div>
+        <p class="text-secondary mt-2">No notifications yet</p>
+        <a href="{% url 'social_feed' %}" class="btn btn-sm btn-primary-custom" style="border-radius:8px">Explore the Feed</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function(){
+  var csrf = document.querySelector('[name=csrfmiddlewaretoken]');
+
+  document.querySelectorAll('.mark-read-btn').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var id = btn.getAttribute('data-id');
+      fetch('/notifications/' + id + '/read/', {method:'POST', headers:{'X-CSRFToken': csrf ? csrf.value : ''}})
+        .then(function(){ btn.remove(); btn.closest('.notif-card').style.borderLeft = 'none'; });
+    });
+  });
+
+  var markAllBtn = document.querySelector('.mark-all-read-btn');
+  if(markAllBtn){
+    markAllBtn.addEventListener('click', function(){
+      fetch('/notifications/read-all/', {method:'POST', headers:{'X-CSRFToken': csrf ? csrf.value : ''}})
+        .then(function(){
+          markAllBtn.remove();
+          document.querySelectorAll('.notif-card').forEach(function(c){ c.style.borderLeft = 'none'; });
+          document.querySelectorAll('.mark-read-btn').forEach(function(b){ b.remove(); });
+        });
+    });
+  }
+})();
+</script>
+{% endblock %}

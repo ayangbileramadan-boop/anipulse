@@ -25,6 +25,8 @@
                     <a href="{% url 'anime_detail' anime.anilist_id %}">
                         <img src="{{ anime.cover_image_medium }}" style="width:40px;height:56px;object-fit:cover;border-radius:6px" alt="" loading="lazy">
                     </a>
+                    {% empty %}
+                    <p class="text-secondary small">No anime in this list yet</p>
                     {% endfor %}
                 </div>
                 <form method="post" class="d-inline mt-2">

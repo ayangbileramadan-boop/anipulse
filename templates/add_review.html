@@ -15,7 +15,7 @@
             <h2 class="fw-bold mt-3 mb-1">Write a Review</h2>
             <p class="text-secondary mb-4">Share your thoughts on <strong>{{ anime.display_title }}</strong></p>
 
-            <form method="post" class="review-form-card">
+            <form method="post" class="review-form-card" onsubmit="var btn=this.querySelector('button[type=submit],input[type=submit]');if(btn)btn.disabled=true">
                 {% csrf_token %}
                 <div class="mb-3">
                     <label class="form-label fw-medium">Rating</label>

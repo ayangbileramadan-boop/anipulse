@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models import F
 
 from .models import WatchlistEntry
 from .serializers import WatchlistEntrySerializer, WatchlistEntryCreateSerializer
@@ -66,22 +67,20 @@ class WatchlistViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def increment_episode(self, request, pk=None):
-        """POST /watchlist/{id}/increment_episode/ — +1 episodes_watched."""
         entry = self.get_object()
         max_episodes = entry.anime.episodes or 9999
         if entry.episodes_watched < max_episodes:
-            entry.episodes_watched += 1
-            entry.save()
+            WatchlistEntry.objects.filter(id=entry.id, episodes_watched__lt=max_episodes).update(episodes_watched=F('episodes_watched') + 1)
+        entry.refresh_from_db()
         serializer = self.get_serializer(entry)
         return Response(serializer.data)
 
     @action(detail=True, methods=['post'])
     def decrement_episode(self, request, pk=None):
-        """POST /watchlist/{id}/decrement_episode/ — -1 episodes_watched."""
         entry = self.get_object()
         if entry.episodes_watched > 0:
-            entry.episodes_watched -= 1
-            entry.save()
+            WatchlistEntry.objects.filter(id=entry.id, episodes_watched__gt=0).update(episodes_watched=F('episodes_watched') - 1)
+        entry.refresh_from_db()
         serializer = self.get_serializer(entry)
         return Response(serializer.data)
 
