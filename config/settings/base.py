@@ -18,7 +18,6 @@ DJANGO_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
-    'django_celery_beat',
     'rest_framework',
     'allauth',
     'allauth.account',
@@ -148,7 +147,6 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
-CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
 # ─── AniList API ─────────────────────────────────────────────────────
 ANILIST_API_URL = 'https://graphql.anilist.co'
@@ -183,17 +181,6 @@ USE_I18N = True
 USE_TZ = True
 
 # ─── Sentry ──────────────────────────────────────────────────────────
-SENTRY_DSN = config('SENTRY_DSN', default='')
-if SENTRY_DSN:
-    import sentry_sdk
-    from sentry_sdk.integrations.django import DjangoIntegration
-    sentry_sdk.init(
-        dsn=SENTRY_DSN,
-        integrations=[DjangoIntegration()],
-        traces_sample_rate=0.5,
-        send_default_pii=False,
-    )
-
 # ─── Logging ─────────────────────────────────────────────────────────
 LOGGING = {
     'version': 1,
