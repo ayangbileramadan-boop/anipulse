@@ -175,18 +175,6 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# ─── Sentry ──────────────────────────────────────────────────────────
-SENTRY_DSN = config('SENTRY_DSN', default='')
-if SENTRY_DSN:
-    import sentry_sdk
-    from sentry_sdk.integrations.django import DjangoIntegration
-    sentry_sdk.init(
-        dsn=SENTRY_DSN,
-        integrations=[DjangoIntegration()],
-        traces_sample_rate=0.5,
-        send_default_pii=False,
-    )
-
 # ─── Logging ─────────────────────────────────────────────────────────
 LOGGING = {
     'version': 1,

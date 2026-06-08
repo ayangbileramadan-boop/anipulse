@@ -18,28 +18,9 @@ CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='https://anipulse.
 # Static files (Whitenoise for production)
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Cache (Redis for production — fallback to local memory if unavailable)
-try:
-    CACHES = {
-        'default': {
-            'BACKEND': 'django_redis.cache.RedisCache',
-            'LOCATION': config('REDIS_URL', default='redis://127.0.0.1:6379/1'),
-            'OPTIONS': {'CLIENT_CLASS': 'django_redis.client.DefaultClient'},
-        }
+# Cache (local memory — upgrade to Redis when needed)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
     }
-except Exception:
-    CACHES = {
-        'default': {
-            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        }
-    }
-
-# Sentry
-SENTRY_DSN = config('SENTRY_DSN', default='')
-if SENTRY_DSN:
-    import sentry_sdk
-    sentry_sdk.init(
-        dsn=SENTRY_DSN,
-        traces_sample_rate=0.1,
-        send_default_pii=False,
-    )
+}
