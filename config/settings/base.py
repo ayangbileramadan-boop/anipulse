@@ -21,8 +21,6 @@ THIRD_PARTY_APPS = [
     'rest_framework',
     'allauth',
     'allauth.account',
-    'allauth.socialaccount',
-    'allauth.socialaccount.providers.google',
 ]
 
 LOCAL_APPS = [
@@ -112,19 +110,6 @@ ACCOUNT_LOGOUT_ON_GET = False
 ACCOUNT_LOGOUT_REDIRECT_URL = '/'
 ACCOUNT_LOGIN_REDIRECT_URL = '/'
 ACCOUNT_SIGNUP_REDIRECT_URL = '/'
-SOCIALACCOUNT_LOGIN_ON_GET = True
-SOCIALACCOUNT_AUTO_SIGNUP = True
-SOCIALACCOUNT_EMAIL_REQUIRED = True
-SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'
-
-SOCIALACCOUNT_PROVIDERS = {
-    'google': {
-        'SCOPE': ['profile', 'email'],
-        'AUTH_PARAMS': {'access_type': 'online'},
-        'OAUTH_PKCE_ENABLED': True,
-        'FETCH_USERINFO': True,
-    }
-}
 
 # ─── Cache ──────────────────────────────────────────────────────────
 CACHES = {
