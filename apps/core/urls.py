@@ -60,6 +60,7 @@ urlpatterns = [
     path('battles/<int:battle_id>/vote/', views.battle_vote, name='battle_vote'),
     path('battles/<int:battle_id>/vote/json/', views.battle_vote_json, name='battle_vote_json'),
     path('battles/<int:battle_id>/data/json/', views.battle_data_json, name='battle_data_json'),
+    path('battles/<int:battle_id>/', views.battle_detail, name='battle_detail'),
     path('tierlists/', views.tier_list_list, name='tier_list_list'),
     path('tierlists/create/', views.tier_list_create, name='tier_list_create'),
     path('tierlists/<slug:slug>/', views.tier_list_view, name='tier_list_view'),

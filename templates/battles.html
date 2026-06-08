@@ -57,6 +57,7 @@
           {% if b.is_daily_featured %}<div class="text-center mt-2"><span class="daily-badge">Daily Featured</span></div>{% endif %}
           {% if user.is_authenticated and not b.is_expired %}
           <div class="d-flex gap-2 mt-3">
+            <a href="{% url 'battle_detail' b.id %}" class="text-decoration-none small" style="color:var(--text-secondary);font-size:0.7rem;padding:4px 8px">📊</a>
             <button class="vote-btn flex-grow-1 {% if user_votes and user_votes|dictlookup:b.id == 1 %}active{% endif %}" onclick="castVote({{ b.id }}, 1, this)" id="vote1-{{ b.id }}">{{ b.anime1.display_title|truncatechars:14 }}</button>
             <button class="vote-btn flex-grow-1 {% if user_votes and user_votes|dictlookup:b.id == 2 %}active{% endif %}" onclick="castVote({{ b.id }}, 2, this)" id="vote2-{{ b.id }}">{{ b.anime2.display_title|truncatechars:14 }}</button>
           </div>
@@ -100,11 +101,13 @@
           </div>
           <div class="bar-bg"><div class="bar-fill" id="bar-{{ b.id }}" style="width:{{ b.pct1 }}%;background:var(--primary)"></div></div>
           <div class="d-flex justify-content-between align-items-center mt-1">
-            {% if b.is_daily_featured %}<span class="daily-badge">Daily</span>{% endif %}
-            {% if b.expires_at %}<span class="expiry-badge text-muted" style="background:var(--surface-2)">Expires {{ b.expires_at|timeuntil }}</span>{% endif %}
-          </div>
+          {% if b.is_daily_featured %}<span class="daily-badge">Daily</span>{% endif %}
+          {% if b.expires_at %}<span class="expiry-badge text-muted" style="background:var(--surface-2)">Expires {{ b.expires_at|timeuntil }}</span>{% endif %}
+          <a href="{% url 'battle_detail' b.id %}" class="text-decoration-none small ms-auto" style="color:var(--text-secondary);font-size:0.7rem">Details →</a>
+        </div>
         </div>
         <div class="flex-shrink-0 d-flex gap-1 align-items-center">
+          <a href="{% url 'battle_detail' b.id %}" class="text-decoration-none small" style="color:var(--text-secondary);font-size:0.75rem;padding:6px 8px">📊</a>
           {% if user.is_authenticated and not b.is_expired %}
           <button class="vote-btn {% if user_votes and user_votes|dictlookup:b.id == 1 %}active{% endif %}" onclick="castVote({{ b.id }}, 1, this)" id="vote1-{{ b.id }}" style="padding:6px 12px;font-size:0.75rem">{{ b.anime1.display_title|truncatechars:10 }}</button>
           <button class="vote-btn {% if user_votes and user_votes|dictlookup:b.id == 2 %}active{% endif %}" onclick="castVote({{ b.id }}, 2, this)" id="vote2-{{ b.id }}" style="padding:6px 12px;font-size:0.75rem">{{ b.anime2.display_title|truncatechars:10 }}</button>

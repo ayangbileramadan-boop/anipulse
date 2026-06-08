@@ -1,0 +1,142 @@
+{% extends 'base.html' %}{% load core_extras %}
+{% block title %}{{ battle.anime1.display_title }} vs {{ battle.anime2.display_title }} — AniPulse{% endblock %}
+{% block extra_css %}<style>
+.battle-header{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:30px;margin-bottom:24px}
+.battle-img{width:120px;height:170px;object-fit:cover;border-radius:12px}
+.vs-lg{width:56px;height:56px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem;border:4px solid var(--surface);flex-shrink:0;z-index:2}
+.stat-card{background:var(--surface-2);border-radius:12px;padding:16px;text-align:center}
+.stat-value{font-size:1.5rem;font-weight:700;color:var(--text)}
+.stat-label{font-size:0.75rem;color:var(--text-secondary);margin-top:4px}
+.vote-row{display:flex;gap:12px;margin-top:16px}
+.vote-btn{flex:1;padding:12px;border-radius:12px;border:2px solid var(--border);background:transparent;color:var(--text);font-weight:600;transition:all 0.2s;text-align:center}
+.vote-btn:hover{border-color:var(--primary);background:rgba(232,54,93,0.05)}
+.vote-btn.active{border-color:var(--primary);background:rgba(232,54,93,0.1);color:var(--primary)}
+.vote-btn:disabled{opacity:0.5;cursor:not-allowed}
+.recent-voter{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:0.85rem}
+.recent-voter .avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0}
+@media(max-width:576px){
+  .battle-header{padding:16px}
+  .battle-img{width:80px;height:114px}
+  .vs-lg{width:40px;height:40px;font-size:0.8rem}
+}
+</style>{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <a href="{% url 'battle_list' %}" class="text-decoration-none mb-3 d-inline-block" style="color:var(--text-secondary);font-size:0.9rem">← Back to Battles</a>
+
+  <div class="battle-header">
+    <div class="d-flex align-items-center justify-content-center gap-3 gap-md-4">
+      <div class="text-center" style="min-width:0;flex:1">
+        <img src="{{ battle.anime1.cover_image_large|default:battle.anime1.cover_image_medium }}" class="battle-img" alt="" loading="lazy">
+        <h5 class="fw-bold mt-3 mb-1">{{ battle.anime1.display_title }}</h5>
+        {% if battle.anime1.genres.all %}<div class="small text-muted">{{ battle.anime1.genres.all|slice:":3"|join:", " }}</div>{% endif %}
+      </div>
+      <div class="vs-lg">VS</div>
+      <div class="text-center" style="min-width:0;flex:1">
+        <img src="{{ battle.anime2.cover_image_large|default:battle.anime2.cover_image_medium }}" class="battle-img" alt="" loading="lazy">
+        <h5 class="fw-bold mt-3 mb-1">{{ battle.anime2.display_title }}</h5>
+        {% if battle.anime2.genres.all %}<div class="small text-muted">{{ battle.anime2.genres.all|slice:":3"|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="row g-3 mt-3">
+      <div class="col-4"><div class="stat-card"><div class="stat-value">{{ battle.total_votes }}</div><div class="stat-label">Total Votes</div></div></div>
+      <div class="col-4"><div class="stat-card"><div class="stat-value" style="color:var(--primary)">{{ battle.pct1 }}%</div><div class="stat-label">{{ battle.anime1.display_title|truncatechars:12 }}</div></div></div>
+      <div class="col-4"><div class="stat-card"><div class="stat-value" style="color:var(--primary)">{{ battle.pct2 }}%</div><div class="stat-label">{{ battle.anime2.display_title|truncatechars:12 }}</div></div></div>
+    </div>
+
+    <div class="bar-bg mt-3" style="height:12px;border-radius:6px">
+      <div class="bar-fill" style="width:{{ battle.pct1 }}%;background:linear-gradient(90deg,var(--primary),#A259FF)"></div>
+    </div>
+
+    {% if user.is_authenticated %}
+    <div class="vote-row">
+      <button class="vote-btn {% if user_vote == 1 %}active{% endif %}" data-choice="1" data-battle="{{ battle.id }}" {% if user_vote %}disabled{% endif %}>
+        {% if user_vote == 1 %}✓ {% endif %}Vote {{ battle.anime1.display_title|truncatechars:20 }}
+      </button>
+      <button class="vote-btn {% if user_vote == 2 %}active{% endif %}" data-choice="2" data-battle="{{ battle.id }}" {% if user_vote %}disabled{% endif %}>
+        {% if user_vote == 2 %}✓ {% endif %}Vote {{ battle.anime2.display_title|truncatechars:20 }}
+      </button>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="row g-4">
+    <div class="col-md-7">
+      <div class="card" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px">
+        <h6 class="fw-bold mb-3">📊 Matchup Stats</h6>
+        <div class="d-flex justify-content-between py-2 border-bottom" style="border-color:var(--border)!important">
+          <span class="text-muted small">Category</span>
+          <span class="small fw-medium">{{ battle.category|title }}</span>
+        </div>
+        {% if battle.is_daily_featured %}
+        <div class="d-flex justify-content-between py-2 border-bottom" style="border-color:var(--border)!important">
+          <span class="text-muted small">Featured</span>
+          <span class="small fw-medium" style="color:var(--primary)">Daily Battle</span>
+        </div>
+        {% endif %}
+        {% if battle.expires_at %}
+        <div class="d-flex justify-content-between py-2 border-bottom" style="border-color:var(--border)!important">
+          <span class="text-muted small">Expires</span>
+          <span class="small fw-medium">{{ battle.expires_at|timeuntil }}</span>
+        </div>
+        {% endif %}
+        <div class="d-flex justify-content-between py-2 border-bottom" style="border-color:var(--border)!important">
+          <span class="text-muted small">Created</span>
+          <span class="small fw-medium">{{ battle.created_at|date:"M j, Y" }}</span>
+        </div>
+        <div class="d-flex justify-content-between py-2">
+          <span class="text-muted small">By</span>
+          <span class="small fw-medium">{% if battle.created_by %}{{ battle.created_by.username }}{% else %}AniPulse{% endif %}</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-5">
+      <div class="card" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px">
+        <h6 class="fw-bold mb-3">🕐 Recent Votes</h6>
+        {% if recent_votes %}
+          {% for v in recent_votes %}
+          <div class="recent-voter">
+            {% if v.user.avatar %}
+            <img src="{{ v.user.avatar }}" class="avatar" alt="">
+            {% else %}
+            <div class="avatar rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white fw-bold" style="font-size:12px">{{ v.user.username|first|upper }}</div>
+            {% endif %}
+            <div class="flex-grow-1">
+              <span class="fw-medium small">{{ v.user.username }}</span>
+              <span class="text-muted" style="font-size:0.7rem">voted for</span>
+              <span class="small" style="color:var(--primary);font-weight:500">{% if v.choice == 1 %}{{ battle.anime1.display_title|truncatechars:16 }}{% else %}{{ battle.anime2.display_title|truncatechars:16 }}{% endif %}</span>
+            </div>
+            <span class="text-muted" style="font-size:0.65rem">{{ v.created_at|timesince }} ago</span>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-muted small mb-0">No votes yet. Be the first!</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.querySelectorAll('.vote-btn:not(:disabled)').forEach(btn => {
+  btn.addEventListener('click', async function() {
+    const choice = this.dataset.choice;
+    const battleId = this.dataset.battle;
+    try {
+      const resp = await fetch(`/battles/${battleId}/vote/json/`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `choice=${choice}`
+      });
+      const data = await resp.json();
+      if (data.error) return alert(data.error);
+      document.querySelectorAll('.vote-btn').forEach(b => { b.disabled = true; });
+      document.querySelector(`.vote-btn[data-choice="${data.choice}"]`).classList.add('active');
+      document.querySelector(`.vote-btn[data-choice="${data.choice}"]`).innerHTML = '✓ ' + document.querySelector(`.vote-btn[data-choice="${data.choice}"]`).innerText.trim();
+      location.reload();
+    } catch(e) { alert('Vote failed'); }
+  });
+});
+</script>
+{% endblock %}

@@ -1300,6 +1300,20 @@ def battle_data_json(request, battle_id):
     })
 
 
+def battle_detail(request, battle_id):
+    battle = get_object_or_404(Battle.objects.select_related('anime1', 'anime2', 'created_by'), id=battle_id)
+    recent_votes = BattleVote.objects.filter(battle=battle).select_related('user').order_by('-created_at')[:20]
+    user_vote = None
+    if request.user.is_authenticated:
+        uv = BattleVote.objects.filter(battle=battle, user=request.user).first()
+        user_vote = uv.choice if uv else None
+    return render(request, 'battle_detail.html', {
+        'battle': battle,
+        'recent_votes': recent_votes,
+        'user_vote': user_vote,
+    })
+
+
 def tier_list_list(request):
     cached = cache.get('tier_list_list_data')
     if cached is not None:
