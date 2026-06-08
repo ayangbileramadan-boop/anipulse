@@ -21,6 +21,10 @@
     <form method="post" onsubmit="var btn=this.querySelector('button[type=submit],input[type=submit]');if(btn)btn.disabled=true">
       {% csrf_token %}
       <div class="form-group">
+        <label>Username</label>
+        <input type="text" name="username" value="{{ user.username }}" maxlength="150" required>
+      </div>
+      <div class="form-group">
         <label>Email</label>
         <input type="email" name="email" value="{{ user.email }}">
       </div>
@@ -30,7 +34,8 @@
       </div>
       <div class="form-group">
         <label>Avatar URL</label>
-        <input type="url" name="avatar" value="{{ user.avatar }}" placeholder="https://...">
+        <input type="url" name="avatar" value="{{ user.avatar }}" placeholder="https://i.imgur.com/...">
+        <small style="color:var(--text-secondary);font-size:0.75rem">Paste an image URL (Imgur, Gravatar, etc.)</small>
       </div>
       <div class="form-group">
         <label>Cover Image URL</label>

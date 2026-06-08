@@ -2559,6 +2559,12 @@ def notification_list(request):
 def user_settings(request):
     user = request.user
     if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        if username and username != user.username:
+            if get_user_model().objects.filter(username=username).exclude(pk=user.pk).exists():
+                messages.error(request, 'Username already taken')
+            else:
+                user.username = username
         user.bio = request.POST.get('bio', '')
         user.avatar = request.POST.get('avatar', '')
         user.cover_image = request.POST.get('cover_image', '')

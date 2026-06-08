@@ -3,6 +3,7 @@ from django.urls import path, include, reverse_lazy
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
+from django.views.static import serve as media_serve
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -38,4 +39,9 @@ urlpatterns = [
 
     # Google OAuth
     path('accounts/', include('allauth.urls')),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]
+
+# Serve media files (works with DEBUG=False on Render)
+urlpatterns += [
+    path('media/<path:path>', media_serve, {'document_root': settings.MEDIA_ROOT}),
+]
