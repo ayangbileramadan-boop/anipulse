@@ -1,6 +1,8 @@
 import os
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.sites.models import Site
 from django.core.management.base import BaseCommand
 from django.core.management import call_command
 
@@ -11,6 +13,17 @@ class Command(BaseCommand):
     help = 'Run all seed commands for demo data'
 
     def handle(self, *args, **options):
+        # Update default site with the actual Render URL
+        render_url = os.environ.get('RENDER_EXTERNAL_URL', '')
+        if render_url:
+            from urllib.parse import urlparse
+            hostname = urlparse(render_url).hostname or 'localhost'
+            Site.objects.update_or_create(
+                id=settings.SITE_ID,
+                defaults={'domain': hostname, 'name': 'AniPulse'}
+            )
+            self.stdout.write(f'Site set to {hostname}')
+
         # Create admin from env vars (set in Render dashboard)
         admin_user = os.environ.get('ADMIN_USERNAME', '')
         admin_pass = os.environ.get('ADMIN_PASSWORD', '')
