@@ -130,7 +130,7 @@ class FeedBuilder:
         result = {
             'id': f'activity_{activity.id}',
             'type': 'activity',
-            'timestamp': activity.created_at.isoformat(),
+            'timestamp': activity.created_at,
             'user': self._user_data(activity.user),
             'content': {
                 'activity_type': activity.activity_type,
@@ -149,7 +149,7 @@ class FeedBuilder:
         result = {
             'id': f'vote_{vote.id}',
             'type': 'battle_vote',
-            'timestamp': vote.created_at.isoformat(),
+            'timestamp': vote.created_at,
             'user': self._user_data(vote.user),
             'content': {
                 'choice': vote.choice,
@@ -292,7 +292,7 @@ class FeedBuilder:
         return {
             'id': 'welcome_1',
             'type': 'system_welcome',
-            'timestamp': self.now.isoformat(),
+            'timestamp': self.now,
             'user': {'id': 0, 'username': 'AniPulse', 'avatar': '', 'is_system': True},
             'content': {
                 'title': 'Welcome to AniPulse!',
