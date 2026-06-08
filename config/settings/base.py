@@ -19,7 +19,6 @@ DJANGO_APPS = [
 
 THIRD_PARTY_APPS = [
     'rest_framework',
-    'django_celery_beat',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
@@ -141,7 +140,6 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
-CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
 # ─── AniList API ─────────────────────────────────────────────────────
 ANILIST_API_URL = 'https://graphql.anilist.co'
