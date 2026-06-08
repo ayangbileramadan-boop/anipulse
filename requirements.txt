@@ -17,3 +17,4 @@ requests==2.31.0
 requests-cache==1.2.1
 dj-database-url==2.2.0
 PyJWT>=2.8
+cryptography>=42.0.0
