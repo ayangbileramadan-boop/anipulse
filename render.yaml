@@ -10,6 +10,8 @@ services:
       python manage.py seed_all
     startCommand: gunicorn config.wsgi --workers 4 --worker-class sync --timeout 120
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.9
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings.production
       - key: SECRET_KEY
