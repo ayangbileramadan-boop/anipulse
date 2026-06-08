@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: anipulse
+    env: python
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+      python manage.py migrate --noinput
+      python manage.py collectstatic --noinput
+    startCommand: gunicorn config.wsgi --workers 4 --worker-class sync --timeout 120
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: .onrender.com
+      - key: DATABASE_URL
+        fromDatabase:
+          name: anipulse-db
+          property: connectionString
+      - key: CSRF_TRUSTED_ORIGINS
+        value: https://*.onrender.com
+      - key: SENTRY_DSN
+        sync: false
+      - key: REDIS_URL
+        sync: false
+
+databases:
+  - name: anipulse-db
+    databaseName: anipulse
+    plan: free

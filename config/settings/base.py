@@ -19,6 +19,7 @@ DJANGO_APPS = [
 
 THIRD_PARTY_APPS = [
     'rest_framework',
+    'django_celery_beat',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
@@ -75,19 +76,12 @@ WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
 
 # ─── Database ──────────────────────────────────────────────────────
+import dj_database_url
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': config('DB_NAME', default='anipulse'),
-        'USER': config('DB_USER', default='anipulse'),
-        'PASSWORD': config('DB_PASSWORD', default=''),
-        'HOST': config('DB_HOST', default='127.0.0.1'),
-        'PORT': config('DB_PORT', default='3306'),
-        'OPTIONS': {
-            'charset': 'utf8mb4',
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
-    }
+    'default': dj_database_url.config(
+        default='sqlite:///{}'.format(BASE_DIR / 'db.sqlite3'),
+        conn_max_age=600,
+    )
 }
 
 # ─── Email Configuration ──────────────────────────────────────────
@@ -147,6 +141,7 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
 # ─── AniList API ─────────────────────────────────────────────────────
 ANILIST_API_URL = 'https://graphql.anilist.co'
@@ -181,6 +176,17 @@ USE_I18N = True
 USE_TZ = True
 
 # ─── Sentry ──────────────────────────────────────────────────────────
+SENTRY_DSN = config('SENTRY_DSN', default='')
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[DjangoIntegration()],
+        traces_sample_rate=0.5,
+        send_default_pii=False,
+    )
+
 # ─── Logging ─────────────────────────────────────────────────────────
 LOGGING = {
     'version': 1,
