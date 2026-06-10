@@ -101,8 +101,7 @@ class FeedBuilder:
             user_data['is_system'] = True
         user_data['liked'] = liked
 
-        ct = ContentType.objects.get_for_model(post)
-        comment_count = post.comment_set.count()
+        comment_count = post.comments.count()
 
         result = {
             'id': f'post_{post.id}',

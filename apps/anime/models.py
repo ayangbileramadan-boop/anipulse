@@ -1,6 +1,6 @@
 from django.db import models
 from django.utils import timezone
-from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from apps.core.models import TimeStampedModel, Streak, UserFollow, Notification, CharacterFavorite, StaffFavorite
 
@@ -372,6 +372,7 @@ class SocialPost(TimeStampedModel):
     image = models.URLField(max_length=500, blank=True)
     likes = models.PositiveIntegerField(default=0)
     reply_to = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies')
+    comments = GenericRelation('Comment', content_type_field='content_type', object_id_field='object_id')
 
     class Meta:
         ordering = ['-created_at']
