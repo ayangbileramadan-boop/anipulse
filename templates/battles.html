@@ -2,21 +2,27 @@
 {% block title %}Anime Battles — AniPulse{% endblock %}
 {% block extra_css %}<style>
 .battle-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:20px; transition:all 0.2s }
-.battle-card:hover { border-color:rgba(232,54,93,0.2) }
+.battle-card:hover { border-color:rgba(232,54,93,0.2); box-shadow:0 4px 20px rgba(0,0,0,0.06) }
 .battle-img { width:70px; height:100px; object-fit:cover; border-radius:10px }
+.battle-img-lg { width:100px; height:142px; object-fit:cover; border-radius:12px }
 .vs-badge { width:40px; height:40px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.75rem; flex-shrink:0; z-index:2; border:3px solid var(--surface) }
 .bar-bg { height:8px; border-radius:4px; background:var(--surface-2); overflow:hidden }
 .bar-fill { height:100%; border-radius:4px; transition:width 0.5s ease }
-.trending-badge { background:linear-gradient(135deg,var(--primary),#A259FF); color:#fff; border-radius:20px; padding:4px 14px; font-size:0.7rem; font-weight:600 }
 .vote-btn { border:1px solid var(--border); border-radius:10px; padding:8px 16px; font-size:0.8rem; transition:all 0.2s; background:transparent; color:var(--text-muted) }
 .vote-btn:hover { border-color:var(--primary); color:var(--primary) }
 .vote-btn.active { border-color:var(--primary); background:rgba(232,54,93,0.1); color:var(--primary); font-weight:600 }
 .vote-btn:disabled { opacity:0.5; cursor:not-allowed }
 .expiry-badge { font-size:0.65rem; padding:2px 8px; border-radius:6px }
 .daily-badge { background:linear-gradient(135deg,var(--primary),#A259FF); color:#fff; font-size:0.6rem; padding:2px 10px; border-radius:6px; font-weight:600 }
+.stat-pill{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:4px;font-size:0.65rem;background:var(--surface-2);color:var(--text-secondary)}
+.stat-pill.highlight{background:rgba(46,204,113,.12);color:#2ecc71}
+.img-cover{position:relative;overflow:hidden;border-radius:10px;background:var(--surface-2)}
+.img-cover img{width:100%;height:100%;object-fit:cover}
+.img-cover .fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--text-muted);background:var(--surface-2)}
 @media(max-width:576px){
   .battle-card { padding:14px }
   .battle-img { width:56px; height:80px }
+  .battle-img-lg { width:72px; height:102px }
   .vs-badge { width:32px; height:32px; font-size:0.6rem }
   .vote-btn { padding:6px 12px; font-size:0.75rem }
 }
@@ -39,13 +45,31 @@
         <div class="battle-card">
           <div class="d-flex align-items-center justify-content-center gap-2 mb-3">
             <div class="text-center" style="min-width:0;flex:1">
-              <img src="{{ b.anime1.cover_image_large|default:b.anime1.cover_image_medium }}" class="battle-img" alt="" loading="lazy">
-              <div class="small fw-medium mt-1 text-truncate" style="color:var(--text)">{{ b.anime1.display_title|truncatechars:16 }}</div>
+              <div class="img-cover" style="width:100px;height:142px;margin:0 auto">
+                <img src="{{ b.anime1.cover_image_large|default:b.anime1.cover_image_medium }}" class="battle-img-lg" alt="" loading="lazy" onerror="this.style.display='none';this.parentElement.querySelector('.fallback').style.display='flex'">
+                <div class="fallback" style="display:none">📺</div>
+              </div>
+              <div class="small fw-medium mt-1 text-truncate" style="color:var(--text)">{{ b.anime1.display_title|truncatechars:20 }}</div>
+              <div class="d-flex gap-1 justify-content-center flex-wrap mt-1">
+                <span class="stat-pill highlight">⭐{{ b.anime1.average_score|default:"?" }}</span>
+                <span class="stat-pill">📺{{ b.anime1.episodes|default:"?" }}eps</span>
+                <span class="stat-pill">👥{{ b.anime1.popularity|default:"?" }}</span>
+                {% if b.anime1.studios.all %}<span class="stat-pill">🎬{{ b.anime1.studios.all.0.name|truncatechars:10 }}</span>{% endif %}
+              </div>
             </div>
             <div class="vs-badge">VS</div>
             <div class="text-center" style="min-width:0;flex:1">
-              <img src="{{ b.anime2.cover_image_large|default:b.anime2.cover_image_medium }}" class="battle-img" alt="" loading="lazy">
-              <div class="small fw-medium mt-1 text-truncate" style="color:var(--text)">{{ b.anime2.display_title|truncatechars:16 }}</div>
+              <div class="img-cover" style="width:100px;height:142px;margin:0 auto">
+                <img src="{{ b.anime2.cover_image_large|default:b.anime2.cover_image_medium }}" class="battle-img-lg" alt="" loading="lazy" onerror="this.style.display='none';this.parentElement.querySelector('.fallback').style.display='flex'">
+                <div class="fallback" style="display:none">📺</div>
+              </div>
+              <div class="small fw-medium mt-1 text-truncate" style="color:var(--text)">{{ b.anime2.display_title|truncatechars:20 }}</div>
+              <div class="d-flex gap-1 justify-content-center flex-wrap mt-1">
+                <span class="stat-pill highlight">⭐{{ b.anime2.average_score|default:"?" }}</span>
+                <span class="stat-pill">📺{{ b.anime2.episodes|default:"?" }}eps</span>
+                <span class="stat-pill">👥{{ b.anime2.popularity|default:"?" }}</span>
+                {% if b.anime2.studios.all %}<span class="stat-pill">🎬{{ b.anime2.studios.all.0.name|truncatechars:10 }}</span>{% endif %}
+              </div>
             </div>
           </div>
           <div class="d-flex justify-content-between mb-1 small">
@@ -57,7 +81,7 @@
           {% if b.is_daily_featured %}<div class="text-center mt-2"><span class="daily-badge">Daily Featured</span></div>{% endif %}
           {% if user.is_authenticated and not b.is_expired %}
           <div class="d-flex gap-2 mt-3">
-            <a href="{% url 'battle_detail' b.id %}" class="text-decoration-none small" style="color:var(--text-secondary);font-size:0.7rem;padding:4px 8px">📊</a>
+            <a href="{% url 'battle_detail' b.id %}" class="btn btn-sm" style="border:1px solid var(--border);border-radius:10px;padding:6px 10px;font-size:0.75rem;color:var(--text-secondary);text-decoration:none">📊 Details</a>
             <button class="vote-btn flex-grow-1 {% if user_votes and user_votes|dictlookup:b.id == 1 %}active{% endif %}" onclick="castVote({{ b.id }}, 1, this)" id="vote1-{{ b.id }}">{{ b.anime1.display_title|truncatechars:14 }}</button>
             <button class="vote-btn flex-grow-1 {% if user_votes and user_votes|dictlookup:b.id == 2 %}active{% endif %}" onclick="castVote({{ b.id }}, 2, this)" id="vote2-{{ b.id }}">{{ b.anime2.display_title|truncatechars:14 }}</button>
           </div>
@@ -84,13 +108,29 @@
       <div class="d-flex align-items-center gap-3 flex-wrap">
         <div class="d-flex align-items-center gap-2 flex-grow-1" style="min-width:0">
           <div class="text-center" style="min-width:0;flex:1">
-            <img src="{{ b.anime1.cover_image_large|default:b.anime1.cover_image_medium }}" class="battle-img" alt="" loading="lazy">
+            <div class="img-cover" style="width:70px;height:100px;margin:0 auto">
+              <img src="{{ b.anime1.cover_image_large|default:b.anime1.cover_image_medium }}" class="battle-img" alt="" loading="lazy" onerror="this.style.display='none';this.parentElement.querySelector('.fallback').style.display='flex'">
+              <div class="fallback" style="display:none">📺</div>
+            </div>
             <div class="small fw-medium mt-1 text-truncate" style="color:var(--text)">{{ b.anime1.display_title|truncatechars:16 }}</div>
+            <div class="d-flex gap-1 justify-content-center flex-wrap mt-1">
+              <span class="stat-pill highlight">⭐{{ b.anime1.average_score|default:"?" }}</span>
+              <span class="stat-pill">📺{{ b.anime1.episodes|default:"?" }}</span>
+              <span class="stat-pill">👥{{ b.anime1.popularity|default:"?" }}</span>
+            </div>
           </div>
           <div class="vs-badge">VS</div>
           <div class="text-center" style="min-width:0;flex:1">
-            <img src="{{ b.anime2.cover_image_large|default:b.anime2.cover_image_medium }}" class="battle-img" alt="" loading="lazy">
+            <div class="img-cover" style="width:70px;height:100px;margin:0 auto">
+              <img src="{{ b.anime2.cover_image_large|default:b.anime2.cover_image_medium }}" class="battle-img" alt="" loading="lazy" onerror="this.style.display='none';this.parentElement.querySelector('.fallback').style.display='flex'">
+              <div class="fallback" style="display:none">📺</div>
+            </div>
             <div class="small fw-medium mt-1 text-truncate" style="color:var(--text)">{{ b.anime2.display_title|truncatechars:16 }}</div>
+            <div class="d-flex gap-1 justify-content-center flex-wrap mt-1">
+              <span class="stat-pill highlight">⭐{{ b.anime2.average_score|default:"?" }}</span>
+              <span class="stat-pill">📺{{ b.anime2.episodes|default:"?" }}</span>
+              <span class="stat-pill">👥{{ b.anime2.popularity|default:"?" }}</span>
+            </div>
           </div>
         </div>
         <div class="flex-grow-1" style="max-width:250px;min-width:160px">
@@ -107,7 +147,7 @@
         </div>
         </div>
         <div class="flex-shrink-0 d-flex gap-1 align-items-center">
-          <a href="{% url 'battle_detail' b.id %}" class="text-decoration-none small" style="color:var(--text-secondary);font-size:0.75rem;padding:6px 8px">📊</a>
+          <a href="{% url 'battle_detail' b.id %}" class="btn btn-sm" style="border:1px solid var(--border);border-radius:10px;padding:4px 10px;font-size:0.7rem;color:var(--text-secondary);text-decoration:none">📊</a>
           {% if user.is_authenticated and not b.is_expired %}
           <button class="vote-btn {% if user_votes and user_votes|dictlookup:b.id == 1 %}active{% endif %}" onclick="castVote({{ b.id }}, 1, this)" id="vote1-{{ b.id }}" style="padding:6px 12px;font-size:0.75rem">{{ b.anime1.display_title|truncatechars:10 }}</button>
           <button class="vote-btn {% if user_votes and user_votes|dictlookup:b.id == 2 %}active{% endif %}" onclick="castVote({{ b.id }}, 2, this)" id="vote2-{{ b.id }}" style="padding:6px 12px;font-size:0.75rem">{{ b.anime2.display_title|truncatechars:10 }}</button>
@@ -143,7 +183,6 @@ function castVote(battleId, choice, btn) {
   var card = document.getElementById('battle-card-' + battleId);
   var btns = card.querySelectorAll('.vote-btn');
   btns.forEach(function(b) { b.disabled = true; b.textContent = '...'; });
-
   fetch('/battles/' + battleId + '/vote/json/', {
     method: 'POST',
     headers: { 'X-CSRFToken': getCookie('csrftoken') },

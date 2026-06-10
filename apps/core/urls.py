@@ -73,6 +73,7 @@ urlpatterns = [
     path('social/like/<int:post_id>/', views.social_like_post, name='social_like_post'),
     path('social/like/<int:post_id>/json/', views.social_like_json, name='social_like_json'),
     path('social/<int:post_id>/comment/', views.social_comment, name='social_comment'),
+    path('social/<int:post_id>/comments/api/', views.social_post_comments, name='social_post_comments'),
     path('social/<int:post_id>/delete/', views.social_delete_post, name='social_delete_post'),
     path('social/follow/<str:username>/', views.social_follow, name='social_follow'),
     path('feed/api/', views.feed_api, name='feed_api'),

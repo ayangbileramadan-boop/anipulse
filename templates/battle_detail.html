@@ -2,7 +2,11 @@
 {% block title %}{{ battle.anime1.display_title }} vs {{ battle.anime2.display_title }} — AniPulse{% endblock %}
 {% block extra_css %}<style>
 .battle-header{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:30px;margin-bottom:24px}
-.battle-img{width:140px;height:200px;object-fit:cover;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,0.3)}
+.battle-img{width:140px;height:200px;object-fit:cover;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,0.3);background:var(--surface-2)}
+.vs-lg{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--primary),#A259FF);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;border:4px solid var(--surface);flex-shrink:0;z-index:2;box-shadow:0 0 20px rgba(232,54,93,0.3)}
+.stat-pill{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:6px;font-size:0.7rem;background:var(--surface-2);color:var(--text-secondary);margin:1px}
+.stat-pill.score{background:rgba(46,204,113,.12);color:#2ecc71}
+.stat-pill.pop{background:rgba(52,152,219,.12);color:#3498db}
 .vs-lg{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--primary),#A259FF);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;border:4px solid var(--surface);flex-shrink:0;z-index:2;box-shadow:0 0 20px rgba(232,54,93,0.3)}
 .stat-card{background:var(--surface-2);border-radius:14px;padding:18px;text-align:center;border:1px solid var(--border)}
 .stat-value{font-size:1.6rem;font-weight:800;color:var(--text)}
@@ -16,6 +20,15 @@
 .recent-voter{display:flex;align-items:center;gap:8px;padding:8px 0;font-size:0.85rem;border-bottom:1px solid var(--border)}
 .recent-voter:last-child{border-bottom:none}
 .recent-voter .av{width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0}
+.comp-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.comp-row:last-child{border-bottom:none}
+.comp-label{width:80px;font-size:0.78rem;color:var(--text-secondary);flex-shrink:0}
+.comp-bar-bg{flex:1;height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+.comp-bar-fill{height:100%;border-radius:4px}
+.comp-value{width:36px;text-align:center;font-weight:700;font-size:0.8rem}
+.comp-value.left{color:var(--primary)}
+.comp-value.right{color:#A259FF}
+.genre-tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:0.7rem;background:var(--surface-2);color:var(--text-secondary);margin:1px}
 .detail-label{color:var(--text-secondary);font-size:0.8rem}
 .detail-value{color:var(--text);font-weight:600;font-size:0.9rem}
 @media(max-width:576px){
@@ -33,17 +46,35 @@
   <div class="battle-header">
     <div class="d-flex align-items-center justify-content-center gap-3 gap-md-5">
       <div class="text-center" style="min-width:0;flex:1">
-        <img src="{{ battle.anime1.cover_image_large|default:battle.anime1.cover_image_medium }}" class="battle-img" alt="" loading="lazy">
+        <img src="{{ battle.anime1.cover_image_large|default:battle.anime1.cover_image_medium }}" class="battle-img" alt="" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 140 200%22><rect fill=%22%23222%22 width=%22140%22 height=%22200%22/><text x=%2270%22 y=%22100%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2224%22>📺</text></svg>'">
         <h5 class="fw-bold mt-3 mb-0">{{ battle.anime1.display_title }}</h5>
-        {% if battle.anime1.genres.all %}<div class="small text-muted mt-1">{{ battle.anime1.genres.all|slice:":3"|join:", " }}</div>{% endif %}
-        <div class="small text-muted">Score: {{ battle.anime1.average_score|default:"?" }}</div>
+        <div class="d-flex gap-1 justify-content-center flex-wrap mt-1">
+          <span class="stat-pill score">⭐ {{ battle.anime1.average_score|default:"?" }}</span>
+          <span class="stat-pill">📺 {{ battle.anime1.episodes|default:"?" }} eps</span>
+          <span class="stat-pill pop">👥 {{ battle.anime1.popularity|default:"?" }}</span>
+          {% if battle.anime1.studios.all %}<span class="stat-pill">🎬 {{ battle.anime1.studios.all.0.name|truncatechars:12 }}</span>{% endif %}
+          <span class="stat-pill">{{ battle.anime1.format|default:"?" }}</span>
+          <span class="stat-pill">{{ battle.anime1.season_year|default:"?" }}</span>
+        </div>
+        <div class="d-flex gap-1 justify-content-center flex-wrap mt-1">
+          {% for g in battle.anime1.genres.all|slice:":4" %}<span class="stat-pill" style="background:rgba(232,54,93,.1);color:var(--primary)">{{ g.name }}</span>{% endfor %}
+        </div>
       </div>
       <div class="vs-lg">VS</div>
       <div class="text-center" style="min-width:0;flex:1">
-        <img src="{{ battle.anime2.cover_image_large|default:battle.anime2.cover_image_medium }}" class="battle-img" alt="" loading="lazy">
+        <img src="{{ battle.anime2.cover_image_large|default:battle.anime2.cover_image_medium }}" class="battle-img" alt="" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 140 200%22><rect fill=%22%23222%22 width=%22140%22 height=%22200%22/><text x=%2270%22 y=%22100%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2224%22>📺</text></svg>'">
         <h5 class="fw-bold mt-3 mb-0">{{ battle.anime2.display_title }}</h5>
-        {% if battle.anime2.genres.all %}<div class="small text-muted mt-1">{{ battle.anime2.genres.all|slice:":3"|join:", " }}</div>{% endif %}
-        <div class="small text-muted">Score: {{ battle.anime2.average_score|default:"?" }}</div>
+        <div class="d-flex gap-1 justify-content-center flex-wrap mt-1">
+          <span class="stat-pill score">⭐ {{ battle.anime2.average_score|default:"?" }}</span>
+          <span class="stat-pill">📺 {{ battle.anime2.episodes|default:"?" }} eps</span>
+          <span class="stat-pill pop">👥 {{ battle.anime2.popularity|default:"?" }}</span>
+          {% if battle.anime2.studios.all %}<span class="stat-pill">🎬 {{ battle.anime2.studios.all.0.name|truncatechars:12 }}</span>{% endif %}
+          <span class="stat-pill">{{ battle.anime2.format|default:"?" }}</span>
+          <span class="stat-pill">{{ battle.anime2.season_year|default:"?" }}</span>
+        </div>
+        <div class="d-flex gap-1 justify-content-center flex-wrap mt-1">
+          {% for g in battle.anime2.genres.all|slice:":4" %}<span class="stat-pill" style="background:rgba(162,89,255,.1);color:#A259FF">{{ g.name }}</span>{% endfor %}
+        </div>
       </div>
     </div>
 
@@ -61,11 +92,11 @@
     {% if user.is_authenticated %}
     <div class="vote-row">
       <button class="vote-action {% if user_vote == 1 %}active{% endif %}" data-choice="1" data-battle="{{ battle.id }}" {% if user_vote %}disabled{% endif %}>
-        <img src="{{ battle.anime1.cover_image_medium|default:battle.anime1.cover_image_large }}" class="mini-cover" alt="">
+        <img src="{{ battle.anime1.cover_image_medium|default:battle.anime1.cover_image_large }}" class="mini-cover" alt="" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 56%22><rect fill=%22%23333%22 width=%2240%22 height=%2256%22/><text x=%2220%22 y=%2230%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2214%22>📺</text></svg>'">
         <span>{% if user_vote == 1 %}✓ {% endif %}Vote</span>
       </button>
       <button class="vote-action {% if user_vote == 2 %}active{% endif %}" data-choice="2" data-battle="{{ battle.id }}" {% if user_vote %}disabled{% endif %}>
-        <img src="{{ battle.anime2.cover_image_medium|default:battle.anime2.cover_image_large }}" class="mini-cover" alt="">
+        <img src="{{ battle.anime2.cover_image_medium|default:battle.anime2.cover_image_large }}" class="mini-cover" alt="" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 56%22><rect fill=%22%23333%22 width=%2240%22 height=%2256%22/><text x=%2220%22 y=%2230%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2214%22>📺</text></svg>'">
         <span>{% if user_vote == 2 %}✓ {% endif %}Vote</span>
       </button>
     </div>
@@ -75,18 +106,89 @@
   <div class="row g-4">
     <div class="col-md-7">
       <div class="card" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px">
-        <h6 class="fw-bold mb-3">📊 Matchup Info</h6>
-        <div class="row g-3">
-          <div class="col-6"><div class="detail-label">Category</div><div class="detail-value">{{ battle.category|title }}</div></div>
-          <div class="col-6"><div class="detail-label">Created</div><div class="detail-value">{{ battle.created_at|date:"M j, Y" }}</div></div>
-          {% if battle.is_daily_featured %}
-          <div class="col-6"><div class="detail-label">Status</div><div class="detail-value" style="color:var(--primary)">🔥 Daily Featured</div></div>
-          {% endif %}
-          {% if battle.expires_at %}
-          <div class="col-6"><div class="detail-label">Expires</div><div class="detail-value">{{ battle.expires_at|timeuntil }} left</div></div>
-          {% endif %}
-          <div class="col-6"><div class="detail-label">Created by</div><div class="detail-value">{% if battle.created_by %}{{ battle.created_by.username }}{% else %}AniPulse{% endif %}</div></div>
-          <div class="col-6"><div class="detail-label">Total matchups</div><div class="detail-value">{{ battle.total_votes }} votes</div></div>
+        <h6 class="fw-bold mb-3">📊 Head-to-Head Comparison</h6>
+
+        {% with s1=battle.anime1.average_score|default:0 s2=battle.anime2.average_score|default:0 %}
+        {% with max_score=s1|add:s2|add:1 %}
+        {% with pct1_score=s1|floatformat:0 pct2_score=s2|floatformat:0 %}
+        <div class="comp-row">
+          <div class="comp-label">Score</div>
+          <div class="comp-value left">{{ s1 }}</div>
+          <div class="comp-bar-bg">
+            {% if s1 or s2 %}
+            <div class="comp-bar-fill" style="width:{% widthratio s1 s1|add:s2 100 %}%;background:var(--primary)"></div>
+            {% endif %}
+          </div>
+          <div class="comp-value right">{{ s2 }}</div>
+        </div>
+        {% endwith %}{% endwith %}{% endwith %}
+
+        {% with e1=battle.anime1.episodes|default:0 e2=battle.anime2.episodes|default:0 %}
+        <div class="comp-row">
+          <div class="comp-label">Episodes</div>
+          <div class="comp-value left">{{ e1 }}</div>
+          <div class="comp-bar-bg">
+            {% if e1 or e2 %}
+            <div class="comp-bar-fill" style="width:{% widthratio e1 e1|add:e2 100 %}%;background:var(--primary)"></div>
+            {% endif %}
+          </div>
+          <div class="comp-value right">{{ e2 }}</div>
+        </div>
+        {% endwith %}
+
+        {% with p1=battle.anime1.popularity|default:0 p2=battle.anime2.popularity|default:0 %}
+        <div class="comp-row">
+          <div class="comp-label">Popularity</div>
+          <div class="comp-value left">{{ p1 }}</div>
+          <div class="comp-bar-bg">
+            {% if p1 or p2 %}
+            <div class="comp-bar-fill" style="width:{% widthratio p1 p1|add:p2 100 %}%;background:var(--primary)"></div>
+            {% endif %}
+          </div>
+          <div class="comp-value right">{{ p2 }}</div>
+        </div>
+        {% endwith %}
+
+        {% with m1=battle.anime1.mean_score|default:battle.anime1.average_score|default:0 m2=battle.anime2.mean_score|default:battle.anime2.average_score|default:0 %}
+        <div class="comp-row">
+          <div class="comp-label">Mean Score</div>
+          <div class="comp-value left">{{ m1|floatformat:1 }}</div>
+          <div class="comp-bar-bg">
+            {% if m1 or m2 %}
+            <div class="comp-bar-fill" style="width:{% widthratio m1|floatformat:0 m1|add:m2|floatformat:0 100 %}%;background:var(--primary)"></div>
+            {% endif %}
+          </div>
+          <div class="comp-value right">{{ m2|floatformat:1 }}</div>
+        </div>
+        {% endwith %}
+
+        <div class="comp-row">
+          <div class="comp-label">Format</div>
+          <div class="comp-value left" style="font-size:0.7rem;font-weight:400">{{ battle.anime1.format|default:"?" }}</div>
+          <div style="flex:1;text-align:center;font-size:0.7rem;color:var(--text-muted)">vs</div>
+          <div class="comp-value right" style="font-size:0.7rem;font-weight:400">{{ battle.anime2.format|default:"?" }}</div>
+        </div>
+
+        <div class="comp-row">
+          <div class="comp-label">Status</div>
+          <div class="comp-value left" style="font-size:0.7rem;font-weight:400">{{ battle.anime1.status|default:"?" }}</div>
+          <div style="flex:1;text-align:center;font-size:0.7rem;color:var(--text-muted)">vs</div>
+          <div class="comp-value right" style="font-size:0.7rem;font-weight:400">{{ battle.anime2.status|default:"?" }}</div>
+        </div>
+
+        <div class="comp-row">
+          <div class="comp-label">Year</div>
+          <div class="comp-value left" style="font-size:0.7rem;font-weight:400">{{ battle.anime1.season_year|default:"?" }}</div>
+          <div style="flex:1;text-align:center;font-size:0.7rem;color:var(--text-muted)">vs</div>
+          <div class="comp-value right" style="font-size:0.7rem;font-weight:400">{{ battle.anime2.season_year|default:"?" }}</div>
+        </div>
+
+        <div class="mt-3">
+          <div class="comp-label mb-2">Genres</div>
+          <div class="d-flex flex-wrap gap-1">
+            {% for g in battle.anime1.genres.all %}<span class="genre-tag" style="background:rgba(232,54,93,0.1);color:var(--primary)">{{ g.name }}</span>{% endfor %}
+            {% for g in battle.anime2.genres.all %}<span class="genre-tag" style="background:rgba(162,89,255,0.1);color:#A259FF">{{ g.name }}</span>{% endfor %}
+          </div>
         </div>
       </div>
 
@@ -104,16 +206,36 @@
           <p class="text-muted mb-0">No votes yet. Be the first!</p>
         {% endif %}
       </div>
+
+      <div class="card mt-3" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px">
+        {% include 'includes/comment_thread.html' with ctype="anime.battle" oid=battle.id %}
+      </div>
     </div>
 
     <div class="col-md-5">
       <div class="card" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px">
+        <h6 class="fw-bold mb-3">📋 Battle Info</h6>
+        <div class="row g-3">
+          <div class="col-6"><div class="detail-label">Category</div><div class="detail-value">{{ battle.category|title }}</div></div>
+          <div class="col-6"><div class="detail-label">Created</div><div class="detail-value">{{ battle.created_at|date:"M j, Y" }}</div></div>
+          {% if battle.is_daily_featured %}
+          <div class="col-6"><div class="detail-label">Status</div><div class="detail-value" style="color:var(--primary)">🔥 Daily Featured</div></div>
+          {% endif %}
+          {% if battle.expires_at %}
+          <div class="col-6"><div class="detail-label">Expires</div><div class="detail-value">{{ battle.expires_at|timeuntil }} left</div></div>
+          {% endif %}
+          <div class="col-6"><div class="detail-label">Created by</div><div class="detail-value">{% if battle.created_by %}{{ battle.created_by.username }}{% else %}AniPulse{% endif %}</div></div>
+          <div class="col-6"><div class="detail-label">Total votes</div><div class="detail-value">{{ battle.total_votes }}</div></div>
+        </div>
+      </div>
+
+      <div class="card mt-3" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px">
         <h6 class="fw-bold mb-3">🕐 Recent Votes</h6>
         {% if recent_votes %}
           {% for v in recent_votes %}
           <div class="recent-voter">
-            {% if v.user.avatar %}
-            <img src="{{ v.user.avatar }}" class="av" alt="">
+            {% if v.user.avatar and v.user.avatar.url %}
+            <img src="{{ v.user.avatar.url }}" class="av" alt="" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 36 36%22><rect fill=%22%23333%22 width=%2236%22 height=%2236%22 rx=%2218%22/><text x=%2218%22 y=%2222%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2216%22>?</text></svg>'">
             {% else %}
             <div class="av rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white fw-bold" style="font-size:12px">{{ v.user.username|first|upper }}</div>
             {% endif %}
@@ -149,7 +271,7 @@ document.querySelectorAll('.vote-action:not(:disabled)').forEach(btn => {
       if (data.error) { btns.forEach(b => b.style.pointerEvents = ''); return alert(data.error); }
       btns.forEach(b => b.disabled = true);
       this.classList.add('active');
-      this.innerHTML = '<img src="' + (choice === '1' ? '{{ battle.anime1.cover_image_medium|default:battle.anime1.cover_image_large }}' : '{{ battle.anime2.cover_image_medium|default:battle.anime2.cover_image_large }}') + '" class="mini-cover" alt=""> <span>✓ Voted</span>';
+      this.innerHTML = '<img src="' + (choice === '1' ? '{{ battle.anime1.cover_image_medium|default:battle.anime1.cover_image_large }}' : '{{ battle.anime2.cover_image_medium|default:battle.anime2.cover_image_large }}') + '" class="mini-cover" alt="" onerror="this.src=\'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 56%22><rect fill=%22%23333%22 width=%2240%22 height=%2256%22/><text x=%2220%22 y=%2230%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2214%22>📺</text></svg>\'"> <span>✓ Voted</span>';
       location.reload();
     } catch(e) { btns.forEach(b => b.style.pointerEvents = ''); alert('Vote failed'); }
   });

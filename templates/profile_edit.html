@@ -25,8 +25,8 @@
         <div class="text-center mb-4">
           <label class="d-block fw-medium mb-2 text-secondary" style="font-size:0.85rem">Profile Picture</label>
           <div class="drop-zone" id="avatarDrop" onclick="document.getElementById('avatarInput').click()">
-            {% if user.avatar %}
-            <img src="{{ user.avatar }}" id="avatarPreview" alt="Your current avatar">
+            {% if user.avatar and user.avatar.url %}
+            <img src="{{ user.avatar.url }}" id="avatarPreview" alt="Your current avatar" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect fill=%22%23333%22 width=%2264%22 height=%2264%22 rx=%2232%22/><text x=%2232%22 y=%2238%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2228%22>?</text></svg>'">
             {% else %}
             <div class="placeholder" id="avatarPlaceholder">📷</div>
             {% endif %}
@@ -37,22 +37,14 @@
         <div class="mb-4">
           <label class="d-block fw-medium mb-2 text-secondary" style="font-size:0.85rem">Cover Image</label>
           <div class="drop-zone-cover" id="coverDrop" onclick="document.getElementById('coverInput').click()">
-            {% if user.cover_image %}
-            <img src="{{ user.cover_image }}" id="coverPreview" alt="Your current cover image">
+            {% if user.cover_image and user.cover_image.url %}
+            <img src="{{ user.cover_image.url }}" id="coverPreview" alt="Your current cover image" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 80%22><rect fill=%22%23222%22 width=%22200%22 height=%2280%22/><text x=%22100%22 y=%2245%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2220%22>🖼️</text></svg>'">
             {% else %}
             <div class="placeholder" id="coverPlaceholder">🖼️</div>
             {% endif %}
           </div>
           <input type="file" id="coverInput" class="file-input" accept="image/*" name="cover_file" onchange="previewFile(this, 'coverPreview', 'coverPlaceholder')">
           <small class="text-secondary d-block mt-2">Click to upload or drag. Max 5MB.</small>
-        </div>
-        <div class="mb-3">
-          <label class="form-label fw-medium">Avatar URL <small class="text-muted">(optional, overrides upload)</small></label>
-          <input type="url" name="avatar" value="{{ user.avatar|default:'' }}" class="form-input" placeholder="https://...">
-        </div>
-        <div class="mb-3">
-          <label class="form-label fw-medium">Cover Image URL <small class="text-muted">(optional, overrides upload)</small></label>
-          <input type="url" name="cover_image" value="{{ user.cover_image|default:'' }}" class="form-input" placeholder="https://...">
         </div>
         <div class="mb-3">
           <label class="form-label fw-medium">Bio</label>

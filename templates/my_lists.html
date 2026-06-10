@@ -23,7 +23,7 @@
                 <div class="d-flex gap-2">
                     {% for anime in cl.anime|slice:":4" %}
                     <a href="{% url 'anime_detail' anime.anilist_id %}">
-                        <img src="{{ anime.cover_image_medium }}" style="width:40px;height:56px;object-fit:cover;border-radius:6px" alt="" loading="lazy">
+                        <img src="{{ anime.cover_image_medium }}" style="width:40px;height:56px;object-fit:cover;border-radius:6px" alt="" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 56%22><rect fill=%22%23222%22 width=%2240%22 height=%2256%22/><text x=%2220%22 y=%2230%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2214%22>?</text></svg>'">
                     </a>
                     {% empty %}
                     <p class="text-secondary small">No anime in this list yet</p>

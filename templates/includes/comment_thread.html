@@ -10,8 +10,8 @@
   {% if user.is_authenticated %}
   <div class="comment-form-wrap mt-4 pt-3 border-top">
     <div class="d-flex gap-2 align-items-start">
-      {% if user.avatar %}
-        <img src="{{ user.avatar }}" alt="" class="comment-avatar-sm rounded-circle flex-shrink-0" width="32" height="32">
+      {% if user.avatar and user.avatar.url %}
+        <img src="{{ user.avatar.url }}" alt="" class="comment-avatar-sm rounded-circle flex-shrink-0" width="32" height="32" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect fill=%22%23333%22 width=%2232%22 height=%2232%22 rx=%2216%22/><text x=%2216%22 y=%2220%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2214%22>?</text></svg>'">
       {% else %}
         <div class="comment-avatar-sm rounded-circle bg-secondary flex-shrink-0 d-flex align-items-center justify-content-center" style="width:32px;height:32px;font-size:14px;color:#fff">{{ user.username|first|upper }}</div>
       {% endif %}

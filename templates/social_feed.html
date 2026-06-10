@@ -1,56 +1,128 @@
 {% extends 'base.html' %}{% load core_extras %}
 {% block title %}Feed — AniPulse{% endblock %}
 {% block extra_css %}<style>
-.feed-item { padding-bottom:16px; margin-bottom:16px; border-bottom:1px solid var(--border) }
-.feed-item:last-child { border-bottom:none !important; margin-bottom:0; padding-bottom:0 }
-.feed-like-btn:hover { border-color:var(--primary); color:var(--primary) }
-.feed-like-btn.liked { border-color:var(--primary); color:var(--primary); background:rgba(232,54,93,0.08) }
-.feed-loading { text-align:center; padding:30px 0; color:var(--text-muted) }
-.feed-loading .spinner { width:24px; height:24px; border:3px solid var(--border); border-top-color:var(--primary); border-radius:50%; animation:spin 0.8s linear infinite; display:inline-block }
-@keyframes spin { to { transform:rotate(360deg) } }
-.feed-end { text-align:center; padding:20px 0; color:var(--text-muted); font-size:0.85rem }
-.feed-head-spinner { display:inline-block; width:16px; height:16px; border:2px solid var(--border); border-top-color:var(--primary); border-radius:50%; animation:spin 0.8s linear infinite; vertical-align:middle; margin-left:8px }
+:root{--card-radius:12px}
+.feed-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--card-radius);margin-bottom:12px;transition:box-shadow .2s}
+.feed-card:hover{box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.feed-card-header{padding:14px 16px 0;display:flex;align-items:flex-start;gap:10px}
+.feed-card-body{padding:8px 16px 12px 66px}
+.feed-card-actions{display:flex;padding:0 16px 12px 66px;gap:2px}
+.feed-title{font-size:1rem;font-weight:600;color:var(--text);line-height:1.4;margin:0 0 4px}
+.feed-body{font-size:0.88rem;color:var(--text-secondary);line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.avatar-s{width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;background:var(--surface-2)}
+.avatar-fallback-s{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;background:var(--surface-2);color:var(--primary)}
+.flair-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:0.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.3px;flex-shrink:0}
+.flair-discussion{background:rgba(52,152,219,.15);color:#3498db}
+.flair-trending{background:rgba(232,54,93,.15);color:var(--primary)}
+.flair-seasonal{background:rgba(46,204,113,.15);color:#2ecc71}
+.flair-episode{background:rgba(155,89,182,.15);color:#9b59b6}
+.flair-post{background:rgba(149,165,166,.15);color:#95a5a6}
+.feed-action-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:6px;border:none;background:transparent;color:var(--text-secondary);font-size:0.78rem;cursor:pointer;transition:all .15s;line-height:1}
+.feed-action-btn:hover{background:var(--surface-2);color:var(--text)}
+.feed-action-btn.liked{color:var(--primary);background:rgba(232,54,93,.08)}
+.feed-action-btn svg{width:15px;height:15px;flex-shrink:0}
+.feed-action-count{font-weight:500;min-width:12px;text-align:center}
+.feed-comments{padding:0 16px 12px 66px;display:none}
+.feed-comments.open{display:block}
+.comment-input-wrap{display:flex;gap:8px;align-items:flex-start;margin-top:8px}
+.comment-input-wrap textarea{flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:0.82rem;resize:none;outline:none;min-height:36px}
+.comment-input-wrap textarea:focus{border-color:var(--primary)}
+.comment-item{display:flex;gap:8px;padding:6px 0}
+.comment-avatar{width:26px;height:26px;border-radius:50%;object-fit:cover;flex-shrink:0;background:var(--surface-2)}
+.comment-avatar-fallback{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;background:var(--surface-2);color:var(--primary)}
+.comment-body{font-size:0.82rem;color:var(--text);line-height:1.5}
+.comment-meta{font-size:0.7rem;color:var(--text-muted)}
+.comment-reply-btn{font-size:0.7rem;color:var(--text-muted);cursor:pointer;background:none;border:none;padding:0}
+.comment-reply-btn:hover{color:var(--primary)}
+.nested-reply{padding-left:34px}
+.feed-anime-attach{display:flex;gap:10px;background:var(--surface-2);border-radius:8px;padding:10px;margin-top:8px;cursor:pointer;transition:background .15s;text-decoration:none;align-items:center}
+.feed-anime-attach:hover{background:var(--border)}
+.feed-anime-attach img{width:36px;height:50px;object-fit:cover;border-radius:4px;flex-shrink:0}
+.feed-anime-attach .atitle{font-weight:600;font-size:0.85rem;color:var(--text)}
+.feed-anime-attach .asub{font-size:0.72rem;color:var(--text-muted)}
+.feed-image{max-width:100%;max-height:300px;border-radius:8px;margin-top:8px;object-fit:cover}
+.post-form-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--card-radius);padding:16px;margin-bottom:16px}
+.post-form-wrap input,.post-form-wrap textarea{width:100%;background:transparent;border:none;color:var(--text);outline:none}
+.post-form-wrap input{font-size:0.95rem;font-weight:600;padding:0 0 8px}
+.post-form-wrap input::placeholder{color:var(--text-muted);font-weight:400}
+.post-form-wrap textarea{font-size:0.88rem;resize:none;min-height:60px;padding:0}
+.post-form-wrap textarea::placeholder{color:var(--text-muted)}
+.post-form-footer{display:flex;justify-content:space-between;align-items:center;padding-top:10px;margin-top:10px;border-top:1px solid var(--border)}
+.post-form-footer .left{display:flex;gap:6px;align-items:center}
+.attach-btn{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:0.75rem;cursor:pointer;transition:all .15s}
+.attach-btn:hover{border-color:var(--primary);color:var(--primary)}
+.anime-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;background:rgba(232,54,93,.1);font-size:0.75rem;margin-top:4px}
+.anime-chip .remove{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0;font-size:12px;line-height:1}
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.feed-end{text-align:center;padding:16px 0;color:var(--text-muted);font-size:0.8rem}
+.img-placeholder{background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:0.7rem;border-radius:4px;overflow:hidden;position:relative}
+.img-placeholder::before{content:"📷";opacity:.4;font-size:1.2rem}
+@media(max-width:576px){
+  .feed-card-body,.feed-card-actions,.feed-comments{padding-left:16px}
+  .feed-card-header{padding:10px 12px 0}
+  .feed-card-body,.feed-card-actions,.feed-comments{padding-right:12px}
+  .feed-title{font-size:0.92rem}
+}
 </style>{% endblock %}
 {% block content %}
-<div class="container py-5" style="max-width:640px">
+<div class="container py-4" style="max-width:640px">
   <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-    <h2 class="fw-bold mb-0">Feed <span class="feed-head-spinner" id="feedSpinner"></span></h2>
+    <h4 class="fw-bold mb-0">Feed</h4>
     {% if user.is_authenticated %}
-    <div class="d-flex gap-2 align-items-center">
-      <a href="{% url 'friend_activity' %}" class="btn btn-sm btn-outline-light" style="border-radius:10px;font-size:0.8rem">Friends</a>
-      <form method="post" action="{% url 'social_create_post' %}" class="d-flex gap-2" style="min-width:0" onsubmit="var btn=this.querySelector('button[type=submit],input[type=submit]');if(btn)btn.disabled=true">
-        {% csrf_token %}
-        <input type="text" name="body" class="form-control form-control-sm" placeholder="What's on your mind?" required maxlength="1000" style="border-radius:10px;font-size:0.85rem">
-        <button type="submit" class="btn btn-sm btn-primary-custom" style="border-radius:10px;white-space:nowrap;font-size:0.8rem">Post</button>
-      </form>
-    </div>
+    <a href="{% url 'friend_activity' %}" class="btn btn-sm btn-outline-light" style="border-radius:8px;font-size:0.78rem">Activity</a>
     {% endif %}
   </div>
+
+  {% if user.is_authenticated %}
+  <div class="post-form-wrap">
+    <form method="post" action="{% url 'social_create_post' %}" id="postForm">
+      {% csrf_token %}
+      <input type="text" name="title" id="postTitle" placeholder="Title (optional)" maxlength="200" autocomplete="off">
+      <textarea name="body" id="postBody" placeholder="What are your thoughts?" maxlength="2000"></textarea>
+      <div id="animeAttach" style="display:none" class="anime-chip">
+        <img id="attachCover" src="" alt="" style="width:20px;height:28px;object-fit:cover;border-radius:3px">
+        <span id="attachTitle"></span>
+        <button type="button" class="remove" onclick="clearAnimeAttach()">✕</button>
+      </div>
+      <input type="hidden" name="anime_id" id="attachAnimeId" value="">
+      <div class="post-form-footer">
+        <div class="left">
+          <button type="button" class="attach-btn" onclick="openAnimePicker()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+            Attach Anime
+          </button>
+        </div>
+        <button type="submit" class="btn btn-sm btn-primary-custom px-3" style="border-radius:8px;font-size:0.78rem">Post</button>
+      </div>
+    </form>
+  </div>
+  {% endif %}
 
   <div id="feed-container">
     {% for item in feed_items %}
       {% include 'includes/feed_item.html' with item=item %}
     {% empty %}
     <div class="text-center py-5">
-      <div style="font-size:3rem" class="mb-3">🌊</div>
-      <h5 class="fw-bold" style="color:var(--text)">Your feed is empty</h5>
-      <p class="text-secondary small" style="max-width:360px;margin:0 auto">Follow friends, track anime, and vote in battles to see activity here.</p>
+      <div style="font-size:2.5rem;opacity:.5" class="mb-2">💬</div>
+      <h5 class="fw-bold">No discussions yet</h5>
+      <p class="text-secondary small" style="max-width:360px;margin:0 auto">Be the first to start a discussion or follow other users to see their posts.</p>
       <div class="d-flex justify-content-center gap-2 mt-3">
         <a href="{% url 'discover' %}" class="btn btn-sm" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:6px 18px">Discover Anime</a>
-        <a href="{% url 'battles' %}" class="btn btn-sm btn-outline-light" style="border-radius:8px;padding:6px 18px">Join Battles</a>
       </div>
     </div>
     {% endfor %}
   </div>
 
-  <div id="feed-loader" class="feed-loading" style="display:{% if feed_meta.has_next %}block{% else %}none{% endif %}">
+  <div id="feed-loader" class="text-center py-3" style="display:{% if feed_meta.has_next %}block{% else %}none{% endif %}">
     <div class="spinner"></div>
-    <div class="mt-2 small">Loading more...</div>
+    <div class="mt-1 small text-muted">Loading more...</div>
   </div>
   <div id="feed-end" class="feed-end" style="display:{% if feed_meta.has_next %}none{% else %}block{% endif %}">
-    You're all caught up
+    No more posts
   </div>
 </div>
+
 <script>
 let feedNextPage = {{ feed_meta.next_page|default:'null' }};
 let feedLoading = false;
@@ -60,171 +132,245 @@ function feedLoadMore() {
   if (feedLoading || feedEnded) return;
   feedLoading = true;
   document.getElementById('feed-loader').style.display = 'block';
-
   fetch('/feed/api/?page=' + feedNextPage + '&size=20')
     .then(r => r.json())
     .then(data => {
       feedNextPage = data.next_page;
       feedEnded = !data.has_next;
-      const container = document.getElementById('feed-container');
-      const empty = container.querySelector('.text-center.py-5');
-      if (empty) empty.remove();
-
-      data.results.forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'feed-item';
-        div.dataset.itemId = item.id;
-        div.dataset.itemType = item.type;
-        div.innerHTML = feedRenderItem(item);
-        container.appendChild(div);
-      });
-
+      const c = document.getElementById('feed-container');
+      const e = c.querySelector('.text-center.py-5');
+      if (e) e.remove();
+      data.results.forEach(i => { c.appendChild(feedCard(i)); });
       document.getElementById('feed-loader').style.display = 'none';
       document.getElementById('feed-end').style.display = feedEnded ? 'block' : 'none';
       feedLoading = false;
-    })
-    .catch(() => {
-      document.getElementById('feed-loader').style.display = 'none';
-      feedLoading = false;
-    });
+    }).catch(() => { feedLoading = false; });
 }
 
-function feedRenderItem(item) {
-  if (item.type === 'post' || item.type === 'system_post') {
-    return feedPost(item);
-  } else if (item.type === 'activity') {
-    return feedActivity(item);
-  } else if (item.type === 'battle_vote') {
-    return feedBattleVote(item);
-  } else if (item.type === 'system_trending' || item.type === 'system_seasonal' || item.type === 'system_most_watched') {
-    const icons = { system_trending: '🔥', system_seasonal: '🌸', system_most_watched: '📺' };
-    return feedSystem(item, icons[item.type] || '📌');
-  } else if (item.type === 'system_welcome') {
-    return feedWelcome(item);
-  }
-  return '';
+function feedCard(item) {
+  const card = document.createElement('div');
+  card.className = 'feed-card';
+  card.dataset.postId = item.post_id;
+  card.innerHTML = feedPostHtml(item);
+  return card;
 }
 
-function feedUserHtml(user) {
-  if (user.avatar) {
-    return '<img src="' + escAttr(user.avatar) + '" alt="" class="rounded-circle" width="36" height="36">';
-  }
-  return '<div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white fw-bold" style="width:36px;height:36px;font-size:14px">' + escAttr(user.username.charAt(0).toUpperCase()) + '</div>';
-}
-
-function escAttr(s) {
+function esc(s) {
   const d = document.createElement('div');
   d.textContent = s;
   return d.innerHTML;
 }
 
-function feedPost(item) {
-  var u = item.user;
-  var c = item.content;
-  var likedClass = u.liked ? ' liked' : '';
-  var heartIcon = u.liked ? 'fas' : 'far';
-  var systemBadge = u.is_system ? '<span class="badge" style="background:var(--primary);font-size:0.6rem;font-weight:500">AniPulse</span>' : '';
-  var animeTag = '';
-  if (c.anime && c.anime.title) {
-    animeTag = '<div class="text-muted" style="font-size:0.8rem"><i class="fas fa-film me-1"></i>' + escAttr(c.anime.title) + '</div>';
+function timeAgo(ts) {
+  const d = Date.now() - new Date(ts).getTime();
+  const m = Math.floor(d / 60000);
+  if (m < 1) return 'now';
+  if (m < 60) return m + 'm';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h';
+  const day = Math.floor(h / 24);
+  if (day < 7) return day + 'd';
+  return new Date(ts).toLocaleDateString(undefined, {month:'short', day:'numeric'});
+}
+
+function userHtml(user, size) {
+  size = size || 36;
+  if (user.avatar) {
+    return '<img src="' + esc(user.avatar) + '" alt="" class="avatar-s" style="width:'+size+'px;height:'+size+'px" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"><div class="avatar-fallback-s" style="width:'+size+'px;height:'+size+'px;font-size:'+(size*0.4)+'px;display:none">' + esc(user.username.charAt(0).toUpperCase()) + '</div>';
   }
-  var imageTag = '';
-  if (c.image) {
-    imageTag = '<img src="' + escAttr(c.image) + '" alt="" class="mt-2 rounded" style="max-width:100%;max-height:300px;border-radius:12px" loading="lazy">';
+  return '<div class="avatar-fallback-s" style="width:'+size+'px;height:'+size+'px;font-size:'+(size*0.4)+'px">' + esc(user.username.charAt(0).toUpperCase()) + '</div>';
+}
+
+function flairHtml(subtype) {
+  const map = {discussion:'Discussion', trending:'Trending', seasonal:'Seasonal', episode_discussion:'Episode', post:'Post'};
+  const cls = {discussion:'flair-discussion', trending:'flair-trending', seasonal:'flair-seasonal', episode_discussion:'flair-episode', post:'flair-post'};
+  const label = map[subtype] || 'Post';
+  const c = cls[subtype] || 'flair-post';
+  return '<span class="flair-badge ' + c + '">' + label + '</span>';
+}
+
+function feedPostHtml(item) {
+  const u = item.user;
+  const c = item.content;
+  const subtype = item.subtype || 'post';
+  const likedCls = u.liked ? ' liked' : '';
+  const heartSvg = u.liked
+    ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+  const pId = item.post_id || 0;
+  const profileUrl = '/profile/' + esc(u.username) + '/';
+  const sysBadge = u.is_system ? '<span class="badge ms-1" style="background:var(--primary);font-size:0.55rem;font-weight:500;padding:2px 6px">AniPulse</span>' : '';
+
+  let animeCard = '';
+  if (c.anime && c.anime.id && c.anime.title) {
+    const img = c.anime.image || '';
+    animeCard = '<a href="/anime/' + c.anime.id + '/" class="feed-anime-attach">'
+      + (img ? '<img src="' + esc(img) + '" alt="" loading="lazy" onerror="this.outerHTML=\'<div class=img-placeholder style=width:36px;height:50px></div>\'">' : '<div class="img-placeholder" style="width:36px;height:50px"></div>')
+      + '<div><div class="atitle">' + esc(c.anime.title) + '</div><div class="asub">View anime</div></div></a>';
   }
-  return '<div class="d-flex gap-3 align-items-start">' +
-    '<a href="/profile/' + escAttr(u.username) + '" class="text-decoration-none flex-shrink-0">' + feedUserHtml(u) + '</a>' +
-    '<div class="flex-grow-1 min-w-0">' +
-    '<div class="d-flex align-items-center gap-2 flex-wrap">' +
-    '<a href="/profile/' + escAttr(u.username) + '" class="fw-semibold text-decoration-none" style="color:var(--text);font-size:0.9rem">' + escAttr(u.username) + '</a>' +
-    systemBadge +
-    '<span class="text-muted" style="font-size:0.75rem">just now</span></div>' +
-    animeTag +
-    '<div class="mt-1" style="color:var(--text-secondary);font-size:0.9rem;line-height:1.5">' + (c.body || '').replace(/\n/g, '<br>') + '</div>' +
-    imageTag +
-    '</div></div>';
+
+  const imgTag = c.image ? '<img src="' + esc(c.image) + '" alt="" class="feed-image" loading="lazy" onerror="this.outerHTML=\'<div class=img-placeholder style=height:120px></div>\'">' : '';
+
+  return '<div class="feed-card-header">'
+    + '<a href="' + profileUrl + '" class="text-decoration-none flex-shrink-0">' + userHtml(u) + '</a>'
+    + '<div class="flex-grow-1 min-w-0">'
+    + '<div class="d-flex align-items-center gap-2 flex-wrap" style="margin-top:-2px">'
+    + '<a href="' + profileUrl + '" class="fw-semibold text-decoration-none" style="color:var(--text);font-size:0.82rem">' + esc(u.username) + '</a>'
+    + sysBadge
+    + '<span class="text-muted" style="font-size:0.68rem">' + timeAgo(item.timestamp) + '</span>'
+    + '</div>'
+    + '<div class="d-flex align-items-center gap-1 mt-1">' + flairHtml(subtype) + '</div>'
+    + '</div></div>'
+    + '<div class="feed-card-body">'
+    + (c.title ? '<div class="feed-title">' + esc(c.title) + '</div>' : '')
+    + '<div class="feed-body">' + esc(c.body || '').replace(/\n/g, '<br>') + '</div>'
+    + animeCard + imgTag
+    + '</div>'
+    + '<div class="feed-card-actions">'
+    + '<button class="feed-action-btn' + likedCls + '" onclick="feedLike(this,' + pId + ')" title="Like">'
+    + heartSvg + '<span class="feed-action-count">' + (c.likes || 0) + '</span></button>'
+    + '<button class="feed-action-btn" onclick="toggleComments(this,' + pId + ')" title="Comment">'
+    + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'
+    + '<span class="feed-action-count">' + (c.comment_count || 0) + '</span></button>'
+    + '<button class="feed-action-btn" onclick="feedShare(' + pId + ')" title="Share">'
+    + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>'
+    + '</div>'
+    + '<div class="feed-comments" id="comments-' + pId + '">'
+    + '<div id="comment-list-' + pId + '"></div>'
+    + '<div class="comment-input-wrap">'
+    + userHtml({username: '{{ user.username }}', avatar: '{{ user.avatar.url|default:"" }}'}, 26)
+    + '<textarea id="comment-input-' + pId + '" placeholder="Write a comment..." rows="1" oninput="autoResize(this)"></textarea>'
+    + '<button class="btn btn-sm" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:0.72rem;flex-shrink:0" onclick="postComment(' + pId + ')">Post</button>'
+    + '</div></div>';
 }
 
-function feedActivity(item) {
-  var u = item.user;
-  var c = item.content;
-  var typeLabel = '';
-  var animeName = (c.anime && c.anime.title) ? '<strong style="color:var(--text)">' + escAttr(c.anime.title) + '</strong>' : '';
-  switch (c.activity_type) {
-    case 'WATCHING': typeLabel = 'Started watching ' + animeName; break;
-    case 'COMPLETED': typeLabel = 'Completed ' + animeName; break;
-    case 'REVIEW': typeLabel = 'Reviewed ' + animeName; break;
-    case 'ACHIEVEMENT': typeLabel = '🏆 Earned achievement: <strong style="color:var(--text)">' + escAttr(c.description) + '</strong>'; break;
-    case 'BATTLE': typeLabel = '⚔️ Voted in a battle'; break;
-    case 'STREAK': typeLabel = '🔥 Reached <strong style="color:var(--text)">' + escAttr(c.description) + '</strong>'; break;
-    case 'POST': typeLabel = 'Made a post'; break;
-    default: typeLabel = escAttr(c.description); break;
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
+function feedLike(btn, postId) {
+  fetch('/feed/like/' + postId + '/json/', {method:'POST', headers:{'X-CSRFToken':'{{ csrf_token }}'}})
+    .then(r => r.json()).then(d => {
+      const ct = btn.querySelector('.feed-action-count');
+      if (ct) ct.textContent = d.likes;
+      btn.classList.toggle('liked', d.liked);
+    }).catch(() => {});
+}
+
+function toggleComments(btn, postId) {
+  const sec = document.getElementById('comments-' + postId);
+  if (!sec) return;
+  sec.classList.toggle('open');
+  if (sec.classList.contains('open') && !sec.dataset.loaded) {
+    sec.dataset.loaded = '1';
+    loadComments(postId);
   }
-  return '<div class="d-flex gap-3 align-items-start">' +
-    '<a href="/profile/' + escAttr(u.username) + '" class="text-decoration-none flex-shrink-0">' + feedUserHtml(u) + '</a>' +
-    '<div class="flex-grow-1 min-w-0">' +
-    '<div class="d-flex align-items-center gap-2 flex-wrap">' +
-    '<a href="/profile/' + escAttr(u.username) + '" class="fw-semibold text-decoration-none" style="color:var(--text);font-size:0.9rem">' + escAttr(u.username) + '</a>' +
-    '<span class="text-muted" style="font-size:0.75rem">just now</span></div>' +
-    '<div style="font-size:0.9rem;color:var(--text-secondary)">' + typeLabel + '</div>' +
-    '</div></div>';
 }
 
-function feedBattleVote(item) {
-  var u = item.user;
-  var c = item.content;
-  return '<div class="d-flex gap-3 align-items-start">' +
-    '<a href="/profile/' + escAttr(u.username) + '" class="text-decoration-none flex-shrink-0">' + feedUserHtml(u) + '</a>' +
-    '<div class="flex-grow-1 min-w-0">' +
-    '<div class="d-flex align-items-center gap-2 flex-wrap">' +
-    '<a href="/profile/' + escAttr(u.username) + '" class="fw-semibold text-decoration-none" style="color:var(--text);font-size:0.9rem">' + escAttr(u.username) + '</a>' +
-    '<span class="text-muted" style="font-size:0.75rem">just now</span></div>' +
-    '<div style="font-size:0.9rem;color:var(--text-secondary)">⚔️ Voted in battle:</div>' +
-    '<div class="d-flex align-items-center gap-2 mt-1">' +
-    '<span class="small fw-medium" style="color:var(--text);font-size:0.8rem">' + escAttr((c.anime1 && c.anime1.title) || 'Anime') + '</span>' +
-    '<span class="badge" style="background:var(--primary);font-size:0.6rem">VS</span>' +
-    '<span class="small fw-medium" style="color:var(--text);font-size:0.8rem">' + escAttr((c.anime2 && c.anime2.title) || 'Anime') + '</span>' +
-    '</div></div></div>';
+function loadComments(postId) {
+  const list = document.getElementById('comment-list-' + postId);
+  if (!list) return;
+  list.innerHTML = '<div class="text-center py-2"><div class="spinner" style="width:14px;height:14px;border-width:2px"></div></div>';
+  fetch('/social/' + postId + '/comments/api/').then(r => r.json()).then(d => {
+    list.innerHTML = '';
+    (d.comments || []).forEach(c => { list.appendChild(renderComment(c, 0)); });
+  }).catch(() => { list.innerHTML = ''; });
 }
 
-function feedSystem(item, icon) {
-  var c = item.content;
-  var imageTag = c.image ? '<img src="' + escAttr(c.image) + '" alt="" class="rounded flex-shrink-0" width="48" height="68" style="object-fit:cover;border-radius:8px" loading="lazy">' : '';
-  var animeLink = c.anime_id ? '<a href="/anime/' + c.anime_id + '/" class="btn btn-sm mt-1" style="background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:0.75rem;padding:4px 12px">View</a>' : '';
-  return '<div class="d-flex gap-3 align-items-start">' +
-    '<div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:36px;height:36px;background:rgba(232,54,93,0.1);color:var(--primary);font-size:16px">' + icon + '</div>' +
-    '<div class="flex-grow-1 min-w-0">' +
-    '<div class="d-flex align-items-center gap-2 flex-wrap">' +
-    '<span class="fw-semibold" style="color:var(--text);font-size:0.9rem">AniPulse</span>' +
-    '<span class="badge" style="background:var(--primary);font-size:0.6rem;font-weight:500">System</span>' +
-    '<span class="text-muted" style="font-size:0.75rem">just now</span></div>' +
-    '<div class="mt-1" style="font-size:0.85rem;color:var(--text-secondary)">' + escAttr(c.subtitle || '') + '</div>' +
-    '<div class="d-flex align-items-center gap-3 mt-2">' +
-    imageTag +
-    '<div><div class="fw-semibold" style="color:var(--text);font-size:0.95rem">' + escAttr(c.title) + '</div>' + animeLink + '</div>' +
-    '</div></div></div>';
+function renderComment(c, depth) {
+  const div = document.createElement('div');
+  div.className = depth > 0 ? 'comment-item nested-reply' : 'comment-item';
+  const avatarHtml = c.avatar
+    ? '<img src="' + esc(c.avatar) + '" alt="" class="comment-avatar" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"><div class="comment-avatar-fallback" style="display:none">' + esc(c.user.charAt(0).toUpperCase()) + '</div>'
+    : '<div class="comment-avatar-fallback">' + esc(c.user.charAt(0).toUpperCase()) + '</div>';
+  div.innerHTML = avatarHtml
+    + '<div class="flex-grow-1 min-w-0">'
+    + '<div class="d-flex align-items-center gap-2">'
+    + '<a href="/profile/' + esc(c.user) + '/" class="fw-semibold text-decoration-none" style="color:var(--text);font-size:0.78rem">' + esc(c.user) + '</a>'
+    + '<span class="comment-meta">' + timeAgo(c.created_at) + '</span>'
+    + '</div>'
+    + '<div class="comment-body">' + (c.is_spoiler ? '<em class="text-muted">Spoiler</em>' : esc(c.body || '')) + '</div>'
+    + '<div class="d-flex gap-2 mt-1">'
+    + '<button class="comment-reply-btn" onclick="replyToComment(this,' + c.id + ',' + postIdFromEl(div) + ')">Reply</button>'
+    + '</div>'
+    + '</div>';
+  return div;
 }
 
-function feedWelcome(item) {
-  return '<div class="text-center py-4">' +
-    '<div style="font-size:3rem" class="mb-2">🎉</div>' +
-    '<h5 class="fw-bold" style="color:var(--text)">Welcome to AniPulse!</h5>' +
-    '<p style="color:var(--text-secondary);font-size:0.9rem;max-width:400px;margin:0 auto">Start following friends, track anime, and vote in battles to personalize your feed.</p>' +
-    '<div class="d-flex justify-content-center gap-2 mt-3">' +
-    '<a href="/discover/" class="btn btn-sm" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:6px 18px">Discover Anime</a>' +
-    '<a href="/battles/" class="btn btn-sm btn-outline-light" style="border-radius:8px;padding:6px 18px">Join Battles</a>' +
-    '</div></div>';
+function postIdFromEl(el) {
+  const card = el.closest('.feed-card');
+  return card ? parseInt(card.dataset.postId) : 0;
 }
 
-const feedSpinner = document.getElementById('feedSpinner');
-if (feedSpinner) feedSpinner.style.display = 'none';
+function replyToComment(btn, commentId, postId) {
+  const sec = document.getElementById('comments-' + postId);
+  if (!sec) return;
+  const input = sec.querySelector('textarea');
+  if (input) {
+    input.placeholder = 'Reply to comment...';
+    input.focus();
+    input.dataset.parentId = commentId;
+  }
+}
 
-const feedSentinel = document.getElementById('feed-end');
-if (feedSentinel && feedNextPage) {
-  const observer = new IntersectionObserver(function(entries) {
-    if (entries[0].isIntersecting) feedLoadMore();
-  }, { rootMargin: '200px' });
-  observer.observe(feedSentinel);
+function postComment(postId) {
+  const sec = document.getElementById('comments-' + postId);
+  if (!sec) return;
+  const input = sec.querySelector('textarea');
+  if (!input || !input.value.trim()) return;
+  const body = input.value.trim();
+  const parentId = input.dataset.parentId || '';
+  input.value = '';
+  input.style.height = 'auto';
+  input.placeholder = 'Write a comment...';
+  delete input.dataset.parentId;
+  fetch('/comments/create/', {
+    method: 'POST',
+    headers: {'X-CSRFToken':'{{ csrf_token }}'},
+    body: new URLSearchParams({'body': body, 'ctype': 'anime.socialpost', 'oid': postId, 'parent': parentId})
+  }).then(r => r.json()).then(d => {
+    if (d.error) return;
+    const list = document.getElementById('comment-list-' + postId);
+    if (list) {
+      list.appendChild(renderComment(d, parentId ? 1 : 0));
+      const cBtn = document.querySelector('.feed-card[data-post-id="' + postId + '"] .feed-action-btn:nth-child(2) .feed-action-count');
+      if (cBtn) cBtn.textContent = parseInt(cBtn.textContent || 0) + 1;
+    }
+  }).catch(() => {});
+}
+
+function feedShare(postId) {
+  const url = window.location.origin + '/social/?post=' + postId;
+  if (navigator.share) { navigator.share({title:'AniPulse', url: url}); }
+  else { navigator.clipboard.writeText(url).then(() => { alert('Link copied!'); }).catch(() => {}); }
+}
+
+function openAnimePicker() {
+  const q = prompt('Search anime to attach:');
+  if (q && q.trim()) {
+    fetch('/search/json/?q=' + encodeURIComponent(q.trim()) + '&limit=1')
+      .then(r => r.json()).then(d => {
+        const a = (d.results || d)[0];
+        if (a) {
+          document.getElementById('attachAnimeId').value = a.id;
+          document.getElementById('attachCover').src = (a.coverImage && a.coverImage.medium) || (a.image) || '';
+          document.getElementById('attachTitle').textContent = a.title?.english || a.title?.romaji || a.title || '';
+          document.getElementById('animeAttach').style.display = 'flex';
+        }
+      }).catch(() => {});
+  }
+}
+
+function clearAnimeAttach() {
+  document.getElementById('attachAnimeId').value = '';
+  document.getElementById('animeAttach').style.display = 'none';
+}
+
+const sentinel = document.getElementById('feed-end');
+if (sentinel && feedNextPage) {
+  const obs = new IntersectionObserver(e => { if (e[0].isIntersecting) feedLoadMore(); }, {rootMargin:'200px'});
+  obs.observe(sentinel);
 }
 </script>
 {% endblock %}

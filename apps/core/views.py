@@ -1,6 +1,6 @@
 import time
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from django.shortcuts import redirect, get_object_or_404
 from apps.core.utils import safe_render as render
@@ -949,17 +949,11 @@ def compare_anime(request):
 @login_required
 @transaction.atomic
 def profile_edit(request):
-    from django.core.files.storage import default_storage
-    from django.core.files.base import ContentFile
     from PIL import Image
-    import io, uuid, os
 
     user = request.user
     if request.method == 'POST':
         user.bio = request.POST.get('bio', '')
-
-        avatar_url = request.POST.get('avatar', '').strip()
-        cover_url = request.POST.get('cover_image', '').strip()
 
         if 'avatar_file' in request.FILES:
             f = request.FILES['avatar_file']
@@ -967,10 +961,7 @@ def profile_edit(request):
                 img = Image.open(f)
                 img.verify()
                 f.seek(0)
-                ext = os.path.splitext(f.name)[1] or '.jpg'
-                filename = f'avatars/{user.id}_{uuid.uuid4().hex}{ext}'
-                path = default_storage.save(filename, ContentFile(f.read()))
-                avatar_url = settings.MEDIA_URL + path
+                user.avatar.save(f'avatar_{user.id}', f)
             except Exception:
                 messages.error(request, 'Invalid avatar image file.')
 
@@ -980,15 +971,18 @@ def profile_edit(request):
                 img = Image.open(f)
                 img.verify()
                 f.seek(0)
-                ext = os.path.splitext(f.name)[1] or '.jpg'
-                filename = f'covers/{user.id}_{uuid.uuid4().hex}{ext}'
-                path = default_storage.save(filename, ContentFile(f.read()))
-                cover_url = settings.MEDIA_URL + path
+                user.cover_image.save(f'cover_{user.id}', f)
             except Exception:
                 messages.error(request, 'Invalid cover image file.')
 
-        user.avatar = avatar_url
-        user.cover_image = cover_url
+        if 'remove_avatar' in request.POST:
+            user.avatar.delete(save=False)
+            user.avatar = None
+
+        if 'remove_cover' in request.POST:
+            user.cover_image.delete(save=False)
+            user.cover_image = None
+
         user.save()
         messages.success(request, 'Profile updated!')
         return redirect('profile', username=user.username)
@@ -1111,6 +1105,30 @@ def battle_list(request):
 
     from django.utils import timezone
     now = timezone.now()
+
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    has_daily = Battle.objects.filter(is_daily_featured=True, created_at__gte=today_start).exists()
+    if not has_daily:
+        try:
+            from apps.anime.models import Anime
+            top = Anime.objects.filter(average_score__isnull=False).exclude(average_score=0).order_by('-popularity')[:10]
+            if len(top) >= 4:
+                import random
+                shuffled = list(top)
+                random.shuffle(shuffled)
+                pairs = [(shuffled[i], shuffled[i+1]) for i in range(0, len(shuffled)-1, 2)]
+                for a1, a2 in pairs[:2]:
+                    _, created = Battle.objects.get_or_create(
+                        anime1=a1, anime2=a2, is_daily_featured=True,
+                        defaults={
+                            'is_active': True,
+                            'category': 'versus',
+                            'expires_at': now + timedelta(days=1),
+                        },
+                    )
+        except Exception:
+            pass
+
     active_qs = Battle.objects.filter(
         is_active=True,
     ).filter(
@@ -1559,12 +1577,10 @@ def tier_list_prefill_api(request):
 
 def social_feed(request):
     from apps.feed.services import FeedBuilder
-    from apps.anime.models import SocialPost
 
     builder = FeedBuilder(request.user)
     feed_data = builder.build(page=1)
 
-    page_obj = SocialPost.objects.filter(reply_to__isnull=True).select_related('user', 'anime').order_by('-created_at')[:1]
     return render(request, 'social_feed.html', {
         'feed_items': feed_data['results'],
         'feed_meta': {
@@ -1592,10 +1608,18 @@ def feed_api(request):
 def social_create_post(request):
     if request.method == 'POST':
         body = request.POST.get('body', '').strip()
+        title = request.POST.get('title', '').strip()
+        anime_id = request.POST.get('anime_id', '').strip()
         if body:
-            post = SocialPost.objects.create(user=request.user, body=body)
-            UserActivity.objects.create(user=request.user, activity_type='POST', description=body[:100])
-            messages.success(request, 'Posted!')
+            from apps.anime.models import Anime
+            anime = None
+            if anime_id:
+                try:
+                    anime = Anime.objects.get(anilist_id=int(anime_id))
+                except (Anime.DoesNotExist, ValueError):
+                    pass
+            post = SocialPost.objects.create(user=request.user, body=body, title=title, anime=anime)
+            messages.success(request, 'Posted!' if not title else f'"{title}" posted!')
         return redirect('social_feed')
     return redirect('social_feed')
 
@@ -1649,20 +1673,29 @@ def social_comment(request, post_id):
     if request.method == 'POST':
         body = request.POST.get('body', '').strip()
         if body:
-            parent_id = request.POST.get('parent')
-            reply_to = None
-            if parent_id:
-                try:
-                    reply_to = SocialPost.objects.get(id=int(parent_id))
-                except (SocialPost.DoesNotExist, ValueError):
-                    pass
-            SocialPost.objects.create(
+            from apps.anime.models import Comment
+            from django.contrib.contenttypes.models import ContentType
+            post = get_object_or_404(SocialPost, id=post_id)
+            ct = ContentType.objects.get_for_model(SocialPost)
+            comment = Comment.objects.create(
                 user=request.user,
                 body=body,
-                reply_to=reply_to,
+                content_type=ct,
+                object_id=post.id,
             )
-            if reply_to and reply_to.user != request.user:
-                _create_notification(reply_to.user, f'{request.user.username} replied to your post', url='/social/', ntype='COMMENT')
+            if request.headers.get('Accept') == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                from django.http import JsonResponse
+                return JsonResponse({
+                    'id': comment.id,
+                    'user': comment.user.username,
+                    'user_id': comment.user.id,
+                    'avatar': comment.user.avatar.url if comment.user.avatar else '',
+                    'body': comment.body,
+                    'is_spoiler': comment.is_spoiler,
+                    'created_at': comment.created_at.isoformat(),
+                })
+            if post.user != request.user:
+                _create_notification(post.user, f'{request.user.username} commented on your post', url='/social/', ntype='COMMENT')
     return redirect('social_feed')
 
 
@@ -1671,6 +1704,27 @@ def social_delete_post(request, post_id):
     post = get_object_or_404(SocialPost, id=post_id, user=request.user)
     post.delete()
     return redirect('social_feed')
+
+
+@login_required
+def social_post_comments(request, post_id):
+    from django.http import JsonResponse
+    from django.contrib.contenttypes.models import ContentType
+    post = get_object_or_404(SocialPost, id=post_id)
+    ct = ContentType.objects.get_for_model(SocialPost)
+    comments = Comment.objects.filter(
+        content_type=ct, object_id=post.id, parent__isnull=True
+    ).select_related('user').order_by('created_at')[:20]
+    data = [{
+        'id': c.id,
+        'user': c.user.username,
+        'user_id': c.user.id,
+        'avatar': c.user.avatar.url if c.user.avatar else '',
+        'body': c.body,
+        'is_spoiler': c.is_spoiler,
+        'created_at': c.created_at.isoformat(),
+    } for c in comments]
+    return JsonResponse({'comments': data})
 
 
 @login_required
@@ -2579,8 +2633,28 @@ def user_settings(request):
             else:
                 user.username = username
         user.bio = request.POST.get('bio', '')
-        user.avatar = request.POST.get('avatar', '')
-        user.cover_image = request.POST.get('cover_image', '')
+
+        from PIL import Image
+        if 'avatar_file' in request.FILES:
+            f = request.FILES['avatar_file']
+            try:
+                img = Image.open(f)
+                img.verify()
+                f.seek(0)
+                user.avatar.save(f'avatar_{user.id}', f)
+            except Exception:
+                messages.error(request, 'Invalid avatar image file.')
+
+        if 'cover_file' in request.FILES:
+            f = request.FILES['cover_file']
+            try:
+                img = Image.open(f)
+                img.verify()
+                f.seek(0)
+                user.cover_image.save(f'cover_{user.id}', f)
+            except Exception:
+                messages.error(request, 'Invalid cover image file.')
+
         user.timezone = request.POST.get('timezone', 'UTC')
         user.notify_new_episodes = request.POST.get('notify_new_episodes') == 'on'
         user.notify_airing = request.POST.get('notify_airing') == 'on'
@@ -2651,7 +2725,7 @@ def comment_list(request):
             'id': c.id,
             'user': c.user.username,
             'user_id': c.user.id,
-            'avatar': c.user.avatar or '',
+            'avatar': c.user.avatar.url if c.user.avatar else '',
             'body': c.body,
             'is_spoiler': c.is_spoiler,
             'is_edited': c.is_edited,
@@ -2734,7 +2808,7 @@ def comment_create(request):
         'id': comment.id,
         'user': comment.user.username,
         'user_id': comment.user.id,
-        'avatar': comment.user.avatar or '',
+        'avatar': comment.user.avatar.url if comment.user.avatar else '',
         'body': comment.body,
         'is_spoiler': comment.is_spoiler,
         'depth': comment.depth,

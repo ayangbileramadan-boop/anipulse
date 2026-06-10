@@ -109,14 +109,21 @@ def sync_anime_from_anilist(data: dict) -> Anime:
     # External links
     links_data = data.get('externalLinks', []) or []
     ExternalLink.objects.filter(anime=anime).delete()
+    seen_sites = set()
     for link in links_data:
-        ExternalLink.objects.create(
+        site = link.get('site', '')
+        if site in seen_sites:
+            continue
+        seen_sites.add(site)
+        ExternalLink.objects.get_or_create(
             anime=anime,
-            site=link.get('site', ''),
-            url=link.get('url', ''),
-            icon=link.get('icon', '') or '',
-            color=link.get('color', '') or '',
-            language=link.get('language', '') or '',
+            site=site,
+            defaults={
+                'url': link.get('url', ''),
+                'icon': link.get('icon', '') or '',
+                'color': link.get('color', '') or '',
+                'language': link.get('language', '') or '',
+            },
         )
 
     action = 'Created' if created else 'Updated'

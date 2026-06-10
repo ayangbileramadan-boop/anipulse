@@ -18,7 +18,7 @@
 <div class="container py-5">
   <div class="settings-card">
     <h5><i class="fas fa-cog me-2"></i>Account Settings</h5>
-    <form method="post" onsubmit="var btn=this.querySelector('button[type=submit],input[type=submit]');if(btn)btn.disabled=true">
+    <form method="post" enctype="multipart/form-data" onsubmit="var btn=this.querySelector('button[type=submit],input[type=submit]');if(btn)btn.disabled=true">
       {% csrf_token %}
       <div class="form-group">
         <label>Username</label>
@@ -33,13 +33,18 @@
         <textarea name="bio">{{ user.bio|surrogatefree }}</textarea>
       </div>
       <div class="form-group">
-        <label>Avatar URL</label>
-        <input type="url" name="avatar" value="{{ user.avatar }}" placeholder="https://i.imgur.com/...">
-        <small style="color:var(--text-secondary);font-size:0.75rem">Paste an image URL (Imgur, Gravatar, etc.)</small>
+        <label>Avatar</label>
+        {% if user.avatar and user.avatar.url %}
+        <div class="mb-2"><img src="{{ user.avatar.url }}" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect fill=%22%23333%22 width=%2264%22 height=%2264%22 rx=%2232%22/><text x=%2232%22 y=%2238%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2228%22>?</text></svg>'"></div>
+        {% endif %}
+        <input type="file" name="avatar_file" accept="image/*" style="width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:10px 14px;font-size:0.9rem">
       </div>
       <div class="form-group">
-        <label>Cover Image URL</label>
-        <input type="url" name="cover_image" value="{{ user.cover_image }}" placeholder="https://...">
+        <label>Cover Image</label>
+        {% if user.cover_image and user.cover_image.url %}
+        <div class="mb-2"><img src="{{ user.cover_image.url }}" alt="" style="width:200px;height:80px;object-fit:cover;border-radius:8px" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 80%22><rect fill=%22%23222%22 width=%22200%22 height=%2280%22/><text x=%22100%22 y=%2245%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2220%22>🖼️</text></svg>'"></div>
+        {% endif %}
+        <input type="file" name="cover_file" accept="image/*" style="width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:10px 14px;font-size:0.9rem">
       </div>
       <div class="form-group">
         <label>Timezone</label>

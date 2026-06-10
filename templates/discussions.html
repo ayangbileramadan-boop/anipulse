@@ -17,7 +17,7 @@
 <div class="container py-5" style="max-width:800px">
     <div class="d-flex align-items-center gap-3 mb-4">
         {% if anime.cover_image_medium %}
-        <img src="{{ anime.cover_image_medium }}" style="width:50px;height:70px;object-fit:cover;border-radius:8px" alt="" loading="lazy">
+        <img src="{{ anime.cover_image_medium }}" style="width:50px;height:70px;object-fit:cover;border-radius:8px" alt="" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 50 70%22><rect fill=%22%23222%22 width=%2250%22 height=%2270%22/><text x=%2225%22 y=%2240%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2218%22>?</text></svg>'">
         {% endif %}
         <div>
             <h2 class="fw-bold mb-1">Discussions</h2>

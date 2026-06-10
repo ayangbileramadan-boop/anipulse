@@ -1,31 +1,74 @@
-<div class="d-flex gap-3 align-items-start">
-  <a href="{% url 'profile' item.user.username %}" class="text-decoration-none flex-shrink-0">
-    {% if item.user.avatar %}
-      <img src="{{ item.user.avatar }}" alt="" class="rounded-circle" width="36" height="36">
+{% load core_extras %}
+{% with subtype=item.subtype|default:'post' %}
+{% with flair_map='{"discussion":"Discussion","trending":"Trending","seasonal":"Seasonal","episode_discussion":"Episode","post":"Post"}' %}
+{% with flair_cls='{"discussion":"flair-discussion","trending":"flair-trending","seasonal":"flair-seasonal","episode_discussion":"flair-episode","post":"flair-post"}' %}
+<div class="feed-card-header">
+  <a href="{% url 'profile' username=item.user.username %}" class="text-decoration-none flex-shrink-0">
+    {% if item.user.avatar and item.user.avatar.url %}
+    <img src="{{ item.user.avatar.url }}" alt="" class="avatar-s" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    <div class="avatar-fallback-s" style="display:none">{{ item.user.username|first|upper }}</div>
     {% else %}
-      <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white fw-bold" style="width:36px;height:36px;font-size:14px">{{ item.user.username|first|upper }}</div>
+    <div class="avatar-fallback-s">{{ item.user.username|first|upper }}</div>
     {% endif %}
   </a>
   <div class="flex-grow-1 min-w-0">
-    <div class="d-flex align-items-center gap-2 flex-wrap">
-      <a href="{% url 'profile' item.user.username %}" class="fw-semibold text-decoration-none" style="color:var(--text);font-size:0.9rem">{{ item.user.username }}</a>
-      {% if item.user.is_system %}<span class="badge" style="background:var(--primary);font-size:0.6rem;font-weight:500">AniPulse</span>{% endif %}
-      <span class="text-muted" style="font-size:0.75rem">{{ item.timestamp|timesince }} ago</span>
+    <div class="d-flex align-items-center gap-2 flex-wrap" style="margin-top:-2px">
+      <a href="{% url 'profile' username=item.user.username %}" class="fw-semibold text-decoration-none" style="color:var(--text);font-size:0.82rem">{{ item.user.username }}</a>
+      {% if item.user.is_system %}<span class="badge ms-1" style="background:var(--primary);font-size:0.55rem;font-weight:500;padding:2px 6px">AniPulse</span>{% endif %}
+      <span class="text-muted" style="font-size:0.68rem">{{ item.timestamp|timesince }} ago</span>
     </div>
-    {% if item.content.anime and item.content.anime.title %}
-      <div class="text-muted" style="font-size:0.8rem">
-        <i class="fas fa-film me-1"></i>{{ item.content.anime.title }}
-      </div>
-    {% endif %}
-    <div class="mt-1" style="color:var(--text-secondary);font-size:0.9rem;line-height:1.5">{{ item.content.body|linebreaksbr }}</div>
-    {% if item.content.image %}
-      <img src="{{ item.content.image }}" alt="" class="mt-2 rounded" style="max-width:100%;max-height:300px;border-radius:12px" loading="lazy">
-    {% endif %}
-    <div class="d-flex align-items-center gap-3 mt-2">
-      <button class="feed-like-btn btn btn-sm" data-item-id="{{ item.id }}" data-type="{{ item.type }}" style="font-size:0.8rem;padding:4px 10px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text-muted)">
-        <i class="{% if item.user.liked %}fas{% else %}far{% endif %} fa-heart me-1"></i><span class="like-count">{{ item.content.likes|default:0 }}</span>
-      </button>
-      <span class="text-muted" style="font-size:0.8rem"><i class="far fa-comment me-1"></i>{{ item.content.comments|default:0 }}</span>
+    <div class="d-flex align-items-center gap-1 mt-1">
+      {% if subtype == 'discussion' %}<span class="flair-badge flair-discussion">Discussion</span>
+      {% elif subtype == 'trending' %}<span class="flair-badge flair-trending">Trending</span>
+      {% elif subtype == 'seasonal' %}<span class="flair-badge flair-seasonal">Seasonal</span>
+      {% elif subtype == 'episode_discussion' %}<span class="flair-badge flair-episode">Episode</span>
+      {% else %}<span class="flair-badge flair-post">Post</span>{% endif %}
     </div>
   </div>
 </div>
+<div class="feed-card-body">
+  {% if item.content.title %}<div class="feed-title">{{ item.content.title }}</div>{% endif %}
+  <div class="feed-body">{{ item.content.body|linebreaksbr }}</div>
+  {% if item.content.anime and item.content.anime.id %}
+  <a href="{% url 'anime_detail' anilist_id=item.content.anime.id %}" class="feed-anime-attach">
+    {% if item.content.anime.image %}
+    <img src="{{ item.content.anime.image }}" alt="" loading="lazy" onerror="this.outerHTML='<div class=img-placeholder style=width:36px;height:50px></div>'">
+    {% endif %}
+    <div><div class="atitle">{{ item.content.anime.title }}</div><div class="asub">View anime</div></div>
+  </a>
+  {% endif %}
+  {% if item.content.image %}
+  <img src="{{ item.content.image }}" alt="" class="feed-image" loading="lazy" onerror="this.outerHTML='<div class=img-placeholder style=height:120px></div>'">
+  {% endif %}
+</div>
+<div class="feed-card-actions">
+  <button class="feed-action-btn{% if item.user.liked %} liked{% endif %}" onclick="feedLike(this,{{ item.post_id }})" title="Like">
+    <svg viewBox="0 0 24 24" fill="{% if item.user.liked %}currentColor{% else %}none{% endif %}" stroke="currentColor" stroke-width="2">
+      {% if item.user.liked %}<path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>{% else %}<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>{% endif %}
+    </svg>
+    <span class="feed-action-count">{{ item.content.likes|default:0 }}</span>
+  </button>
+  <button class="feed-action-btn" onclick="toggleComments(this,{{ item.post_id }})" title="Comment">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <span class="feed-action-count">{{ item.content.comment_count|default:0 }}</span>
+  </button>
+  <button class="feed-action-btn" onclick="feedShare({{ item.post_id }})" title="Share">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+  </button>
+</div>
+<div class="feed-comments" id="comments-{{ item.post_id }}">
+  <div id="comment-list-{{ item.post_id }}"></div>
+  {% if user.is_authenticated %}
+  <div class="comment-input-wrap">
+    {% if user.avatar and user.avatar.url %}
+    <img src="{{ user.avatar.url }}" alt="" class="comment-avatar" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    <div class="comment-avatar-fallback" style="display:none">{{ user.username|first|upper }}</div>
+    {% else %}
+    <div class="comment-avatar-fallback">{{ user.username|first|upper }}</div>
+    {% endif %}
+    <textarea id="comment-input-{{ item.post_id }}" placeholder="Write a comment..." rows="1" oninput="autoResize(this)"></textarea>
+    <button class="btn btn-sm" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:0.72rem;flex-shrink:0" onclick="postComment({{ item.post_id }})">Post</button>
+  </div>
+  {% endif %}
+</div>
+{% endwith %}{% endwith %}{% endwith %}

@@ -357,8 +357,17 @@ class FavoriteAnime(models.Model):
 
 
 class SocialPost(TimeStampedModel):
+    POST_TYPES = [
+        ('post', 'User Post'),
+        ('discussion', 'Discussion'),
+        ('episode_discussion', 'Episode Discussion'),
+        ('trending', 'Trending Topic'),
+        ('seasonal', 'Seasonal Discussion'),
+    ]
     user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='social_posts')
-    body = models.TextField(max_length=1000)
+    title = models.CharField(max_length=200, blank=True)
+    body = models.TextField(max_length=2000)
+    post_type = models.CharField(max_length=30, choices=POST_TYPES, default='post')
     anime = models.ForeignKey(Anime, on_delete=models.SET_NULL, null=True, blank=True, related_name='social_posts')
     image = models.URLField(max_length=500, blank=True)
     likes = models.PositiveIntegerField(default=0)
@@ -368,7 +377,7 @@ class SocialPost(TimeStampedModel):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.user.username}: {self.body[:50]}"
+        return f"{self.user.username}: {self.title or self.body[:50]}"
 
 
 class SocialLike(models.Model):

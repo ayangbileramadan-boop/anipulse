@@ -391,7 +391,7 @@ class TestProfileEditUpload:
         resp = client.post('/profile/edit/', {'avatar_file': avatar}, follow=True)
         assert resp.status_code == 200
         user.refresh_from_db()
-        assert user.avatar is not None and user.avatar != ''
+        assert user.avatar and user.avatar.name
 
     def test_profile_edit_post_with_cover(self, client, user, tmp_path):
         from django.core.files.uploadedfile import SimpleUploadedFile
@@ -408,7 +408,7 @@ class TestProfileEditUpload:
         resp = client.post('/profile/edit/', {'cover_file': cover}, follow=True)
         assert resp.status_code == 200
         user.refresh_from_db()
-        assert user.cover_image is not None and user.cover_image != ''
+        assert user.cover_image and user.cover_image.name
 
     def test_profile_edit_invalid_avatar_rejected(self, client, user):
         from django.core.files.uploadedfile import SimpleUploadedFile
@@ -418,7 +418,7 @@ class TestProfileEditUpload:
         assert resp.status_code == 200
         user.refresh_from_db()
         # Avatar should remain unchanged (empty default)
-        assert getattr(user, 'avatar', '') != b'not-an-image'
+        assert not user.avatar
 
 
 class TestWatchlistSignalXP:

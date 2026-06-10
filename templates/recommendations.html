@@ -30,7 +30,7 @@
     {% for rec in recommendations %}
     <a href="{% url 'anime_detail' rec.anime.anilist_id %}" class="rec-card">
         {% if rec.anime.cover_image_medium %}
-        <img src="{{ rec.anime.cover_image_medium }}" alt="" loading="lazy">
+        <img src="{{ rec.anime.cover_image_medium }}" alt="" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 56 80%22><rect fill=%22%23222%22 width=%2256%22 height=%2280%22/><text x=%2228%22 y=%2245%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2220%22>?</text></svg>'">
         {% endif %}
         <div class="flex-grow-1">
             <div class="fw-bold text-truncate">{{ rec.anime.display_title }}</div>

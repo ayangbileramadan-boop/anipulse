@@ -5,8 +5,8 @@ from apps.core.models import TimeStampedModel
 
 class User(AbstractUser):
     bio = models.TextField(blank=True)
-    avatar = models.URLField(max_length=500, blank=True)
-    cover_image = models.URLField(max_length=500, blank=True)
+    avatar = models.ImageField(upload_to='avatars/', blank=True)
+    cover_image = models.ImageField(upload_to='covers/', blank=True)
     timezone = models.CharField(max_length=50, default='UTC')
     is_watchlist_public = models.BooleanField(default=True)
 

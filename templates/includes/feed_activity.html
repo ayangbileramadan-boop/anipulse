@@ -1,55 +1,26 @@
+{% load core_extras %}
 <div class="d-flex gap-3 align-items-start">
-  <a href="{% url 'profile' item.user.username %}" class="text-decoration-none flex-shrink-0">
-    {% if item.user.avatar %}
-      <img src="{{ item.user.avatar }}" alt="" class="rounded-circle" width="36" height="36">
+  <a href="{% url 'profile' username=item.user.username %}" class="text-decoration-none flex-shrink-0">
+    {% if item.user.avatar and item.user.avatar.url %}
+    <img src="{{ item.user.avatar.url }}" alt="" class="feed-avatar" style="width:36px;height:36px" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 36 36%22><rect fill=%22%23333%22 width=%2236%22 height=%2236%22 rx=%2218%22/><text x=%2218%22 y=%2222%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2216%22>?</text></svg>'">
     {% else %}
-      <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white fw-bold" style="width:36px;height:36px;font-size:14px">{{ item.user.username|first|upper }}</div>
+    <div class="feed-avatar-fallback" style="width:36px;height:36px;font-size:14px;background:var(--surface-2);color:var(--primary)">{{ item.user.username|first|upper }}</div>
     {% endif %}
   </a>
   <div class="flex-grow-1 min-w-0">
     <div class="d-flex align-items-center gap-2 flex-wrap">
-      <a href="{% url 'profile' item.user.username %}" class="fw-semibold text-decoration-none" style="color:var(--text);font-size:0.9rem">{{ item.user.username }}</a>
-      <span class="text-muted" style="font-size:0.75rem">{{ item.timestamp|timesince }} ago</span>
+      <a href="{% url 'profile' username=item.user.username %}" class="fw-semibold text-decoration-none" style="color:var(--text);font-size:0.9rem">{{ item.user.username }}</a>
+      <span class="text-muted" style="font-size:0.7rem">{{ item.timestamp|timesince }} ago</span>
     </div>
-    {% if item.content.activity_type == 'WATCHING' %}
-      <div style="font-size:0.9rem;color:var(--text-secondary)">
-        Started watching
-        {% if item.content.anime and item.content.anime.title %}
-          <strong style="color:var(--text)">{{ item.content.anime.title }}</strong>
-        {% endif %}
-      </div>
-    {% elif item.content.activity_type == 'COMPLETED' %}
-      <div style="font-size:0.9rem;color:var(--text-secondary)">
-        Completed
-        {% if item.content.anime and item.content.anime.title %}
-          <strong style="color:var(--text)">{{ item.content.anime.title }}</strong>
-        {% endif %}
-      </div>
-    {% elif item.content.activity_type == 'REVIEW' %}
-      <div style="font-size:0.9rem;color:var(--text-secondary)">
-        Reviewed
-        {% if item.content.anime and item.content.anime.title %}
-          <strong style="color:var(--text)">{{ item.content.anime.title }}</strong>
-        {% endif %}
-      </div>
-    {% elif item.content.activity_type == 'ACHIEVEMENT' %}
-      <div style="font-size:0.9rem;color:var(--text-secondary)">
-        🏆 Earned achievement: <strong style="color:var(--text)">{{ item.content.description }}</strong>
-      </div>
-    {% elif item.content.activity_type == 'BATTLE' %}
-      <div style="font-size:0.9rem;color:var(--text-secondary)">
-        ⚔️ Voted in a battle
-      </div>
-    {% elif item.content.activity_type == 'STREAK' %}
-      <div style="font-size:0.9rem;color:var(--text-secondary)">
-        🔥 Reached <strong style="color:var(--text)">{{ item.content.description }}</strong>
-      </div>
-    {% elif item.content.activity_type == 'POST' %}
-      <div style="font-size:0.9rem;color:var(--text-secondary)">
-        Made a post
-      </div>
-    {% else %}
-      <div style="font-size:0.9rem;color:var(--text-secondary)">{{ item.content.description }}</div>
-    {% endif %}
+    <div style="font-size:0.88rem;color:var(--text-secondary)">
+      {% if item.content.activity_type == 'WATCHING' %}Started watching <strong style="color:var(--text)">{{ item.content.anime.title }}</strong>
+      {% elif item.content.activity_type == 'COMPLETED' %}Completed <strong style="color:var(--text)">{{ item.content.anime.title }}</strong>
+      {% elif item.content.activity_type == 'REVIEW' %}Reviewed <strong style="color:var(--text)">{{ item.content.anime.title }}</strong>
+      {% elif item.content.activity_type == 'ACHIEVEMENT' %}🏆 Earned: <strong style="color:var(--text)">{{ item.content.description }}</strong>
+      {% elif item.content.activity_type == 'BATTLE' %}⚔️ Voted in a battle
+      {% elif item.content.activity_type == 'STREAK' %}🔥 Streak: <strong style="color:var(--text)">{{ item.content.description }}</strong>
+      {% elif item.content.activity_type == 'POST' %}Made a post
+      {% else %}{{ item.content.description }}{% endif %}
+    </div>
   </div>
 </div>

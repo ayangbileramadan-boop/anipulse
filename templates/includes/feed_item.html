@@ -1,16 +1,6 @@
-<div class="feed-item card bg-transparent border-0 mb-3" data-item-id="{{ item.id }}" data-item-type="{{ item.type }}" style="border-bottom:1px solid var(--border) !important;padding-bottom:16px">
-  {% if item.type == 'post' or item.type == 'system_post' %}
+<div class="feed-card" data-post-id="{{ item.post_id }}">
+  {% if item.type == 'post' %}
     {% include 'includes/feed_post.html' with item=item %}
-  {% elif item.type == 'activity' %}
-    {% include 'includes/feed_activity.html' with item=item %}
-  {% elif item.type == 'battle_vote' %}
-    {% include 'includes/feed_battle_vote.html' with item=item %}
-  {% elif item.type == 'system_trending' %}
-    {% include 'includes/feed_system.html' with item=item icon="🔥" %}
-  {% elif item.type == 'system_seasonal' %}
-    {% include 'includes/feed_system.html' with item=item icon="🌸" %}
-  {% elif item.type == 'system_most_watched' %}
-    {% include 'includes/feed_system.html' with item=item icon="📺" %}
   {% elif item.type == 'system_welcome' %}
     {% include 'includes/feed_welcome.html' with item=item %}
   {% endif %}

@@ -240,7 +240,7 @@
         <div class="trending-item">
             <a href="{% url 'anime_detail' entry.anime.anilist_id %}" class="d-block text-decoration-none">
                 <div class="card-anime position-relative">
-                    <img src="{{ entry.anime.cover_image_large|default:entry.anime.cover_image_medium }}" alt="" loading="lazy">
+                    <img src="{{ entry.anime.cover_image_large|default:entry.anime.cover_image_medium }}" alt="" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 140%22><rect fill=%22%23222%22 width=%22100%22 height=%22140%22/><text x=%2250%22 y=%2275%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2224%22>?</text></svg>'">
                     <span class="badge-score" style="background:rgba(232,54,93,0.9);color:#fff">Ep {{ entry.episodes_watched }}/{{ entry.anime.episodes|default:'?' }}</span>
                 </div>
                 <div class="mt-2"><div class="fw-medium text-truncate" style="color:var(--text);font-size:0.85rem">{{ entry.anime.display_title }}</div></div>
