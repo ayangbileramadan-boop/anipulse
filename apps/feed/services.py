@@ -138,7 +138,6 @@ class FeedBuilder:
     def _generate_discussions(self, exclude_ids=None):
         """Auto-generate trending discussion posts from AniList when feed is empty."""
         from apps.anime.models import SocialPost, Anime
-        from apps.core.models import UserActivity
         import logging
         logger = logging.getLogger(__name__)
 
