@@ -706,6 +706,13 @@ def notification_settings(request):
     return render(request, 'notification_settings.html', {'user': user})
 
 
+def my_profile_redirect(request):
+    from django.shortcuts import redirect
+    if not request.user.is_authenticated:
+        return redirect('login')
+    return redirect('profile', username=request.user.username)
+
+
 def profile_view(request, username):
     User = get_user_model()
     profile_user = get_object_or_404(User, username=username)
@@ -1618,7 +1625,9 @@ def social_create_post(request):
                     anime = Anime.objects.get(anilist_id=int(anime_id))
                 except (Anime.DoesNotExist, ValueError):
                     pass
-            post = SocialPost.objects.create(user=request.user, body=body, title=title, anime=anime)
+            SocialPost.objects.create(user=request.user, body=body, title=title, anime=anime)
+            from apps.feed.services import FeedBuilder
+            FeedBuilder(request.user).invalidate()
             messages.success(request, 'Posted!' if not title else f'"{title}" posted!')
         return redirect('social_feed')
     return redirect('social_feed')

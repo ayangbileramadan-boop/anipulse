@@ -15,7 +15,6 @@ SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
-# Render terminates SSL at the proxy — tell Django to trust X-Forwarded-Proto
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
@@ -30,3 +29,43 @@ CACHES = {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
     }
 }
+
+# ─── Cloudflare R2 (S3-compatible object storage) ───────────────────
+R2_BUCKET = config('R2_BUCKET', default='')
+R2_ACCESS_KEY = config('R2_ACCESS_KEY', default='')
+R2_SECRET_KEY = config('R2_SECRET_KEY', default='')
+R2_ACCOUNT_ID = config('R2_ACCOUNT_ID', default='')
+R2_PUBLIC_URL = config('R2_PUBLIC_URL', default='')
+
+if R2_BUCKET and R2_ACCESS_KEY and R2_SECRET_KEY and R2_ACCOUNT_ID:
+    STORAGES = {
+        'default': {
+            'BACKEND': 'storages.backends.s3.S3Storage',
+            'OPTIONS': {
+                'bucket_name': R2_BUCKET,
+                'access_key': R2_ACCESS_KEY,
+                'secret_key': R2_SECRET_KEY,
+                'endpoint_url': f'https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com',
+                'region_name': 'auto',
+                'default_acl': 'public-read',
+                'file_overwrite': False,
+                'location': 'media',
+            },
+        },
+        'staticfiles': {
+            'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        },
+    }
+
+    if R2_PUBLIC_URL:
+        AWS_S3_CUSTOM_DOMAIN = R2_PUBLIC_URL
+        AWS_S3_ENDPOINT_URL = f'https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com'
+else:
+    STORAGES = {
+        'default': {
+            'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        },
+        'staticfiles': {
+            'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        },
+    }

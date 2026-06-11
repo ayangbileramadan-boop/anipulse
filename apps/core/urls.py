@@ -44,6 +44,7 @@ urlpatterns = [
     path('character/<int:character_id>/', views.character_view, name='character'),
     path('staff/<int:staff_id>/', views.staff_view, name='staff'),
     path('season/<int:year>/<str:season>/', views.seasonal_archive, name='seasonal_archive'),
+    path('profile/', views.my_profile_redirect, name='my_profile'),
     path('profile/edit/', views.profile_edit, name='profile_edit'),
     path('profile/<str:username>/', views.profile_view, name='profile'),
     path('profile/<str:username>/follow/', views.profile_follow_json, name='profile_follow'),
