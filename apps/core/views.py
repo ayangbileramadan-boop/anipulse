@@ -1617,6 +1617,8 @@ def social_feed(request):
 
     top_battle = Battle.objects.filter(
         created_at__gte=now - timedelta(days=7),
+    ).annotate(
+        total_votes=F('votes1') + F('votes2')
     ).order_by('-total_votes').first()
 
     return render(request, 'social_feed.html', {
