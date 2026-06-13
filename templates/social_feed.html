@@ -58,6 +58,19 @@
 .feed-end{text-align:center;padding:16px 0;color:var(--text-muted);font-size:0.8rem}
 .img-placeholder{background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:0.7rem;border-radius:4px;overflow:hidden;position:relative}
 .img-placeholder::before{content:"📷";opacity:.4;font-size:1.2rem}
+.anime-search-wrap{position:relative;margin:6px 14px 0}
+.anime-search-wrap input{width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);font-size:0.82rem;outline:none;display:none}
+.anime-search-wrap.open input{display:block}
+.anime-results{position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:0 0 10px 10px;max-height:200px;overflow-y:auto;z-index:100;display:none;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.anime-results.show{display:block}
+.anime-result-item{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .15s}
+.anime-result-item:last-child{border-bottom:none}
+.anime-result-item:hover,.anime-result-item.highlight{background:var(--surface-2)}
+.anime-result-item img{width:24px;height:34px;object-fit:cover;border-radius:4px;flex-shrink:0;background:var(--surface-2)}
+.anime-result-item .info{min-width:0;flex:1}
+.anime-result-item .info .title{font-size:0.78rem;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.anime-result-item .info .sub{font-size:0.65rem;color:var(--text-muted)}
+.anime-search-loading{text-align:center;padding:10px;color:var(--text-muted);font-size:0.75rem}
 @media(max-width:576px){
   .feed-card-body,.feed-card-actions,.feed-comments{padding-left:16px}
   .feed-card-header{padding:10px 12px 0}
@@ -86,11 +99,15 @@
         <button type="button" class="remove" onclick="clearAnimeAttach()">✕</button>
       </div>
       <input type="hidden" name="anime_id" id="attachAnimeId" value="">
+      <div class="anime-search-wrap" id="animeSearchWrap">
+        <input type="text" id="animeSearch" placeholder="Search anime..." autocomplete="off">
+        <div id="animeResults" class="anime-results"></div>
+      </div>
       <div class="post-form-footer">
         <div class="left">
-          <button type="button" class="attach-btn" onclick="openAnimePicker()">
+          <button type="button" class="attach-btn" id="attachBtn">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
-            Attach Anime
+            <span id="attachBtnLabel">Attach Anime</span>
           </button>
         </div>
         <button type="submit" class="btn btn-sm btn-primary-custom px-3" style="border-radius:8px;font-size:0.78rem">Post</button>
@@ -250,12 +267,14 @@ function autoResize(el) {
 }
 
 function feedLike(btn, postId) {
-  fetch('/feed/like/' + postId + '/json/', {method:'POST', headers:{'X-CSRFToken':'{{ csrf_token }}'}})
+  const csrf = document.querySelector('[name=csrfmiddlewaretoken]');
+  const token = csrf ? csrf.value : '{{ csrf_token }}';
+  fetch('/social/like/' + postId + '/json/', {method:'POST', headers:{'X-CSRFToken': token}})
     .then(r => r.json()).then(d => {
       const ct = btn.querySelector('.feed-action-count');
       if (ct) ct.textContent = d.likes;
       btn.classList.toggle('liked', d.liked);
-    }).catch(() => {});
+    }).catch(() => { console.error('Like failed'); });
 }
 
 function toggleComments(btn, postId) {
@@ -346,26 +365,74 @@ function feedShare(postId) {
   else { navigator.clipboard.writeText(url).then(() => { alert('Link copied!'); }).catch(() => {}); }
 }
 
-function openAnimePicker() {
-  const q = prompt('Search anime to attach:');
-  if (q && q.trim()) {
-    fetch('/search/json/?q=' + encodeURIComponent(q.trim()) + '&limit=1')
+// ─── Live Anime Search ───
+const animeSearch = document.getElementById('animeSearch');
+const animeResults = document.getElementById('animeResults');
+const animeSearchWrap = document.getElementById('animeSearchWrap');
+const attachBtnLabel = document.getElementById('attachBtnLabel');
+let animeSearchTimer;
+
+document.getElementById('attachBtn').addEventListener('click', function(e) {
+  e.stopPropagation();
+  animeSearchWrap.classList.add('open');
+  animeSearch.focus();
+});
+
+animeSearch.addEventListener('input', function() {
+  clearTimeout(animeSearchTimer);
+  const q = this.value.trim();
+  if (q.length < 2) { animeResults.classList.remove('show'); animeResults.innerHTML = ''; return; }
+  animeSearchTimer = setTimeout(() => {
+    animeResults.innerHTML = '<div class="anime-search-loading">Searching...</div>';
+    animeResults.classList.add('show');
+    fetch('/search/json/?q=' + encodeURIComponent(q) + '&limit=8')
       .then(r => r.json()).then(d => {
-        const a = (d.results || d)[0];
-        if (a) {
-          document.getElementById('attachAnimeId').value = a.id;
-          document.getElementById('attachCover').src = (a.coverImage && a.coverImage.medium) || (a.image) || '';
-          document.getElementById('attachTitle').textContent = a.title?.english || a.title?.romaji || a.title || '';
-          document.getElementById('animeAttach').style.display = 'flex';
-        }
-      }).catch(() => {});
+        const items = d.results || d || [];
+        if (!items.length) { animeResults.innerHTML = '<div class="anime-search-loading">No results</div>'; return; }
+        animeResults.innerHTML = items.map(a => {
+          const title = a.title?.english || a.title?.romaji || a.title || 'Unknown';
+          const img = (a.coverImage && a.coverImage.medium) || '';
+          const year = a.year || '';
+          return '<div class="anime-result-item" data-id="' + a.id + '" data-title="' + escAttr(title) + '" data-img="' + escAttr(img) + '">'
+            + (img ? '<img src="' + escAttr(img) + '" alt="" loading="lazy">' : '<div style="width:24px;height:34px;border-radius:4px;background:var(--surface-2)"></div>')
+            + '<div class="info"><div class="title">' + esc(title) + '</div>'
+            + (year ? '<div class="sub">' + year + '</div>' : '')
+            + '</div></div>';
+        }).join('');
+      }).catch(() => { animeResults.innerHTML = '<div class="anime-search-loading">Error loading</div>'; });
+  }, 300);
+});
+
+animeResults.addEventListener('click', function(e) {
+  const item = e.target.closest('.anime-result-item');
+  if (!item) return;
+  const id = item.dataset.id;
+  const title = item.dataset.title;
+  const img = item.dataset.img;
+  document.getElementById('attachAnimeId').value = id;
+  document.getElementById('attachCover').src = img;
+  document.getElementById('attachTitle').textContent = title;
+  document.getElementById('animeAttach').style.display = 'flex';
+  attachBtnLabel.textContent = 'Change Anime';
+  animeResults.classList.remove('show');
+  animeSearch.value = '';
+  animeSearchWrap.classList.remove('open');
+});
+
+document.addEventListener('click', function(e) {
+  if (!animeSearchWrap.contains(e.target) && !document.getElementById('attachBtn').contains(e.target)) {
+    animeSearchWrap.classList.remove('open');
+    animeResults.classList.remove('show');
   }
-}
+});
 
 function clearAnimeAttach() {
   document.getElementById('attachAnimeId').value = '';
   document.getElementById('animeAttach').style.display = 'none';
+  attachBtnLabel.textContent = 'Attach Anime';
 }
+
+function escAttr(s) { return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 const sentinel = document.getElementById('feed-end');
 if (sentinel && feedNextPage) {

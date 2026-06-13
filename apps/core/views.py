@@ -1,5 +1,6 @@
 import time
 import logging
+from uuid import uuid4
 from datetime import datetime, timezone, timedelta
 
 from django.shortcuts import redirect, get_object_or_404
@@ -968,7 +969,9 @@ def profile_edit(request):
                 img = Image.open(f)
                 img.verify()
                 f.seek(0)
-                user.avatar.save(f'avatar_{user.id}', f)
+                if user.avatar:
+                    user.avatar.delete(save=False)
+                user.avatar.save(f'avatar_{uuid4().hex}', f)
             except Exception:
                 messages.error(request, 'Invalid avatar image file.')
 
@@ -978,7 +981,9 @@ def profile_edit(request):
                 img = Image.open(f)
                 img.verify()
                 f.seek(0)
-                user.cover_image.save(f'cover_{user.id}', f)
+                if user.cover_image:
+                    user.cover_image.delete(save=False)
+                user.cover_image.save(f'cover_{uuid4().hex}', f)
             except Exception:
                 messages.error(request, 'Invalid cover image file.')
 
@@ -1619,12 +1624,19 @@ def social_create_post(request):
         anime_id = request.POST.get('anime_id', '').strip()
         if body:
             from apps.anime.models import Anime
+            from apps.anime.services.sync import sync_anime_from_anilist
+            from apps.anime.services.anilist import AniListClient
             anime = None
             if anime_id:
                 try:
                     anime = Anime.objects.get(anilist_id=int(anime_id))
                 except (Anime.DoesNotExist, ValueError):
-                    pass
+                    try:
+                        data = AniListClient().get_anime_detail(int(anime_id))
+                        if data and data.get('Media'):
+                            anime = sync_anime_from_anilist(data['Media'])
+                    except Exception:
+                        pass
             SocialPost.objects.create(user=request.user, body=body, title=title, anime=anime)
             from apps.feed.services import FeedBuilder
             FeedBuilder(request.user).invalidate()
@@ -2650,7 +2662,9 @@ def user_settings(request):
                 img = Image.open(f)
                 img.verify()
                 f.seek(0)
-                user.avatar.save(f'avatar_{user.id}', f)
+                if user.avatar:
+                    user.avatar.delete(save=False)
+                user.avatar.save(f'avatar_{uuid4().hex}', f)
             except Exception:
                 messages.error(request, 'Invalid avatar image file.')
 
@@ -2660,7 +2674,9 @@ def user_settings(request):
                 img = Image.open(f)
                 img.verify()
                 f.seek(0)
-                user.cover_image.save(f'cover_{user.id}', f)
+                if user.cover_image:
+                    user.cover_image.delete(save=False)
+                user.cover_image.save(f'cover_{uuid4().hex}', f)
             except Exception:
                 messages.error(request, 'Invalid cover image file.')
 
