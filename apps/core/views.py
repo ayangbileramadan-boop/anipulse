@@ -1588,6 +1588,7 @@ def tier_list_prefill_api(request):
 
 
 def social_feed(request):
+    from django.utils import timezone as tz
     from apps.feed.services import FeedBuilder
     from apps.anime.models import SocialPost, Battle
     from django.db.models import Count
@@ -1595,11 +1596,12 @@ def social_feed(request):
     builder = FeedBuilder(request.user)
     feed_data = builder.build(page=1)
 
+    now = tz.now()
     # Trending section data
     trending_discussions = SocialPost.objects.filter(
         reply_to__isnull=True,
         post_type__in=['discussion', 'trending', 'episode_discussion'],
-        created_at__gte=timezone.now() - timedelta(days=2),
+        created_at__gte=now - timedelta(days=2),
     ).annotate(
         comment_count=Count('comments'),
         like_count=Count('liked_by'),
@@ -1607,14 +1609,14 @@ def social_feed(request):
 
     most_active = SocialPost.objects.filter(
         reply_to__isnull=True,
-        created_at__gte=timezone.now() - timedelta(days=2),
+        created_at__gte=now - timedelta(days=2),
     ).annotate(
         comment_count=Count('comments'),
         like_count=Count('liked_by'),
     ).order_by('-comment_count')[:5]
 
     top_battle = Battle.objects.filter(
-        created_at__gte=timezone.now() - timedelta(days=7),
+        created_at__gte=now - timedelta(days=7),
     ).order_by('-total_votes').first()
 
     return render(request, 'social_feed.html', {
