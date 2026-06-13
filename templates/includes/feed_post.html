@@ -1,7 +1,6 @@
 {% load core_extras %}
 {% with subtype=item.subtype|default:'post' %}
-{% with flair_map='{"discussion":"Discussion","trending":"Trending","seasonal":"Seasonal","episode_discussion":"Episode","post":"Post"}' %}
-{% with flair_cls='{"discussion":"flair-discussion","trending":"flair-trending","seasonal":"flair-seasonal","episode_discussion":"flair-episode","post":"flair-post"}' %}
+{% with c=item.content %}
 <div class="feed-card-header">
   <a href="{% url 'profile' username=item.user.username %}" class="text-decoration-none flex-shrink-0">
     {% if item.user.avatar and item.user.avatar.url %}
@@ -22,23 +21,61 @@
       {% elif subtype == 'trending' %}<span class="flair-badge flair-trending">Trending</span>
       {% elif subtype == 'seasonal' %}<span class="flair-badge flair-seasonal">Seasonal</span>
       {% elif subtype == 'episode_discussion' %}<span class="flair-badge flair-episode">Episode</span>
+      {% elif subtype == 'poll' %}<span class="flair-badge" style="background:rgba(155,89,182,.15);color:#9b59b6">Poll</span>
+      {% elif subtype == 'qotd' %}<span class="flair-badge" style="background:rgba(52,152,219,.15);color:#3498db">QOTD</span>
+      {% elif subtype == 'hot_take' %}<span class="flair-badge" style="background:rgba(231,76,60,.15);color:#e74c3c">Hot Take</span>
+      {% elif subtype == 'recommendation' %}<span class="flair-badge" style="background:rgba(46,204,113,.15);color:#2ecc71">Recommendation</span>
+      {% elif subtype == 'share_battle' %}<span class="flair-badge" style="background:rgba(232,54,93,.15);color:var(--primary)">⚔️ Battle</span>
+      {% elif subtype == 'share_tierlist' %}<span class="flair-badge" style="background:rgba(162,89,255,.15);color:#A259FF">📊 Tier List</span>
       {% else %}<span class="flair-badge flair-post">Post</span>{% endif %}
     </div>
   </div>
 </div>
 <div class="feed-card-body">
-  {% if item.content.title %}<div class="feed-title">{{ item.content.title }}</div>{% endif %}
-  <div class="feed-body">{{ item.content.body|linebreaksbr }}</div>
-  {% if item.content.anime and item.content.anime.id %}
-  <a href="{% url 'anime_detail' anilist_id=item.content.anime.id %}" class="feed-anime-attach">
-    {% if item.content.anime.image %}
-    <img src="{{ item.content.anime.image }}" alt="" loading="lazy" onerror="this.outerHTML='<div class=img-placeholder style=width:36px;height:50px></div>'">
-    {% endif %}
-    <div><div class="atitle">{{ item.content.anime.title }}</div><div class="asub">View anime</div></div>
+  {% if c.title %}<div class="feed-title">{{ c.title }}</div>{% endif %}
+  {% if c.body %}<div class="feed-body">{{ c.body|linebreaksbr }}</div>{% endif %}
+
+  {# ── Rich Anime Card ── #}
+  {% if c.anime and c.anime.id %}
+  <a href="{% url 'anime_detail' anilist_id=c.anime.id %}" class="feed-anime-card">
+    <img src="{{ c.anime.image }}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    <div class="anime-card-body"><div class="ac-title">{{ c.anime.title|truncatechars:40 }}</div>
+      <div class="ac-stats">
+        {% if c.anime.score %}<span>⭐ {{ c.anime.score }}</span>{% endif %}
+        {% if c.anime.episodes %}<span>📺 {{ c.anime.episodes }} eps</span>{% endif %}
+        {% if c.anime.studio %}<span>🎬 {{ c.anime.studio }}</span>{% endif %}
+        {% if c.anime.format %}<span>{{ c.anime.format }}</span>{% endif %}
+        {% if c.anime.year %}<span>{{ c.anime.year }}</span>{% endif %}
+      </div>
+    </div>
   </a>
   {% endif %}
-  {% if item.content.image %}
-  <img src="{{ item.content.image }}" alt="" class="feed-image" loading="lazy" onerror="this.outerHTML='<div class=img-placeholder style=height:120px></div>'">
+
+  {# ── Poll ── #}
+  {% if c.poll and c.poll.options %}
+  <div class="poll-wrap" data-post="{{ item.post_id }}">
+    <div class="poll-q">{{ c.poll.question }}</div>
+    {% for opt in c.poll.options %}
+    <div class="poll-option" data-oid="{{ opt.id }}" onclick="votePoll({{ item.post_id }}, {{ opt.id }})">
+      <div class="poll-bar" style="width:{{ opt.pct }}%"></div>
+      <span class="poll-text">{{ opt.text }}</span>
+      <span class="poll-pct">{{ opt.votes }} vote{{ opt.votes|pluralize }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# ── Shared content ── #}
+  {% if c.shared %}
+  <a href="{{ c.shared.url }}" class="feed-shared-card">
+    <div class="shared-label">{{ c.shared.title }}</div>
+    <div class="shared-link">View {{ c.shared.type }}</div>
+  </a>
+  {% endif %}
+
+  {# ── Image attachment ── #}
+  {% if c.image %}
+  <img src="{{ c.image }}" alt="" class="feed-image" loading="lazy" onerror="this.outerHTML='<div class=img-placeholder style=height:120px></div>'">
   {% endif %}
 </div>
 <div class="feed-card-actions">
@@ -46,14 +83,17 @@
     <svg viewBox="0 0 24 24" fill="{% if item.user.liked %}currentColor{% else %}none{% endif %}" stroke="currentColor" stroke-width="2">
       {% if item.user.liked %}<path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>{% else %}<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>{% endif %}
     </svg>
-    <span class="feed-action-count">{{ item.content.likes|default:0 }}</span>
+    <span class="feed-action-count">{{ c.likes|default:0 }}</span>
   </button>
   <button class="feed-action-btn" onclick="toggleComments(this,{{ item.post_id }})" title="Comment">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-    <span class="feed-action-count">{{ item.content.comment_count|default:0 }}</span>
+    <span class="feed-action-count">{{ c.comment_count|default:0 }}</span>
   </button>
   <button class="feed-action-btn" onclick="feedShare({{ item.post_id }})" title="Share">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+  </button>
+  <button class="feed-action-btn{% if item.bookmarked %} bookmarked{% endif %}" onclick="toggleBookmark({{ item.post_id }})" title="Bookmark">
+    <svg viewBox="0 0 24 24" fill="{% if item.bookmarked %}currentColor{% else %}none{% endif %}" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
   </button>
 </div>
 <div class="feed-comments" id="comments-{{ item.post_id }}">
@@ -71,4 +111,4 @@
   </div>
   {% endif %}
 </div>
-{% endwith %}{% endwith %}{% endwith %}
+{% endwith %}{% endwith %}

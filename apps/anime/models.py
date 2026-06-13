@@ -363,22 +363,37 @@ class SocialPost(TimeStampedModel):
         ('episode_discussion', 'Episode Discussion'),
         ('trending', 'Trending Topic'),
         ('seasonal', 'Seasonal Discussion'),
+        ('poll', 'Poll'),
+        ('qotd', 'Question of the Day'),
+        ('hot_take', 'Hot Take'),
+        ('recommendation', 'Recommendation Thread'),
+        ('share_battle', 'Shared Battle'),
+        ('share_tierlist', 'Shared Tier List'),
+        ('share_review', 'Shared Review'),
     ]
     user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='social_posts')
     title = models.CharField(max_length=200, blank=True)
-    body = models.TextField(max_length=2000)
+    body = models.TextField(max_length=2000, blank=True)
     post_type = models.CharField(max_length=30, choices=POST_TYPES, default='post')
     anime = models.ForeignKey(Anime, on_delete=models.SET_NULL, null=True, blank=True, related_name='social_posts')
     image = models.URLField(max_length=500, blank=True)
     likes = models.PositiveIntegerField(default=0)
     reply_to = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies')
     comments = GenericRelation('Comment', content_type_field='content_type', object_id_field='object_id')
+    # Shared content (battles, tierlists, reviews)
+    shared_ct = models.ForeignKey(ContentType, on_delete=models.SET_NULL, null=True, blank=True, related_name='shared_posts')
+    shared_id = models.PositiveIntegerField(null=True, blank=True)
+    shared_obj = GenericForeignKey('shared_ct', 'shared_id')
 
     class Meta:
         ordering = ['-created_at']
 
     def __str__(self):
         return f"{self.user.username}: {self.title or self.body[:50]}"
+
+    @property
+    def is_share(self):
+        return self.post_type in ('share_battle', 'share_tierlist', 'share_review') and self.shared_id is not None
 
 
 class SocialLike(models.Model):
@@ -400,6 +415,8 @@ class UserActivity(TimeStampedModel):
         ('BATTLE', 'Voted in Battle'),
         ('POST', 'Made a Post'),
         ('STREAK', 'Reached Streak Milestone'),
+        ('SHARE', 'Shared Content'),
+        ('POLL_VOTE', 'Voted in a Poll'),
     ]
     user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='activities')
     activity_type = models.CharField(max_length=20, choices=ACTIVITY_TYPES)
@@ -482,3 +499,64 @@ class CommentLike(models.Model):
 
     def __str__(self):
         return f"{self.user.username} likes {self.comment.id}"
+
+
+class Poll(models.Model):
+    post = models.OneToOneField(SocialPost, on_delete=models.CASCADE, related_name='poll')
+    question = models.CharField(max_length=300)
+    is_multiple = models.BooleanField(default=False)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.question
+
+    @property
+    def total_votes(self):
+        return self.options.annotate(vc=models.Count('votes')).aggregate(t=models.Sum('vc'))['t'] or 0
+
+
+class PollOption(models.Model):
+    poll = models.ForeignKey(Poll, on_delete=models.CASCADE, related_name='options')
+    text = models.CharField(max_length=200)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return self.text
+
+    @property
+    def vote_count(self):
+        return self.votes.count()
+
+    @property
+    def percentage(self, total=None):
+        t = total or self.poll.total_votes
+        return round(self.vote_count / t * 100, 1) if t else 0
+
+
+class PollVote(models.Model):
+    option = models.ForeignKey(PollOption, on_delete=models.CASCADE, related_name='votes')
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('option', 'user')
+
+    def __str__(self):
+        return f"{self.user.username} → {self.option.text}"
+
+
+class Bookmark(models.Model):
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='bookmarks')
+    post = models.ForeignKey(SocialPost, on_delete=models.CASCADE, related_name='bookmarks')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'post')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} bookmarked {self.post.id}"

@@ -71,6 +71,44 @@
 .anime-result-item .info .title{font-size:0.78rem;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .anime-result-item .info .sub{font-size:0.65rem;color:var(--text-muted)}
 .anime-search-loading{text-align:center;padding:10px;color:var(--text-muted);font-size:0.75rem}
+
+/* ─── Rich Anime Card ─── */
+.feed-anime-card{display:flex;align-items:center;gap:12px;padding:10px 12px;margin-top:10px;border-radius:10px;background:var(--surface-2);text-decoration:none;color:var(--text);border:1px solid var(--border)}
+.feed-anime-card img{width:40px;height:56px;object-fit:cover;border-radius:6px;flex-shrink:0;background:var(--surface)}
+.feed-anime-card .anime-card-body{min-width:0;flex:1}
+.feed-anime-card .ac-title{font-size:0.8rem;font-weight:600;color:var(--text)}
+.feed-anime-card .ac-stats{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.feed-anime-card .ac-stats span{font-size:0.62rem;color:var(--text-muted);background:var(--surface);padding:2px 6px;border-radius:4px}
+
+/* ─── Poll ─── */
+.poll-wrap{margin-top:10px;padding:12px;border-radius:10px;background:var(--surface-2);border:1px solid var(--border)}
+.poll-q{font-size:0.85rem;font-weight:600;margin-bottom:8px;color:var(--text)}
+.poll-option{position:relative;padding:8px 10px;margin-bottom:4px;border-radius:6px;background:var(--surface);cursor:pointer;overflow:hidden;transition:all .15s;border:1px solid var(--border)}
+.poll-option:hover{background:rgba(232,54,93,.05)}
+.poll-bar{position:absolute;top:0;left:0;bottom:0;background:rgba(232,54,93,.12);border-radius:6px;transition:width .3s ease}
+.poll-text{position:relative;font-size:0.78rem;color:var(--text);font-weight:500}
+.poll-pct{position:relative;float:right;font-size:0.68rem;color:var(--text-muted)}
+
+/* ─── Shared Content Card ─── */
+.feed-shared-card{display:block;padding:10px 12px;margin-top:10px;border-radius:10px;background:var(--surface-2);text-decoration:none;border:1px solid var(--border);transition:background .15s}
+.feed-shared-card:hover{background:var(--surface-3)}
+.feed-shared-card .shared-label{font-size:0.78rem;color:var(--text);font-weight:500}
+.feed-shared-card .shared-link{font-size:0.68rem;color:var(--primary);font-weight:500;margin-top:2px}
+
+/* ─── Trending Bar ─── */
+.trending-bar{display:flex;gap:8px;overflow-x:auto;padding:10px 0;margin-bottom:16px;scrollbar-width:none;flex-wrap:nowrap}
+.trending-bar::-webkit-scrollbar{display:none}
+.trending-pill{flex-shrink:0;padding:6px 14px;border-radius:20px;background:var(--surface-2);border:1px solid var(--border);font-size:0.72rem;color:var(--text);text-decoration:none;white-space:nowrap;transition:all .15s}
+.trending-pill:hover{background:var(--surface-3);color:var(--primary)}
+.trending-pill .num{color:var(--text-muted);margin-right:4px}
+.bbar{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface-2);border-radius:10px;margin-bottom:16px;border:1px solid var(--border);text-decoration:none;color:var(--text)}
+.bbar:hover{background:var(--surface-3)}
+.bbar .bb-title{font-size:0.78rem;font-weight:500;min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bbar .bb-meta{font-size:0.62rem;color:var(--text-muted);flex-shrink:0}
+
+/* ─── Bookmark ─── */
+.feed-action-btn.bookmarked{color:#f1c40f}
+
 @media(max-width:576px){
   .feed-card-body,.feed-card-actions,.feed-comments{padding-left:16px}
   .feed-card-header{padding:10px 12px 0}
@@ -113,6 +151,39 @@
         <button type="submit" class="btn btn-sm btn-primary-custom px-3" style="border-radius:8px;font-size:0.78rem">Post</button>
       </div>
     </form>
+  </div>
+  {% endif %}
+
+  {# ── Trending Bar ── #}
+  <div class="trending-bar">
+    {% if top_battle %}
+    <a href="{% url 'battle_detail' battle_id=top_battle.id %}" class="trending-pill" style="background:rgba(232,54,93,.12);border-color:transparent">
+      ⚔️ {{ top_battle.anime1.display_title|truncatechars:12 }} vs {{ top_battle.anime2.display_title|truncatechars:12 }}
+    </a>
+    {% endif %}
+    {% for d in trending_discussions %}
+    <a href="#post-{{ d.id }}" class="trending-pill" onclick="document.querySelector('[data-post-id={{ d.id }}]').scrollIntoView({behavior:'smooth'});return false">
+      {% if d.post_type == 'trending' %}🔥{% elif d.post_type == 'episode_discussion' %}📺{% else %}💬{% endif %}
+      {{ d.title|truncatechars:24 }}
+    </a>
+    {% endfor %}
+  </div>
+
+  {# ── Most Active ── #}
+  {% if most_active %}
+  <div style="margin-bottom:16px">
+    <div class="d-flex align-items-center gap-2 mb-2">
+      <span style="font-size:0.7rem;font-weight:600;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase">Most Active 🔥</span>
+    </div>
+    <div class="d-flex flex-column gap-1">
+      {% for p in most_active %}
+      <a href="#post-{{ p.id }}" class="bbar" onclick="document.querySelector('[data-post-id={{ p.id }}]').scrollIntoView({behavior:'smooth'});return false">
+        <span class="num" style="color:var(--text-muted);font-size:0.7rem">#{{ forloop.counter }}</span>
+        <span class="bb-title">{{ p.title|default:p.body|truncatechars:40 }}</span>
+        <span class="bb-meta">💬 {{ p.comment_count }}</span>
+      </a>
+      {% endfor %}
+    </div>
   </div>
   {% endif %}
 
@@ -433,6 +504,40 @@ function clearAnimeAttach() {
 }
 
 function escAttr(s) { return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ─── Poll Voting ───
+function votePoll(postId, optionId) {
+  const csrf = document.querySelector('[name=csrfmiddlewaretoken]');
+  const fd = new FormData();
+  fd.append('option_id', optionId);
+  fd.append('csrfmiddlewaretoken', csrf ? csrf.value : '{{ csrf_token }}');
+  fetch('/social/poll/' + postId + '/vote/', {method:'POST', body: fd})
+    .then(r => r.json()).then(d => {
+      const wrap = document.querySelector('.poll-wrap[data-post="' + postId + '"]');
+      if (!wrap) return;
+      wrap.innerHTML = '<div class="poll-q">' + esc(d.options[0]?.text ? d.options[0].text.split('|')[0] : '') + '</div>';
+      // Actually we need the question from somewhere — store it
+      const q = wrap.querySelector('.poll-q');
+      d.options.forEach(o => {
+        wrap.innerHTML += '<div class="poll-option" style="cursor:default"><div class="poll-bar" style="width:' + o.pct + '%"></div><span class="poll-text">' + esc(o.text) + '</span><span class="poll-pct">' + o.votes + ' vote' + (o.votes !== 1 ? 's' : '') + ' (' + o.pct + '%)</span></div>';
+      });
+    }).catch(() => {});
+}
+
+// ─── Bookmark Toggle ───
+function toggleBookmark(postId) {
+  const csrf = document.querySelector('[name=csrfmiddlewaretoken]');
+  fetch('/social/' + postId + '/bookmark/', {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf ? csrf.value : '{{ csrf_token }}'}
+  }).then(r => r.json()).then(d => {
+    const btn = document.querySelector('[data-post-id="' + postId + '"] .feed-action-btn:last-child');
+    if (btn) {
+      btn.classList.toggle('bookmarked', d.bookmarked);
+      btn.querySelector('svg').setAttribute('fill', d.bookmarked ? 'currentColor' : 'none');
+    }
+  }).catch(() => {});
+}
 
 const sentinel = document.getElementById('feed-end');
 if (sentinel && feedNextPage) {

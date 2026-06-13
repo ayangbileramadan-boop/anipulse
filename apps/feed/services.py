@@ -39,62 +39,77 @@ class FeedBuilder:
         cache.delete(cache_key)
 
     def _build_all(self):
-        from apps.anime.models import SocialPost, SocialLike
+        from apps.anime.models import SocialPost, SocialLike, Bookmark
         from apps.core.models import UserFollow
 
         followed_ids = []
-        if self.user and self.user.is_authenticated:
+        uid = self.user.id if self.user and self.user.is_authenticated else 0
+        if uid:
             followed_ids = list(UserFollow.objects.filter(
                 follower=self.user
             ).values_list('following_id', flat=True))
-            followed_ids.append(self.user.id)
+            followed_ids.append(uid)
 
         items = []
         limit = FEED_MAX_ITEMS * 2
+        all_types = ['post', 'discussion', 'trending', 'seasonal', 'episode_discussion',
+                     'poll', 'qotd', 'hot_take', 'recommendation',
+                     'share_battle', 'share_tierlist', 'share_review']
 
-        # 1. User posts from followed users (highest priority)
-        if followed_ids:
-            posts = SocialPost.objects.filter(
-                reply_to__isnull=True,
-                user_id__in=followed_ids,
-                created_at__gte=self.seven_days_ago,
-            ).select_related('user', 'anime').order_by('-created_at')[:limit]
-
-            liked_post_ids = set()
-            if self.user and self.user.is_authenticated:
-                liked_post_ids = set(SocialLike.objects.filter(
-                    user=self.user,
-                    post_id__in=[p.id for p in posts],
-                ).values_list('post_id', flat=True))
-
-            for p in posts:
-                items.append(self._serialize_post(p, liked=p.id in liked_post_ids))
-
-        # 2. System/community discussions (always shown, promote the community)
-        discussions = SocialPost.objects.filter(
+        # Base queryset — all non-reply posts from last 7 days
+        base_qs = SocialPost.objects.filter(
             reply_to__isnull=True,
-            post_type__in=['discussion', 'trending', 'seasonal', 'episode_discussion'],
+            post_type__in=all_types,
             created_at__gte=self.seven_days_ago,
-        ).select_related('user', 'anime').order_by('-created_at')[:limit // 2]
+        ).select_related('user', 'anime').order_by('-created_at')
 
-        existing_ids = {item['post_id'] for item in items if 'post_id' in item}
-        for p in discussions:
-            if p.id not in existing_ids:
-                liked = False
-                if self.user and self.user.is_authenticated:
-                    liked = SocialLike.objects.filter(user=self.user, post_id=p.id).exists()
-                items.append(self._serialize_post(p, is_system=True, liked=liked))
-                existing_ids.add(p.id)
+        # 1. Priority: posts from followed users
+        if followed_ids:
+            followed_posts = base_qs.filter(user_id__in=followed_ids)
+            all_posts = list(followed_posts[:limit])
+        else:
+            all_posts = []
 
-        # 3. If empty or very sparse, auto-generate trending discussions
-        if len(items) < 5:
+        # 2. Fill with community posts (prominent types) if we don't have enough
+        if len(all_posts) < limit:
+            community_types = ['discussion', 'episode_discussion', 'trending', 'seasonal',
+                               'qotd', 'hot_take', 'recommendation', 'poll']
+            extra = base_qs.filter(post_type__in=community_types)
+            if followed_ids:
+                extra = extra.exclude(user_id__in=followed_ids)
+            existing = {p.id for p in all_posts}
+            for p in extra:
+                if p.id not in existing:
+                    all_posts.append(p)
+                    existing.add(p.id)
+                    if len(all_posts) >= limit:
+                        break
+
+        # 3. Bulk fetch like, bookmark status
+        liked_ids = set()
+        bm_ids = set()
+        pids = [p.id for p in all_posts]
+        if uid:
+            liked_ids = set(SocialLike.objects.filter(user=self.user, post_id__in=pids).values_list('post_id', flat=True))
+            bm_ids = set(Bookmark.objects.filter(user=self.user, post_id__in=pids).values_list('post_id', flat=True))
+
+        for p in all_posts:
+            items.append(self._serialize_post(
+                p,
+                liked=p.id in liked_ids,
+                bookmarked=p.id in bm_ids,
+            ))
+
+        # 4. Auto-generate community content if sparse
+        existing_ids = {item['post_id'] for item in items}
+        if len(items) < 10:
             auto = self._generate_discussions(exclude_ids=existing_ids)
             items.extend(auto)
 
         items.sort(key=lambda x: x['timestamp'], reverse=True)
         return items[:FEED_MAX_ITEMS]
 
-    def _serialize_post(self, post, is_system=False, liked=False):
+    def _serialize_post(self, post, is_system=False, liked=False, bookmarked=False):
         from django.contrib.contenttypes.models import ContentType
         user_data = self._user_data(post.user)
         if is_system:
@@ -102,6 +117,7 @@ class FeedBuilder:
         user_data['liked'] = liked
 
         comment_count = post.comments.count()
+        bookmark_count = post.bookmarks.count() if hasattr(post, 'bookmarks') else 0
 
         result = {
             'id': f'post_{post.id}',
@@ -110,21 +126,56 @@ class FeedBuilder:
             'subtype': post.post_type,
             'timestamp': post.created_at,
             'user': user_data,
+            'bookmarked': bookmarked,
             'content': {
                 'title': post.title or '',
                 'body': post.body,
                 'likes': post.likes,
                 'comment_count': comment_count,
+                'bookmark_count': bookmark_count,
                 'anime': None,
                 'image': post.image or None,
+                'poll': None,
             },
         }
-        if post.anime_id:
+
+        # Rich anime card
+        if post.anime_id and post.anime:
+            a = post.anime
             result['content']['anime'] = {
-                'id': post.anime.anilist_id if hasattr(post, 'anime') and post.anime else None,
-                'title': post.anime.display_title if hasattr(post, 'anime') and post.anime else None,
-                'image': post.anime.cover_image_medium if hasattr(post, 'anime') and post.anime else None,
+                'id': a.anilist_id,
+                'title': a.display_title,
+                'image': a.cover_image_medium,
+                'score': a.average_score,
+                'episodes': a.episodes,
+                'popularity': a.popularity,
+                'studio': ', '.join(s.name for s in a.studios.all()[:2]) if hasattr(a, 'studios') and a.studios.exists() else None,
+                'format': a.format,
+                'year': a.season_year,
             }
+
+        # Poll data
+        if post.post_type == 'poll' and hasattr(post, 'poll') and post.poll:
+            poll = post.poll
+            options = [{
+                'id': o.id, 'text': o.text, 'votes': o.vote_count,
+                'pct': o.percentage(poll.total_votes),
+            } for o in poll.options.all()]
+            result['content']['poll'] = {
+                'question': poll.question,
+                'total_votes': poll.total_votes,
+                'options': options,
+            }
+
+        # Share data
+        if post.is_share and post.shared_obj:
+            shared = post.shared_obj
+            result['content']['shared'] = {
+                'type': post.post_type.replace('share_', ''),
+                'title': str(shared)[:100],
+                'url': getattr(shared, 'get_absolute_url', lambda: '#')(),
+            }
+
         return result
 
     def _user_data(self, user):
@@ -218,6 +269,77 @@ class FeedBuilder:
                     exclude_ids.add(post.id)
         except Exception as e:
             logger.warning(f'Failed episode discussions: {e}')
+
+        # Question of the Day
+        try:
+            qotd_questions = [
+                'Which anime has the best soundtrack?',
+                'What anime made you cry the most?',
+                'Which anime character do you relate to most?',
+                'What is your all-time favorite anime?',
+                'Which anime has the best animation?',
+                'What anime would you recommend to a beginner?',
+                'Which anime ending hit you the hardest?',
+                'What anime world would you want to live in?',
+            ]
+            import random
+            from datetime import date
+            qotd_q = qotd_questions[hash(str(date.today())) % len(qotd_questions)]
+            post, created = SocialPost.objects.get_or_create(
+                post_type='qotd',
+                user=system_user,
+                title=f'💬 Question of the Day',
+                defaults={'body': qotd_q}
+            )
+            if post.id not in exclude_ids:
+                items.append(self._serialize_post(post, is_system=True))
+                exclude_ids.add(post.id)
+        except Exception:
+            pass
+
+        # Hot Take
+        try:
+            hot_takes = [
+                'Is Solo Leveling overrated?',
+                'One Piece is too long — change my mind.',
+                'Dubs are better than subs.',
+                '10-episode anime are the perfect length.',
+                'Classic anime are better than modern ones.',
+                'Romance anime need more actual relationships.',
+            ]
+            hot = hot_takes[hash(str(date.today()) + str(random.randint(0, 99))) % len(hot_takes)]
+            post, created = SocialPost.objects.get_or_create(
+                post_type='hot_take',
+                user=system_user,
+                title=f'🔥 Hot Take',
+                defaults={'body': hot}
+            )
+            if post.id not in exclude_ids:
+                items.append(self._serialize_post(post, is_system=True))
+                exclude_ids.add(post.id)
+        except Exception:
+            pass
+
+        # Recommendation Thread
+        try:
+            recs = [
+                'What to watch after finishing Attack on Titan?',
+                'Suggest some hidden gem anime from the 90s.',
+                'Best anime for fans of great fight choreography?',
+                'Need something like Frieren — slow, emotional, beautiful.',
+            ]
+            rec = recs[hash(str(date.today()) + str(random.randint(0, 999))) % len(recs)]
+            post, created = SocialPost.objects.get_or_create(
+                post_type='recommendation',
+                user=system_user,
+                title=f'📚 Recommendation Thread',
+                defaults={'body': rec}
+            )
+            if post.id not in exclude_ids:
+                items.append(self._serialize_post(post, is_system=True))
+                exclude_ids.add(post.id)
+        except Exception:
+            pass
 
         if not items:
             post, created = SocialPost.objects.get_or_create(

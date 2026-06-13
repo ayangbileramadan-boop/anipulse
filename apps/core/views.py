@@ -1589,9 +1589,33 @@ def tier_list_prefill_api(request):
 
 def social_feed(request):
     from apps.feed.services import FeedBuilder
+    from apps.anime.models import SocialPost, Battle
+    from django.db.models import Count
 
     builder = FeedBuilder(request.user)
     feed_data = builder.build(page=1)
+
+    # Trending section data
+    trending_discussions = SocialPost.objects.filter(
+        reply_to__isnull=True,
+        post_type__in=['discussion', 'trending', 'episode_discussion'],
+        created_at__gte=timezone.now() - timedelta(days=2),
+    ).annotate(
+        comment_count=Count('comments'),
+        like_count=Count('liked_by'),
+    ).order_by('-like_count', '-comment_count')[:5]
+
+    most_active = SocialPost.objects.filter(
+        reply_to__isnull=True,
+        created_at__gte=timezone.now() - timedelta(days=2),
+    ).annotate(
+        comment_count=Count('comments'),
+        like_count=Count('liked_by'),
+    ).order_by('-comment_count')[:5]
+
+    top_battle = Battle.objects.filter(
+        created_at__gte=timezone.now() - timedelta(days=7),
+    ).order_by('-total_votes').first()
 
     return render(request, 'social_feed.html', {
         'feed_items': feed_data['results'],
@@ -1600,6 +1624,9 @@ def social_feed(request):
             'next_page': feed_data['next_page'],
             'total': feed_data['total'],
         },
+        'trending_discussions': trending_discussions,
+        'most_active': most_active,
+        'top_battle': top_battle,
     })
 
 
@@ -1687,6 +1714,82 @@ def social_like_json(request, post_id):
         )
     post.refresh_from_db()
     return JsonResponse({'likes': post.likes, 'liked': not created})
+
+
+@login_required
+@transaction.atomic
+def poll_vote_json(request, post_id):
+    from django.http import JsonResponse
+    from apps.anime.models import SocialPost, Poll, PollOption, PollVote
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    post = get_object_or_404(SocialPost, id=post_id)
+    try:
+        poll = post.poll
+    except Poll.DoesNotExist:
+        return JsonResponse({'error': 'No poll on this post'}, status=404)
+    option_id = request.POST.get('option_id')
+    if not option_id:
+        return JsonResponse({'error': 'Missing option_id'}, status=400)
+    try:
+        option = poll.options.get(id=int(option_id))
+    except (PollOption.DoesNotExist, ValueError):
+        return JsonResponse({'error': 'Invalid option'}, status=400)
+    vote, created = PollVote.objects.get_or_create(option=option, user=request.user)
+    if not created:
+        vote.delete()
+    options = [{'id': o.id, 'text': o.text, 'votes': o.vote_count, 'pct': o.percentage(poll.total_votes)} for o in poll.options.all()]
+    return JsonResponse({'options': options, 'total': poll.total_votes, 'voted': not created, 'voted_option': option.id if not created else None})
+
+
+@login_required
+@transaction.atomic
+def bookmark_toggle_json(request, post_id):
+    from django.http import JsonResponse
+    from apps.anime.models import SocialPost, Bookmark
+    post = get_object_or_404(SocialPost, id=post_id)
+    bm, created = Bookmark.objects.get_or_create(user=request.user, post=post)
+    if not created:
+        bm.delete()
+    return JsonResponse({'bookmarked': created, 'count': post.bookmarks.count()})
+
+
+def _share_post(user, post_type, title, body, content_object):
+    from apps.anime.models import SocialPost
+    from django.contrib.contenttypes.models import ContentType
+    ct = ContentType.objects.get_for_model(content_object)
+    post = SocialPost.objects.create(
+        user=user, post_type=post_type, title=title, body=body,
+        shared_ct=ct, shared_id=content_object.id,
+    )
+    UserActivity.objects.create(user=user, activity_type='SHARE', description=f'Shared a {post_type.replace("share_","")}')
+    return post
+
+
+@login_required
+def share_battle(request, battle_id):
+    from apps.anime.models import Battle
+    battle = get_object_or_404(Battle, id=battle_id)
+    title = f"⚔️ Battle: {battle.anime1.display_title} vs {battle.anime2.display_title}"
+    body = f"Vote now: {battle.anime1.display_title} ({battle.pct1}%) vs {battle.anime2.display_title} ({battle.pct2}%) — {battle.total_votes} total votes"
+    _share_post(request.user, 'share_battle', title[:200], body, battle)
+    from apps.feed.services import FeedBuilder
+    FeedBuilder(request.user).invalidate()
+    messages.success(request, 'Battle shared to feed!')
+    return redirect('social_feed')
+
+
+@login_required
+def share_tierlist(request, slug):
+    from apps.anime.models import TierList
+    tl = get_object_or_404(TierList, slug=slug)
+    title = f"📊 Tier List: {tl.name}"
+    body = f"Check out my tier list: {tl.name} by {request.user.username}"
+    _share_post(request.user, 'share_tierlist', title[:200], body, tl)
+    from apps.feed.services import FeedBuilder
+    FeedBuilder(request.user).invalidate()
+    messages.success(request, 'Tier list shared to feed!')
+    return redirect('social_feed')
 
 
 @login_required
