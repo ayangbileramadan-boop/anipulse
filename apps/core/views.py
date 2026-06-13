@@ -1615,11 +1615,11 @@ def social_feed(request):
         like_count=Count('liked_by'),
     ).order_by('-comment_count')[:5]
 
-    top_battle = Battle.objects.filter(
-        created_at__gte=now - timedelta(days=7),
-    ).annotate(
-        total_votes=F('votes1') + F('votes2')
-    ).order_by('-total_votes').first()
+    top_battle = sorted(
+        [b for b in Battle.objects.filter(created_at__gte=now - timedelta(days=7))],
+        key=lambda b: b.votes1 + b.votes2, reverse=True
+    )[:1]
+    top_battle = top_battle[0] if top_battle else Battle.objects.filter(created_at__gte=now - timedelta(days=7)).order_by('-created_at').first()
 
     return render(request, 'social_feed.html', {
         'feed_items': feed_data['results'],
