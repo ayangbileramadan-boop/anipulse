@@ -41,9 +41,9 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),
 ]
 
-# Serve media files locally (not needed when using S3/R2 cloud storage)
+# Serve media files locally (not needed when using cloud storage)
 from django.core.files.storage import default_storage
-if not hasattr(default_storage, 'bucket_name'):
+if type(default_storage).__name__ == 'FileSystemStorage':
     urlpatterns += [
         path('media/<path:path>', media_serve, {'document_root': settings.MEDIA_ROOT}),
     ]

@@ -16,16 +16,10 @@ services:
         generateValue: true
       - key: DEBUG
         value: "False"
-      # ── Cloudflare R2 ──
-      # Uncomment and fill in to persist uploaded avatars/covers across deploys
-      # Get these from Cloudflare Dashboard > R2 > Create Bucket > Account ID & API Tokens
-      # - key: R2_BUCKET
-      #   value: anipulse-uploads
-      # - key: R2_ACCESS_KEY
-      #   value: your-access-key-id
-      # - key: R2_SECRET_KEY
-      #   value: your-secret-access-key
-      # - key: R2_ACCOUNT_ID
-      #   value: your-account-id
-      # - key: R2_PUBLIC_URL
-      #   value: pub-xxxxx.r2.dev
+      # ── Cloudinary (avatar/cover storage) ──
+      - key: CLOUDINARY_CLOUD_NAME
+        value: dlhv9d3jo
+      - key: CLOUDINARY_API_KEY
+        value: "329518554126186"
+      - key: CLOUDINARY_API_SECRET
+        value: EDQa0Id8gf5_Xm2Dm_8X7vxwHY8

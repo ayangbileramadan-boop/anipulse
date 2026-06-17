@@ -30,45 +30,20 @@ CACHES = {
     }
 }
 
-# ─── Cloudflare R2 (S3-compatible object storage) ───────────────────
-R2_BUCKET = config('R2_BUCKET', default='')
-R2_ACCESS_KEY = config('R2_ACCESS_KEY', default='')
-R2_SECRET_KEY = config('R2_SECRET_KEY', default='')
-R2_ACCOUNT_ID = config('R2_ACCOUNT_ID', default='')
-R2_PUBLIC_URL = config('R2_PUBLIC_URL', default='')
-
 # ─── AnimePahe ──────────────────────────────────────────────────────
 ANIMEPAHE_BASE_URL = config('ANIMEPAHE_BASE_URL', default='https://animepahe.pw')
 
-if R2_BUCKET and R2_ACCESS_KEY and R2_SECRET_KEY and R2_ACCOUNT_ID:
-    STORAGES = {
-        'default': {
-            'BACKEND': 'storages.backends.s3.S3Storage',
-            'OPTIONS': {
-                'bucket_name': R2_BUCKET,
-                'access_key': R2_ACCESS_KEY,
-                'secret_key': R2_SECRET_KEY,
-                'endpoint_url': f'https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com',
-                'region_name': 'auto',
-                'default_acl': 'public-read',
-                'file_overwrite': False,
-                'location': 'media',
-            },
-        },
-        'staticfiles': {
-            'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
-        },
-    }
+# ─── Cloudinary ─────────────────────────────────────────────────────
+CLOUDINARY_CLOUD_NAME = config('CLOUDINARY_CLOUD_NAME', default='dlhv9d3jo')
+CLOUDINARY_API_KEY = config('CLOUDINARY_API_KEY', default='329518554126186')
+CLOUDINARY_API_SECRET = config('CLOUDINARY_API_SECRET', default='EDQa0Id8gf5_Xm2Dm_8X7vxwHY8')
 
-    if R2_PUBLIC_URL:
-        AWS_S3_CUSTOM_DOMAIN = R2_PUBLIC_URL
-        AWS_S3_ENDPOINT_URL = f'https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com'
-else:
-    STORAGES = {
-        'default': {
-            'BACKEND': 'django.core.files.storage.FileSystemStorage',
-        },
-        'staticfiles': {
-            'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
-        },
-    }
+cloudinary.config(
+    cloud_name=CLOUDINARY_CLOUD_NAME,
+    api_key=CLOUDINARY_API_KEY,
+    api_secret=CLOUDINARY_API_SECRET,
+    secure=True,
+)
+
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+CLOUDINARY_URL = f'cloudinary://{CLOUDINARY_API_KEY}:{CLOUDINARY_API_SECRET}@{CLOUDINARY_CLOUD_NAME}'
