@@ -37,6 +37,9 @@ R2_SECRET_KEY = config('R2_SECRET_KEY', default='')
 R2_ACCOUNT_ID = config('R2_ACCOUNT_ID', default='')
 R2_PUBLIC_URL = config('R2_PUBLIC_URL', default='')
 
+# ─── AnimePahe ──────────────────────────────────────────────────────
+ANIMEPAHE_BASE_URL = config('ANIMEPAHE_BASE_URL', default='https://animepahe.ru')
+
 if R2_BUCKET and R2_ACCESS_KEY and R2_SECRET_KEY and R2_ACCOUNT_ID:
     STORAGES = {
         'default': {
