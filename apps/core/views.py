@@ -429,8 +429,24 @@ def anime_detail(request, anime_id):
 
     search_title = (title_english or title_romaji or '').strip()
     from urllib.parse import quote
-    animepahe_base = getattr(settings, 'ANIMEPAHE_BASE_URL', 'https://animepahe.ru')
-    animepahe_url = f'{animepahe_base}?q={quote(search_title)}' if search_title else ''
+    animepahe_base = getattr(settings, 'ANIMEPAHE_BASE_URL', 'https://animepahe.pw')
+    animepahe_url = ''
+    if search_title:
+        try:
+            import requests
+            api_url = f'{animepahe_base}/api?m=search&q={quote(search_title)}'
+            resp = requests.get(api_url, timeout=5)
+            if resp.status_code == 200:
+                data = resp.json()
+                entries = data.get('data', [])
+                if entries:
+                    session = entries[0].get('session')
+                    if session:
+                        animepahe_url = f'{animepahe_base}/anime/{session}'
+        except Exception:
+            pass
+        if not animepahe_url:
+            animepahe_url = f'{animepahe_base}?q={quote(search_title)}'
 
     # Fetch AniList reviews
     anilist_reviews = []
