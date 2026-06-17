@@ -34,6 +34,8 @@ CACHES = {
 ANIMEPAHE_BASE_URL = config('ANIMEPAHE_BASE_URL', default='https://animepahe.pw')
 
 # ─── Cloudinary ─────────────────────────────────────────────────────
+import cloudinary
+
 CLOUDINARY_CLOUD_NAME = config('CLOUDINARY_CLOUD_NAME', default='dlhv9d3jo')
 CLOUDINARY_API_KEY = config('CLOUDINARY_API_KEY', default='329518554126186')
 CLOUDINARY_API_SECRET = config('CLOUDINARY_API_SECRET', default='EDQa0Id8gf5_Xm2Dm_8X7vxwHY8')
