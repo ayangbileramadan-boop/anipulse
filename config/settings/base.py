@@ -147,7 +147,7 @@ ANILIST_CACHE_TTL = 60 * 60
 ANILIST_AIRING_CACHE_TTL = 60 * 15
 ANILIST_DETAIL_CACHE_TTL = 60 * 60 * 6
 
-ANIMEPAHE_BASE_URL = 'https://animepahe.ru'
+ANIMEPAHE_BASE_URL = 'https://animepahe.pw'
 
 # ─── Static / Media ──────────────────────────────────────────────────
 STATIC_URL = '/static/'
