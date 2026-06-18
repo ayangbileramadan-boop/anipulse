@@ -977,7 +977,9 @@ def profile_edit(request):
     from PIL import Image
     from apps.core.utils import validate_uploaded_image
 
+    logger = logging.getLogger(__name__)
     user = request.user
+    ok = True
     if request.method == 'POST':
         user.bio = request.POST.get('bio', '')
 
@@ -986,32 +988,50 @@ def profile_edit(request):
             err = validate_uploaded_image(f)
             if err:
                 messages.error(request, err)
+                ok = False
             else:
+                old_name = user.avatar.name if user.avatar and user.avatar.name else None
                 try:
                     img = Image.open(f)
                     img.verify()
                     f.seek(0)
-                    if user.avatar:
-                        user.avatar.delete(save=False)
                     user.avatar.save(f'avatar_{uuid4().hex}', f)
-                except Exception:
-                    messages.error(request, 'Invalid avatar image file.')
+                except Exception as exc:
+                    logger.exception('Avatar upload failed: %s | content_type=%s | size=%s',
+                                     exc, getattr(f, 'content_type', '?'), getattr(f, 'size', '?'))
+                    messages.error(request, 'Failed to upload avatar.')
+                    ok = False
+                else:
+                    if old_name:
+                        try:
+                            user.avatar.storage.delete(old_name)
+                        except Exception:
+                            logger.warning('Failed to delete old avatar: %s', old_name)
 
         if 'cover_file' in request.FILES:
             f = request.FILES['cover_file']
             err = validate_uploaded_image(f)
             if err:
                 messages.error(request, err)
+                ok = False
             else:
+                old_name = user.cover_image.name if user.cover_image and user.cover_image.name else None
                 try:
                     img = Image.open(f)
                     img.verify()
                     f.seek(0)
-                    if user.cover_image:
-                        user.cover_image.delete(save=False)
                     user.cover_image.save(f'cover_{uuid4().hex}', f)
-                except Exception:
-                    messages.error(request, 'Invalid cover image file.')
+                except Exception as exc:
+                    logger.exception('Cover upload failed: %s | content_type=%s | size=%s',
+                                     exc, getattr(f, 'content_type', '?'), getattr(f, 'size', '?'))
+                    messages.error(request, 'Failed to upload cover image.')
+                    ok = False
+                else:
+                    if old_name:
+                        try:
+                            user.cover_image.storage.delete(old_name)
+                        except Exception:
+                            logger.warning('Failed to delete old cover: %s', old_name)
 
         if 'remove_avatar' in request.POST:
             user.avatar.delete(save=False)
@@ -1022,7 +1042,8 @@ def profile_edit(request):
             user.cover_image = None
 
         user.save()
-        messages.success(request, 'Profile updated!')
+        if ok:
+            messages.success(request, 'Profile updated!')
         return redirect('profile', username=user.username)
     return render(request, 'profile_edit.html', {'user': user})
 
@@ -2778,12 +2799,15 @@ def notification_list(request):
 
 @login_required
 def user_settings(request):
+    logger = logging.getLogger(__name__)
     user = request.user
+    ok = True
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
         if username and username != user.username:
             if get_user_model().objects.filter(username=username).exclude(pk=user.pk).exists():
                 messages.error(request, 'Username already taken')
+                ok = False
             else:
                 user.username = username
         user.bio = request.POST.get('bio', '')
@@ -2795,32 +2819,50 @@ def user_settings(request):
             err = validate_uploaded_image(f)
             if err:
                 messages.error(request, err)
+                ok = False
             else:
+                old_name = user.avatar.name if user.avatar and user.avatar.name else None
                 try:
                     img = Image.open(f)
                     img.verify()
                     f.seek(0)
-                    if user.avatar:
-                        user.avatar.delete(save=False)
                     user.avatar.save(f'avatar_{uuid4().hex}', f)
-                except Exception:
-                    messages.error(request, 'Invalid avatar image file.')
+                except Exception as exc:
+                    logger.exception('Avatar upload failed: %s | content_type=%s | size=%s',
+                                     exc, getattr(f, 'content_type', '?'), getattr(f, 'size', '?'))
+                    messages.error(request, 'Failed to upload avatar.')
+                    ok = False
+                else:
+                    if old_name:
+                        try:
+                            user.avatar.storage.delete(old_name)
+                        except Exception:
+                            logger.warning('Failed to delete old avatar: %s', old_name)
 
         if 'cover_file' in request.FILES:
             f = request.FILES['cover_file']
             err = validate_uploaded_image(f)
             if err:
                 messages.error(request, err)
+                ok = False
             else:
+                old_name = user.cover_image.name if user.cover_image and user.cover_image.name else None
                 try:
                     img = Image.open(f)
                     img.verify()
                     f.seek(0)
-                    if user.cover_image:
-                        user.cover_image.delete(save=False)
                     user.cover_image.save(f'cover_{uuid4().hex}', f)
-                except Exception:
-                    messages.error(request, 'Invalid cover image file.')
+                except Exception as exc:
+                    logger.exception('Cover upload failed: %s | content_type=%s | size=%s',
+                                     exc, getattr(f, 'content_type', '?'), getattr(f, 'size', '?'))
+                    messages.error(request, 'Failed to upload cover image.')
+                    ok = False
+                else:
+                    if old_name:
+                        try:
+                            user.cover_image.storage.delete(old_name)
+                        except Exception:
+                            logger.warning('Failed to delete old cover: %s', old_name)
 
         user.timezone = request.POST.get('timezone', 'UTC')
         user.notify_new_episodes = request.POST.get('notify_new_episodes') == 'on'
@@ -2829,7 +2871,8 @@ def user_settings(request):
         if email:
             user.email = email
         user.save()
-        messages.success(request, 'Settings saved!')
+        if ok:
+            messages.success(request, 'Settings saved!')
         return redirect('user_settings')
     return render(request, 'user_settings.html', {'user': user})
 
