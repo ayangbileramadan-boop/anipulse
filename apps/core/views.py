@@ -975,6 +975,7 @@ def compare_anime(request):
 @transaction.atomic
 def profile_edit(request):
     from PIL import Image
+    from apps.core.utils import validate_uploaded_image
 
     user = request.user
     if request.method == 'POST':
@@ -982,27 +983,35 @@ def profile_edit(request):
 
         if 'avatar_file' in request.FILES:
             f = request.FILES['avatar_file']
-            try:
-                img = Image.open(f)
-                img.verify()
-                f.seek(0)
-                if user.avatar:
-                    user.avatar.delete(save=False)
-                user.avatar.save(f'avatar_{uuid4().hex}', f)
-            except Exception:
-                messages.error(request, 'Invalid avatar image file.')
+            err = validate_uploaded_image(f)
+            if err:
+                messages.error(request, err)
+            else:
+                try:
+                    img = Image.open(f)
+                    img.verify()
+                    f.seek(0)
+                    if user.avatar:
+                        user.avatar.delete(save=False)
+                    user.avatar.save(f'avatar_{uuid4().hex}', f)
+                except Exception:
+                    messages.error(request, 'Invalid avatar image file.')
 
         if 'cover_file' in request.FILES:
             f = request.FILES['cover_file']
-            try:
-                img = Image.open(f)
-                img.verify()
-                f.seek(0)
-                if user.cover_image:
-                    user.cover_image.delete(save=False)
-                user.cover_image.save(f'cover_{uuid4().hex}', f)
-            except Exception:
-                messages.error(request, 'Invalid cover image file.')
+            err = validate_uploaded_image(f)
+            if err:
+                messages.error(request, err)
+            else:
+                try:
+                    img = Image.open(f)
+                    img.verify()
+                    f.seek(0)
+                    if user.cover_image:
+                        user.cover_image.delete(save=False)
+                    user.cover_image.save(f'cover_{uuid4().hex}', f)
+                except Exception:
+                    messages.error(request, 'Invalid cover image file.')
 
         if 'remove_avatar' in request.POST:
             user.avatar.delete(save=False)
@@ -1172,7 +1181,7 @@ def battle_list(request):
         try:
             from django.core.management import call_command
             call_command('seed_battles')
-            active_qs = Battle.objects.filter(is_active=True).select_related('anime1', 'anime2', 'created_by')[:20]
+            active_qs = Battle.objects.filter(is_active=True).select_related('anime1', 'anime2', 'created_by')
         except Exception:
             pass
 
@@ -2780,29 +2789,38 @@ def user_settings(request):
         user.bio = request.POST.get('bio', '')
 
         from PIL import Image
+        from apps.core.utils import validate_uploaded_image
         if 'avatar_file' in request.FILES:
             f = request.FILES['avatar_file']
-            try:
-                img = Image.open(f)
-                img.verify()
-                f.seek(0)
-                if user.avatar:
-                    user.avatar.delete(save=False)
-                user.avatar.save(f'avatar_{uuid4().hex}', f)
-            except Exception:
-                messages.error(request, 'Invalid avatar image file.')
+            err = validate_uploaded_image(f)
+            if err:
+                messages.error(request, err)
+            else:
+                try:
+                    img = Image.open(f)
+                    img.verify()
+                    f.seek(0)
+                    if user.avatar:
+                        user.avatar.delete(save=False)
+                    user.avatar.save(f'avatar_{uuid4().hex}', f)
+                except Exception:
+                    messages.error(request, 'Invalid avatar image file.')
 
         if 'cover_file' in request.FILES:
             f = request.FILES['cover_file']
-            try:
-                img = Image.open(f)
-                img.verify()
-                f.seek(0)
-                if user.cover_image:
-                    user.cover_image.delete(save=False)
-                user.cover_image.save(f'cover_{uuid4().hex}', f)
-            except Exception:
-                messages.error(request, 'Invalid cover image file.')
+            err = validate_uploaded_image(f)
+            if err:
+                messages.error(request, err)
+            else:
+                try:
+                    img = Image.open(f)
+                    img.verify()
+                    f.seek(0)
+                    if user.cover_image:
+                        user.cover_image.delete(save=False)
+                    user.cover_image.save(f'cover_{uuid4().hex}', f)
+                except Exception:
+                    messages.error(request, 'Invalid cover image file.')
 
         user.timezone = request.POST.get('timezone', 'UTC')
         user.notify_new_episodes = request.POST.get('notify_new_episodes') == 'on'

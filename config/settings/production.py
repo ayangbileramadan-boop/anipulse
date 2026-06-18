@@ -47,5 +47,4 @@ cloudinary.config(
     secure=True,
 )
 
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-CLOUDINARY_URL = f'cloudinary://{CLOUDINARY_API_KEY}:{CLOUDINARY_API_SECRET}@{CLOUDINARY_CLOUD_NAME}'
+DEFAULT_FILE_STORAGE = 'apps.core.storage.CloudinaryImageStorage'

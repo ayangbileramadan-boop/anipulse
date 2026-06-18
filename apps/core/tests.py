@@ -420,6 +420,66 @@ class TestProfileEditUpload:
         # Avatar should remain unchanged (empty default)
         assert not user.avatar
 
+    def test_profile_edit_avatar_wrong_type_rejected(self, client, user):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        client.force_login(user)
+        bad = SimpleUploadedFile('bad.txt', b'text', content_type='text/plain')
+        resp = client.post('/profile/edit/', {'avatar_file': bad}, follow=True)
+        assert resp.status_code == 200
+        user.refresh_from_db()
+        assert not user.avatar
+
+    def test_profile_edit_avatar_too_large_rejected(self, client, user):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from apps.core.utils import MAX_IMAGE_SIZE
+        client.force_login(user)
+        big = SimpleUploadedFile('big.jpg', b'x' * (MAX_IMAGE_SIZE + 1), content_type='image/jpeg')
+        resp = client.post('/profile/edit/', {'avatar_file': big}, follow=True)
+        assert resp.status_code == 200
+        user.refresh_from_db()
+        assert not user.avatar
+
+
+class TestValidateUploadedImage:
+    def test_valid_image(self):
+        from apps.core.utils import validate_uploaded_image
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        f = SimpleUploadedFile('test.jpg', b'fake', content_type='image/jpeg')
+        assert validate_uploaded_image(f) is None
+
+    def test_invalid_type(self):
+        from apps.core.utils import validate_uploaded_image
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        f = SimpleUploadedFile('test.txt', b'x', content_type='text/plain')
+        assert validate_uploaded_image(f) is not None
+
+    def test_too_large(self):
+        from apps.core.utils import validate_uploaded_image, MAX_IMAGE_SIZE
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        f = SimpleUploadedFile('test.jpg', b'x' * (MAX_IMAGE_SIZE + 1), content_type='image/jpeg')
+        assert validate_uploaded_image(f) is not None
+
+
+class TestCloudinaryStorageBackwardCompat:
+    """Old DB paths (local / media-prefixed) must gracefully return empty."""
+    def test_old_local_path_returns_empty_url(self):
+        from apps.core.storage import CloudinaryImageStorage
+        s = CloudinaryImageStorage()
+        assert s.url('avatars/old_avatar.jpg') == ''
+        assert s.url('covers/old_cover.png') == ''
+        assert s.url('media/avatars/old_avatar') == ''
+        assert s.url('') == ''
+
+    def test_new_public_id_produces_url(self):
+        from apps.core.storage import CloudinaryImageStorage
+        import cloudinary
+        cloudinary.config(cloud_name='test', api_key='test', api_secret='test', secure=True)
+        s = CloudinaryImageStorage()
+        # hex-only public_id should produce a URL
+        url = s.url('a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6')
+        assert url.startswith('https://')
+        assert 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6' in url
+
 
 class TestWatchlistSignalXP:
     """WatchlistEntry post_save must award XP on WATCHING→COMPLETED."""

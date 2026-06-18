@@ -38,6 +38,21 @@ def unix_to_datetime(ts: int | None) -> datetime.datetime | None:
     return datetime.datetime.fromtimestamp(ts, tz=datetime.timezone.utc)
 
 
+ALLOWED_IMAGE_TYPES = {
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+}
+MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5 MB
+
+
+def validate_uploaded_image(uploaded_file) -> str | None:
+    """Validate image type and size. Returns an error message or None."""
+    if uploaded_file.size > MAX_IMAGE_SIZE:
+        return 'Image too large. Maximum size is 5 MB.'
+    if uploaded_file.content_type not in ALLOWED_IMAGE_TYPES:
+        return f'Invalid image type "{uploaded_file.content_type}". Allowed: JPEG, PNG, GIF, WebP.'
+    return None
+
+
 def get_current_season() -> tuple[str, int]:
     """Return the current anime season name and year."""
     now = timezone.now()
