@@ -20,7 +20,7 @@ from apps.anime.services.sync import sync_anime_from_anilist
 from apps.watchlist.models import WatchlistEntry
 from apps.watchlist.models import ACHIEVEMENT_DEFS
 from apps.core.models import UserFollow, Streak
-from apps.anime.models import Anime, Battle, BattleVote, TierList, TierListItem, TierListLike, SocialPost, SocialLike, UserActivity, Comment, CommentLike, FavoriteAnime
+from apps.anime.models import Anime, Battle, BattleVote, BattleCategoryVote, BattleArgument, BattleArgumentVote, TierList, TierListItem, TierListLike, SocialPost, SocialLike, UserActivity, Comment, CommentLike, FavoriteAnime
 from apps.recommendations.engine import get_recommendations_for_user
 from apps.core.services.personalization import PersonalizationEngine
 from apps.core.services.gamification import GamificationEngine
@@ -1264,6 +1264,7 @@ def battle_create(request):
 @login_required
 @transaction.atomic
 def battle_vote(request, battle_id):
+    from django.utils import timezone
     battle = get_object_or_404(
         Battle.objects.select_for_update().filter(
             is_active=True,
@@ -1305,7 +1306,7 @@ def battle_vote(request, battle_id):
                     description=f"Voted in {battle}",
                 )
             if created and battle.created_by and battle.created_by != request.user:
-                _create_notification(battle.created_by, f'{request.user.username} voted in your battle "{battle.title}"' if battle.title else f'{request.user.username} voted in a battle', url=f'/battles/{battle.id}/', ntype='BATTLE_VOTE')
+                _create_notification(battle.created_by, f'{request.user.username} voted in "{battle.anime1.display_title} vs {battle.anime2.display_title}"', url=f'/battles/{battle.id}/', ntype='BATTLE_VOTE')
             battle.refresh_from_db()
     return redirect('battle_list')
 
@@ -1351,7 +1352,7 @@ def battle_vote_json(request, battle_id):
                     description=f"Voted in {battle}",
                 )
             if created and battle.created_by and battle.created_by != request.user:
-                _create_notification(battle.created_by, f'{request.user.username} voted in your battle "{battle.title}"' if battle.title else f'{request.user.username} voted in a battle', url=f'/battles/{battle.id}/', ntype='BATTLE_VOTE')
+                _create_notification(battle.created_by, f'{request.user.username} voted in "{battle.anime1.display_title} vs {battle.anime2.display_title}"', url=f'/battles/{battle.id}/', ntype='BATTLE_VOTE')
             battle.refresh_from_db()
 
     return JsonResponse({
@@ -1378,16 +1379,143 @@ def battle_data_json(request, battle_id):
 
 
 def battle_detail(request, battle_id):
+    from django.utils import timezone
+    from django.db.models import Count, Q
+    from django.contrib.contenttypes.models import ContentType
+
     battle = get_object_or_404(Battle.objects.select_related('anime1', 'anime2', 'created_by'), id=battle_id)
     recent_votes = BattleVote.objects.filter(battle=battle).select_related('user').order_by('-created_at')[:20]
     user_vote = None
+    user_category_votes = {}
     if request.user.is_authenticated:
         uv = BattleVote.objects.filter(battle=battle, user=request.user).first()
         user_vote = uv.choice if uv else None
+        for cv in BattleCategoryVote.objects.filter(battle=battle, user=request.user):
+            user_category_votes[cv.category] = cv.choice
+
+    # Category vote aggregation
+    category_data = {}
+    for cat, label in BattleCategoryVote.CATEGORIES:
+        cat_votes = BattleCategoryVote.objects.filter(battle=battle, category=cat)
+        v1 = cat_votes.filter(choice=1).count()
+        v2 = cat_votes.filter(choice=2).count()
+        total = v1 + v2
+        category_data[cat] = {
+            'label': label,
+            'votes1': v1,
+            'votes2': v2,
+            'total': total,
+            'pct1': round(v1 / total * 100) if total else 50,
+            'pct2': round(v2 / total * 100) if total else 50,
+        }
+
+    # Arguments
+    arguments1 = BattleArgument.objects.filter(battle=battle, side=1).select_related('user')[:5]
+    arguments2 = BattleArgument.objects.filter(battle=battle, side=2).select_related('user')[:5]
+    user_arg_votes = {}
+    if request.user.is_authenticated:
+        for av in BattleArgumentVote.objects.filter(argument__battle=battle, user=request.user):
+            user_arg_votes[av.argument_id] = av.value
+
+    # Battle stats
+    now = timezone.now()
+    age = now - battle.created_at if battle.created_at else None
+    daily_votes = BattleVote.objects.filter(battle=battle, created_at__gte=now - timezone.timedelta(days=1)).count()
+
     return render(request, 'battle_detail.html', {
         'battle': battle,
         'recent_votes': recent_votes,
         'user_vote': user_vote,
+        'user_category_votes': user_category_votes,
+        'category_data': category_data,
+        'arguments1': arguments1,
+        'arguments2': arguments2,
+        'user_arg_votes': user_arg_votes,
+        'daily_votes': daily_votes,
+        'battle_age': age,
+    })
+
+
+@login_required
+def battle_category_vote_json(request, battle_id):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    battle = get_object_or_404(Battle, id=battle_id)
+    category = request.POST.get('category', '')
+    choice = request.POST.get('choice')
+    valid_categories = [c[0] for c in BattleCategoryVote.CATEGORIES]
+    if category not in valid_categories:
+        return JsonResponse({'error': 'Invalid category'}, status=400)
+    if choice not in ('1', '2'):
+        return JsonResponse({'error': 'Invalid choice'}, status=400)
+    choice_int = int(choice)
+    obj, created = BattleCategoryVote.objects.update_or_create(
+        battle=battle, user=request.user, category=category,
+        defaults={'choice': choice_int},
+    )
+    cat_votes = BattleCategoryVote.objects.filter(battle=battle, category=category)
+    v1 = cat_votes.filter(choice=1).count()
+    v2 = cat_votes.filter(choice=2).count()
+    total = v1 + v2
+    return JsonResponse({
+        'ok': True,
+        'category': category,
+        'choice': choice_int,
+        'votes1': v1,
+        'votes2': v2,
+        'total': total,
+        'pct1': round(v1 / total * 100) if total else 50,
+        'pct2': round(v2 / total * 100) if total else 50,
+    })
+
+
+@login_required
+def battle_argument_create(request, battle_id):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    battle = get_object_or_404(Battle, id=battle_id)
+    side = request.POST.get('side')
+    body = request.POST.get('body', '').strip()
+    if side not in ('1', '2'):
+        return JsonResponse({'error': 'Invalid side'}, status=400)
+    if not body or len(body) > 500:
+        return JsonResponse({'error': 'Argument must be 1-500 characters'}, status=400)
+    arg = BattleArgument.objects.create(
+        battle=battle, user=request.user, side=int(side), body=body,
+    )
+    return JsonResponse({
+        'ok': True,
+        'id': arg.id,
+        'side': arg.side,
+        'body': arg.body,
+        'votes': arg.votes,
+        'user': {'username': request.user.username, 'avatar': request.user.avatar.url if request.user.avatar else ''},
+        'created_at': arg.created_at.isoformat(),
+    })
+
+
+@login_required
+def battle_argument_vote_json(request, argument_id):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    arg = get_object_or_404(BattleArgument, id=argument_id)
+    if arg.user == request.user:
+        return JsonResponse({'error': 'Cannot vote on your own argument'}, status=400)
+    value = request.POST.get('value', '1')
+    if value not in ('1', '-1'):
+        return JsonResponse({'error': 'Invalid vote value'}, status=400)
+    value_int = int(value)
+    obj, created = BattleArgumentVote.objects.update_or_create(
+        argument=arg, user=request.user,
+        defaults={'value': value_int},
+    )
+    agg = BattleArgumentVote.objects.filter(argument=arg).aggregate(total=models.Sum('value'))
+    arg.votes = agg['total'] or 0
+    arg.save(update_fields=['votes'])
+    return JsonResponse({
+        'ok': True,
+        'votes': arg.votes,
+        'value': value_int,
     })
 
 
@@ -1637,36 +1765,46 @@ def tier_list_prefill_api(request):
 def social_feed(request):
     from django.utils import timezone as tz
     from apps.feed.services import FeedBuilder
-    from apps.anime.models import SocialPost, Battle
+    from apps.anime.models import SocialPost, Battle, TierList
     from django.db.models import Count
 
     builder = FeedBuilder(request.user)
     feed_data = builder.build(page=1)
 
     now = tz.now()
-    # Trending section data
+    two_days_ago = now - timedelta(days=2)
+
+    # Trending Discussions — most commented
     trending_discussions = SocialPost.objects.filter(
         reply_to__isnull=True,
         post_type__in=['discussion', 'trending', 'episode_discussion'],
-        created_at__gte=now - timedelta(days=2),
+        created_at__gte=two_days_ago,
     ).annotate(
-        comment_count=Count('comments'),
-        like_count=Count('liked_by'),
-    ).order_by('-like_count', '-comment_count')[:5]
-
-    most_active = SocialPost.objects.filter(
-        reply_to__isnull=True,
-        created_at__gte=now - timedelta(days=2),
-    ).annotate(
-        comment_count=Count('comments'),
-        like_count=Count('liked_by'),
+        comment_count=Count('comments', distinct=True),
     ).order_by('-comment_count')[:5]
 
-    top_battle = sorted(
-        [b for b in Battle.objects.filter(created_at__gte=now - timedelta(days=7))],
-        key=lambda b: b.votes1 + b.votes2, reverse=True
-    )[:1]
-    top_battle = top_battle[0] if top_battle else Battle.objects.filter(created_at__gte=now - timedelta(days=7)).order_by('-created_at').first()
+    # Featured Battle — most votes in last 7 days
+    top_battle = None
+    battles_7d = list(Battle.objects.filter(
+        created_at__gte=now - timedelta(days=7),
+        is_active=True,
+    ))
+    if battles_7d:
+        top_battle = max(battles_7d, key=lambda b: b.total_votes)
+    else:
+        top_battle = Battle.objects.filter(is_active=True).order_by('-created_at').first()
+
+    # Popular Tier Lists
+    top_tier_lists = TierList.objects.filter(is_public=True).select_related('user').annotate(
+        like_count=Count('liked_by'),
+    ).order_by('-like_count')[:5]
+
+    # Trending Anime
+    trending_anime = Anime.objects.filter(
+        is_adult=False, trending__isnull=False,
+    ).exclude(
+        cover_image_medium='',
+    ).order_by('-trending')[:6]
 
     return render(request, 'social_feed.html', {
         'feed_items': feed_data['results'],
@@ -1676,8 +1814,9 @@ def social_feed(request):
             'total': feed_data['total'],
         },
         'trending_discussions': trending_discussions,
-        'most_active': most_active,
         'top_battle': top_battle,
+        'top_tier_lists': top_tier_lists,
+        'trending_anime': trending_anime,
     })
 
 

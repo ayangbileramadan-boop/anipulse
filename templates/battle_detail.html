@@ -1,253 +1,400 @@
 {% extends 'base.html' %}{% load core_extras %}
 {% block title %}{{ battle.anime1.display_title }} vs {{ battle.anime2.display_title }} — AniPulse{% endblock %}
 {% block extra_css %}<style>
-.battle-header{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:30px;margin-bottom:24px}
-.battle-img{width:140px;height:200px;object-fit:cover;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,0.3);background:var(--surface-2)}
-.vs-lg{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--primary),#A259FF);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;border:4px solid var(--surface);flex-shrink:0;z-index:2;box-shadow:0 0 20px rgba(232,54,93,0.3)}
-.stat-pill{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:6px;font-size:0.7rem;background:var(--surface-2);color:var(--text-secondary);margin:1px}
-.stat-pill.score{background:rgba(46,204,113,.12);color:#2ecc71}
-.stat-pill.pop{background:rgba(52,152,219,.12);color:#3498db}
-.vs-lg{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--primary),#A259FF);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;border:4px solid var(--surface);flex-shrink:0;z-index:2;box-shadow:0 0 20px rgba(232,54,93,0.3)}
-.stat-card{background:var(--surface-2);border-radius:14px;padding:18px;text-align:center;border:1px solid var(--border)}
-.stat-value{font-size:1.6rem;font-weight:800;color:var(--text)}
-.stat-label{font-size:0.75rem;color:var(--text-secondary);margin-top:4px}
-.vote-row{display:flex;gap:12px;margin-top:16px}
-.vote-action{flex:1;padding:14px;border-radius:14px;border:2px solid var(--border);background:var(--surface-2);color:var(--text);font-weight:600;transition:all 0.2s;text-align:center;cursor:pointer}
-.vote-action:hover{border-color:var(--primary);background:rgba(232,54,93,0.08);transform:translateY(-2px)}
-.vote-action.active{border-color:var(--primary);background:rgba(232,54,93,0.12);color:var(--primary);border-width:2px}
-.vote-action:disabled{opacity:0.5;cursor:not-allowed;transform:none}
-.vote-action .mini-cover{width:40px;height:56px;object-fit:cover;border-radius:6px;display:block;margin:0 auto 6px}
-.recent-voter{display:flex;align-items:center;gap:8px;padding:8px 0;font-size:0.85rem;border-bottom:1px solid var(--border)}
-.recent-voter:last-child{border-bottom:none}
-.recent-voter .av{width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0}
-.comp-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
-.comp-row:last-child{border-bottom:none}
-.comp-label{width:80px;font-size:0.78rem;color:var(--text-secondary);flex-shrink:0}
-.comp-bar-bg{flex:1;height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden}
-.comp-bar-fill{height:100%;border-radius:4px}
-.comp-value{width:36px;text-align:center;font-weight:700;font-size:0.8rem}
-.comp-value.left{color:var(--primary)}
-.comp-value.right{color:#A259FF}
-.genre-tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:0.7rem;background:var(--surface-2);color:var(--text-secondary);margin:1px}
-.detail-label{color:var(--text-secondary);font-size:0.8rem}
-.detail-value{color:var(--text);font-weight:600;font-size:0.9rem}
+/* ─── Hero Section ─── */
+.battle-hero{background:var(--surface);border:1px solid var(--border);border-radius:20px;overflow:hidden;margin-bottom:20px}
+.bh-covers{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;padding:20px}
+.bh-side{text-align:center;min-width:0}
+.bh-cover{width:100%;max-width:160px;aspect-ratio:7/10;object-fit:cover;border-radius:12px;background:var(--surface-2);display:block;margin:0 auto;box-shadow:0 4px 20px rgba(0,0,0,.3);transition:transform .2s}
+.bh-cover:hover{transform:scale(1.03)}
+.bh-title{font-size:1rem;font-weight:700;color:var(--text);margin-top:10px;line-height:1.3}
+.bh-score{font-size:0.78rem;color:var(--text-muted);margin-top:3px}
+.bh-vs{font-size:1.3rem;font-weight:800;color:var(--primary);flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(232,54,93,.1);border:2px solid var(--primary)}
+.bh-vote-row{display:flex;gap:10px;padding:0 20px 20px}
+.bh-vote-btn{flex:1;padding:14px;border-radius:14px;border:2px solid var(--border);background:var(--surface-2);color:var(--text);font-weight:600;font-size:0.85rem;text-align:center;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:4px}
+.bh-vote-btn:hover{border-color:var(--primary);background:rgba(232,54,93,.08);transform:translateY(-2px)}
+.bh-vote-btn.active{border-color:var(--primary);background:rgba(232,54,93,.12);color:var(--primary)}
+.bh-vote-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.bh-vote-btn .mini-cover{width:36px;height:50px;object-fit:cover;border-radius:6px;background:var(--surface-2)}
+.bh-progress{padding:0 20px 20px}
+.bh-bar{height:16px;border-radius:10px;background:var(--surface-2);overflow:hidden;position:relative}
+.bh-bar-fill{height:100%;border-radius:10px;background:linear-gradient(90deg,var(--primary),#A259FF);transition:width .4s ease;position:relative}
+.bh-bar-label{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:0.65rem;font-weight:700;color:#fff}
+.bh-bar-stats{display:flex;justify-content:space-between;margin-top:6px;font-size:0.7rem;padding:0 4px}
+.bh-bar-stats .left{color:var(--primary);font-weight:600}
+.bh-bar-stats .right{color:#A259FF;font-weight:600}
+.bh-bar-stats .center{color:var(--text-muted)}
+
+/* ─── Cards ─── */
+.card-block{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:16px}
+.card-block-title{font-size:0.85rem;font-weight:700;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.card-block-title .icon{font-size:1rem}
+.card-block-title .count{font-size:0.7rem;color:var(--text-muted);font-weight:400}
+.anime-side{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.anime-side:last-child{border-bottom:none;padding-bottom:0}
+.anime-side:first-child{padding-top:0}
+.as-cover{width:50px;height:70px;object-fit:cover;border-radius:8px;flex-shrink:0;background:var(--surface-2)}
+.as-content{flex:1;min-width:0}
+.as-title{font-size:0.85rem;font-weight:600;color:var(--text)}
+.as-synopsis{font-size:0.75rem;color:var(--text-secondary);line-height:1.5;margin-top:4px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.as-details{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.as-detail{font-size:0.62rem;color:var(--text-muted);background:var(--surface-2);padding:2px 8px;border-radius:4px}
+.as-genres{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.as-genre{font-size:0.6rem;padding:2px 7px;border-radius:4px;font-weight:500}
+.as-genre.a1{background:rgba(232,54,93,.12);color:var(--primary)}
+.as-genre.a2{background:rgba(162,89,255,.12);color:#A259FF}
+
+/* ─── Category Voting ─── */
+.cat-vote-list{display:flex;flex-direction:column;gap:10px}
+.cat-row{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;padding:8px 10px;border-radius:10px;background:var(--surface-2);border:1px solid var(--border);cursor:pointer;transition:all .15s}
+.cat-row:hover{background:var(--surface-3)}
+.cat-row.voted{border-color:var(--primary)}
+.cat-label{font-size:0.7rem;font-weight:500;color:var(--text);text-align:center;grid-column:1/-1;margin-bottom:2px}
+.cat-choice{font-size:0.62rem;font-weight:600;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:all .15s;text-align:center}
+.cat-choice:hover{opacity:.8}
+.cat-choice.selected-a1{border-color:var(--primary);background:rgba(232,54,93,.12);color:var(--primary)}
+.cat-choice.selected-a2{border-color:#A259FF;background:rgba(162,89,255,.12);color:#A259FF}
+.cat-bar-wrap{grid-column:1/-1;display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center}
+.cat-bar-bg{height:6px;border-radius:3px;background:var(--border);overflow:hidden}
+.cat-bar-fill{height:100%;border-radius:3px;transition:width .3s}
+.cat-bar-fill.a1{background:var(--primary)}
+.cat-bar-fill.a2{background:#A259FF}
+.cat-pct{font-size:0.55rem;font-weight:600;color:var(--text-muted);text-align:center;min-width:28px}
+
+/* ─── Arguments ─── */
+.argument-section{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.arg-column{}
+.arg-column-title{font-size:0.72rem;font-weight:600;padding:6px 10px;border-radius:6px;margin-bottom:8px;text-align:center}
+.arg-column-title.a1{background:rgba(232,54,93,.1);color:var(--primary)}
+.arg-column-title.a2{background:rgba(162,89,255,.1);color:#A259FF}
+.arg-card{padding:10px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;margin-bottom:6px}
+.arg-body{font-size:0.75rem;color:var(--text);line-height:1.5}
+.arg-meta{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:0.62rem;color:var(--text-muted)}
+.arg-vote-btn{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:0.6rem;color:var(--text-muted);transition:all .15s}
+.arg-vote-btn:hover{background:var(--surface-3)}
+.arg-vote-btn.upvoted{border-color:#2ecc71;color:#2ecc71}
+.arg-vote-btn.downvoted{border-color:#e74c3c;color:#e74c3c}
+.arg-form-wrap{margin-top:8px}
+.arg-textarea{width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:0.75rem;resize:none;min-height:60px;outline:none}
+.arg-textarea:focus{border-color:var(--primary)}
+
+/* ─── Stats Grid ─── */
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat-item{background:var(--surface-2);border-radius:10px;padding:12px 8px;text-align:center;border:1px solid var(--border)}
+.stat-item .num{font-size:1.2rem;font-weight:800;color:var(--text)}
+.stat-item .label{font-size:0.6rem;color:var(--text-muted);margin-top:2px;text-transform:uppercase;letter-spacing:.3px}
+
+/* ─── Vote History ─── */
+.voter-list{display:flex;flex-direction:column;gap:4px}
+.voter-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;background:var(--surface-2);font-size:0.75rem}
+.voter-item .av{width:24px;height:24px;border-radius:50%;object-fit:cover;flex-shrink:0}
+.voter-item .voter-name{font-weight:500;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.voter-item .voter-choice{font-size:0.6rem;color:var(--text-muted);flex-shrink:0}
+.voter-item .voter-time{font-size:0.55rem;color:var(--text-muted);flex-shrink:0}
+
+/* ─── Share Buttons ─── */
+.share-actions{display:flex;gap:8px;flex-wrap:wrap}
+.share-btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:8px;border:none;font-size:0.72rem;font-weight:500;cursor:pointer;transition:all .15s;text-decoration:none}
+.share-btn.twitter{background:#1da1f2;color:#fff}
+.share-btn.twitter:hover{opacity:.85}
+.share-btn.facebook{background:#1877f2;color:#fff}
+.share-btn.facebook:hover{opacity:.85}
+.share-btn.copy{background:var(--surface-2);color:var(--text);border:1px solid var(--border)}
+.share-btn.copy:hover{background:var(--surface-3)}
+.share-btn.internal{background:var(--primary);color:#fff}
+.share-btn.internal:hover{opacity:.85}
+
+/* ─── Mobile ─── */
 @media(max-width:576px){
-  .battle-header{padding:16px}
-  .battle-img{width:90px;height:130px}
-  .vs-lg{width:44px;height:44px;font-size:0.85rem}
-  .stat-card{padding:12px}
-  .stat-value{font-size:1.2rem}
+  .bh-covers{padding:12px;gap:6px}
+  .bh-cover{max-width:120px}
+  .bh-title{font-size:0.85rem}
+  .bh-vs{width:36px;height:36px;font-size:1rem}
+  .bh-vote-row{padding:0 12px 12px;gap:8px}
+  .bh-vote-btn{padding:10px;font-size:0.78rem}
+  .bh-vote-btn .mini-cover{width:30px;height:42px}
+  .bh-progress{padding:0 12px 12px}
+  .card-block{padding:14px;border-radius:12px}
+  .card-block-title{font-size:0.8rem}
+  .anime-side{flex-direction:column;gap:8px}
+  .as-cover{width:100%;height:auto;aspect-ratio:7/10;max-height:160px;object-fit:cover;margin:0 auto}
+  .argument-section{grid-template-columns:1fr;gap:16px}
+  .stats-grid{grid-template-columns:repeat(3,1fr);gap:6px}
+  .stat-item{padding:10px 6px}
+  .stat-item .num{font-size:1rem}
+  .cat-row{padding:6px 8px}
+}
+@media(max-width:380px){
+  .bh-covers{padding:8px;gap:4px}
+  .bh-cover{max-width:90px}
+  .bh-title{font-size:0.75rem}
+  .bh-vs{width:30px;height:30px;font-size:0.85rem;border-width:1.5px}
+  .bh-vote-btn{font-size:0.72rem;padding:8px}
+  .bh-vote-btn .mini-cover{width:26px;height:36px}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
 }
 </style>{% endblock %}
 {% block content %}
-<div class="container py-4">
-  <a href="{% url 'battle_list' %}" class="text-decoration-none mb-3 d-inline-flex align-items-center gap-1" style="color:var(--text-secondary);font-size:0.9rem">← Back to Battles</a>
+<div class="container py-4" style="max-width:760px">
+  <a href="{% url 'battle_list' %}" class="text-decoration-none mb-3 d-inline-flex align-items-center gap-1" style="color:var(--text-secondary);font-size:0.82rem">← Back to Battles</a>
 
-  <div class="battle-header">
-    <div class="d-flex align-items-center justify-content-center gap-3 gap-md-5">
-      <div class="text-center" style="min-width:0;flex:1">
-        <img src="{{ battle.anime1.cover_image_large|default:battle.anime1.cover_image_medium }}" class="battle-img" alt="" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 140 200%22><rect fill=%22%23222%22 width=%22140%22 height=%22200%22/><text x=%2270%22 y=%22100%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2224%22>📺</text></svg>'">
-        <h5 class="fw-bold mt-3 mb-0">{{ battle.anime1.display_title }}</h5>
-        <div class="d-flex gap-1 justify-content-center flex-wrap mt-1">
-          <span class="stat-pill score">⭐ {{ battle.anime1.average_score|default:"?" }}</span>
-          <span class="stat-pill">📺 {{ battle.anime1.episodes|default:"?" }} eps</span>
-          <span class="stat-pill pop">👥 {{ battle.anime1.popularity|default:"?" }}</span>
-          {% if battle.anime1.studios.all %}<span class="stat-pill">🎬 {{ battle.anime1.studios.all.0.name|truncatechars:12 }}</span>{% endif %}
-          <span class="stat-pill">{{ battle.anime1.format|default:"?" }}</span>
-          <span class="stat-pill">{{ battle.anime1.season_year|default:"?" }}</span>
-        </div>
-        <div class="d-flex gap-1 justify-content-center flex-wrap mt-1">
-          {% for g in battle.anime1.genres.all|slice:":4" %}<span class="stat-pill" style="background:rgba(232,54,93,.1);color:var(--primary)">{{ g.name }}</span>{% endfor %}
-        </div>
+  {# ── Hero Section ── #}
+  <div class="battle-hero">
+    <div class="bh-covers">
+      <div class="bh-side">
+        <img src="{{ battle.anime1.cover_image_large|default:battle.anime1.cover_image_medium }}" class="bh-cover" alt="" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 140 200%22><rect fill=%22%23222%22 width=%22140%22 height=%22200%22/><text x=%2270%22 y=%22100%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2224%22>?</text></svg>'">
+        <div class="bh-title">{{ battle.anime1.display_title }}</div>
+        <div class="bh-score">⭐ {{ battle.anime1.average_score|default:"?" }} · 👥 {{ battle.anime1.popularity|default:"?" }}</div>
       </div>
-      <div class="vs-lg">VS</div>
-      <div class="text-center" style="min-width:0;flex:1">
-        <img src="{{ battle.anime2.cover_image_large|default:battle.anime2.cover_image_medium }}" class="battle-img" alt="" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 140 200%22><rect fill=%22%23222%22 width=%22140%22 height=%22200%22/><text x=%2270%22 y=%22100%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2224%22>📺</text></svg>'">
-        <h5 class="fw-bold mt-3 mb-0">{{ battle.anime2.display_title }}</h5>
-        <div class="d-flex gap-1 justify-content-center flex-wrap mt-1">
-          <span class="stat-pill score">⭐ {{ battle.anime2.average_score|default:"?" }}</span>
-          <span class="stat-pill">📺 {{ battle.anime2.episodes|default:"?" }} eps</span>
-          <span class="stat-pill pop">👥 {{ battle.anime2.popularity|default:"?" }}</span>
-          {% if battle.anime2.studios.all %}<span class="stat-pill">🎬 {{ battle.anime2.studios.all.0.name|truncatechars:12 }}</span>{% endif %}
-          <span class="stat-pill">{{ battle.anime2.format|default:"?" }}</span>
-          <span class="stat-pill">{{ battle.anime2.season_year|default:"?" }}</span>
-        </div>
-        <div class="d-flex gap-1 justify-content-center flex-wrap mt-1">
-          {% for g in battle.anime2.genres.all|slice:":4" %}<span class="stat-pill" style="background:rgba(162,89,255,.1);color:#A259FF">{{ g.name }}</span>{% endfor %}
-        </div>
+      <div class="bh-vs">VS</div>
+      <div class="bh-side">
+        <img src="{{ battle.anime2.cover_image_large|default:battle.anime2.cover_image_medium }}" class="bh-cover" alt="" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 140 200%22><rect fill=%22%23222%22 width=%22140%22 height=%22200%22/><text x=%2270%22 y=%22100%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2224%22>?</text></svg>'">
+        <div class="bh-title">{{ battle.anime2.display_title }}</div>
+        <div class="bh-score">⭐ {{ battle.anime2.average_score|default:"?" }} · 👥 {{ battle.anime2.popularity|default:"?" }}</div>
       </div>
     </div>
 
-    <div class="bar-bg mt-4" style="height:14px;border-radius:8px">
-      <div class="bar-fill" id="bar-pct" style="width:{{ battle.pct1 }}%;background:linear-gradient(90deg,var(--primary),#A259FF);border-radius:8px;position:relative">
-        <span style="position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:0.65rem;font-weight:700;color:#fff">{{ battle.pct1 }}%</span>
+    {# Progress Bar #}
+    <div class="bh-progress">
+      <div class="bh-bar">
+        <div class="bh-bar-fill" id="bh-bar-fill" style="width:{{ battle.pct1 }}%">
+          <span class="bh-bar-label">{{ battle.pct1 }}%</span>
+        </div>
+      </div>
+      <div class="bh-bar-stats">
+        <span class="left">{{ battle.votes1 }} votes</span>
+        <span class="center">{{ battle.total_votes }} total</span>
+        <span class="right">{{ battle.votes2 }} votes</span>
       </div>
     </div>
-    <div class="d-flex justify-content-between mt-1 small px-1">
-      <span style="color:var(--primary);font-weight:600">{{ battle.votes1 }} votes</span>
-      <span class="text-muted">{{ battle.total_votes }} total</span>
-      <span style="color:#A259FF;font-weight:600">{{ battle.votes2 }} votes</span>
-    </div>
 
+    {# Vote Buttons #}
     {% if user.is_authenticated %}
-    <div class="vote-row">
-      <button class="vote-action {% if user_vote == 1 %}active{% endif %}" data-choice="1" data-battle="{{ battle.id }}" {% if user_vote %}disabled{% endif %}>
-        <img src="{{ battle.anime1.cover_image_medium|default:battle.anime1.cover_image_large }}" class="mini-cover" alt="" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 56%22><rect fill=%22%23333%22 width=%2240%22 height=%2256%22/><text x=%2220%22 y=%2230%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2214%22>📺</text></svg>'">
-        <span>{% if user_vote == 1 %}✓ {% endif %}Vote</span>
+    <div class="bh-vote-row">
+      <button class="bh-vote-btn {% if user_vote == 1 %}active{% endif %}" data-choice="1" data-battle="{{ battle.id }}" {% if user_vote %}disabled{% endif %}>
+        <img src="{{ battle.anime1.cover_image_medium }}" class="mini-cover" alt="" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 36 50%22><rect fill=%22%23333%22 width=%2236%22 height=%2250%22/><text x=%2218%22 y=%2228%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2216%22>?</text></svg>'">
+        <span>{% if user_vote == 1 %}✓ {% endif %}Vote {{ battle.anime1.display_title|truncatechars:15 }}</span>
       </button>
-      <button class="vote-action {% if user_vote == 2 %}active{% endif %}" data-choice="2" data-battle="{{ battle.id }}" {% if user_vote %}disabled{% endif %}>
-        <img src="{{ battle.anime2.cover_image_medium|default:battle.anime2.cover_image_large }}" class="mini-cover" alt="" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 56%22><rect fill=%22%23333%22 width=%2240%22 height=%2256%22/><text x=%2220%22 y=%2230%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2214%22>📺</text></svg>'">
-        <span>{% if user_vote == 2 %}✓ {% endif %}Vote</span>
+      <button class="bh-vote-btn {% if user_vote == 2 %}active{% endif %}" data-choice="2" data-battle="{{ battle.id }}" {% if user_vote %}disabled{% endif %}>
+        <img src="{{ battle.anime2.cover_image_medium }}" class="mini-cover" alt="" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 36 50%22><rect fill=%22%23333%22 width=%2236%22 height=%2250%22/><text x=%2218%22 y=%2228%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2216%22>?</text></svg>'">
+        <span>{% if user_vote == 2 %}✓ {% endif %}Vote {{ battle.anime2.display_title|truncatechars:15 }}</span>
       </button>
+    </div>
+    {% else %}
+    <div class="text-center pb-3">
+      <a href="{% url 'login' %}" class="text-decoration-none" style="color:var(--primary);font-size:0.85rem;font-weight:500">Log in to vote</a>
     </div>
     {% endif %}
   </div>
 
-  <div class="row g-4">
+  <div class="row g-3">
+    {# ── Left Column ── #}
     <div class="col-md-7">
-      <div class="card" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px">
-        <h6 class="fw-bold mb-3">📊 Head-to-Head Comparison</h6>
 
-        {% with s1=battle.anime1.average_score|default:0 s2=battle.anime2.average_score|default:0 %}
-        {% with max_score=s1|add:s2|add:1 %}
-        {% with pct1_score=s1|floatformat:0 pct2_score=s2|floatformat:0 %}
-        <div class="comp-row">
-          <div class="comp-label">Score</div>
-          <div class="comp-value left">{{ s1 }}</div>
-          <div class="comp-bar-bg">
-            {% if s1 or s2 %}
-            <div class="comp-bar-fill" style="width:{% widthratio s1 s1|add:s2 100 %}%;background:var(--primary)"></div>
-            {% endif %}
+      {# Anime Details #}
+      <div class="card-block">
+        <div class="card-block-title"><span class="icon">📖</span> Anime Details</div>
+        {% with a1=battle.anime1 a2=battle.anime2 %}
+        <div class="anime-side">
+          <img src="{{ a1.cover_image_medium }}" class="as-cover" alt="" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 50 70%22><rect fill=%22%23222%22 width=%2250%22 height=%2270%22/><text x=%2225%22 y=%2238%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2220%22>?</text></svg>'">
+          <div class="as-content">
+            <div class="as-title" style="color:var(--primary)">{{ a1.display_title }}</div>
+            <div class="as-synopsis">{{ a1.description|default:"No synopsis available."|striptags|truncatechars:200 }}</div>
+            <div class="as-details">
+              <span class="as-detail">{{ a1.format|default:"?" }}</span>
+              <span class="as-detail">{{ a1.episodes|default:"?" }} eps</span>
+              <span class="as-detail">{{ a1.season_year|default:"?" }}</span>
+              <span class="as-detail">{{ a1.status|default:"?" }}</span>
+              {% if a1.studios.all %}<span class="as-detail">{{ a1.studios.all.0.name|truncatechars:16 }}</span>{% endif %}
+            </div>
+            <div class="as-genres">
+              {% for g in a1.genres.all|slice:":4" %}<span class="as-genre a1">{{ g.name }}</span>{% endfor %}
+            </div>
           </div>
-          <div class="comp-value right">{{ s2 }}</div>
         </div>
-        {% endwith %}{% endwith %}{% endwith %}
-
-        {% with e1=battle.anime1.episodes|default:0 e2=battle.anime2.episodes|default:0 %}
-        <div class="comp-row">
-          <div class="comp-label">Episodes</div>
-          <div class="comp-value left">{{ e1 }}</div>
-          <div class="comp-bar-bg">
-            {% if e1 or e2 %}
-            <div class="comp-bar-fill" style="width:{% widthratio e1 e1|add:e2 100 %}%;background:var(--primary)"></div>
-            {% endif %}
+        <div class="anime-side">
+          <img src="{{ a2.cover_image_medium }}" class="as-cover" alt="" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 50 70%22><rect fill=%22%23222%22 width=%2250%22 height=%2270%22/><text x=%2225%22 y=%2238%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2220%22>?</text></svg>'">
+          <div class="as-content">
+            <div class="as-title" style="color:#A259FF">{{ a2.display_title }}</div>
+            <div class="as-synopsis">{{ a2.description|default:"No synopsis available."|striptags|truncatechars:200 }}</div>
+            <div class="as-details">
+              <span class="as-detail">{{ a2.format|default:"?" }}</span>
+              <span class="as-detail">{{ a2.episodes|default:"?" }} eps</span>
+              <span class="as-detail">{{ a2.season_year|default:"?" }}</span>
+              <span class="as-detail">{{ a2.status|default:"?" }}</span>
+              {% if a2.studios.all %}<span class="as-detail">{{ a2.studios.all.0.name|truncatechars:16 }}</span>{% endif %}
+            </div>
+            <div class="as-genres">
+              {% for g in a2.genres.all|slice:":4" %}<span class="as-genre a2">{{ g.name }}</span>{% endfor %}
+            </div>
           </div>
-          <div class="comp-value right">{{ e2 }}</div>
         </div>
         {% endwith %}
+      </div>
 
-        {% with p1=battle.anime1.popularity|default:0 p2=battle.anime2.popularity|default:0 %}
-        <div class="comp-row">
-          <div class="comp-label">Popularity</div>
-          <div class="comp-value left">{{ p1 }}</div>
-          <div class="comp-bar-bg">
-            {% if p1 or p2 %}
-            <div class="comp-bar-fill" style="width:{% widthratio p1 p1|add:p2 100 %}%;background:var(--primary)"></div>
+      {# Category Voting #}
+      <div class="card-block">
+        <div class="card-block-title"><span class="icon">🏅</span> Category Voting <span class="count">— vote per category</span></div>
+        <div class="cat-vote-list" id="catVoteList">
+          {% for cat_key, cat_val in category_data.items %}
+          {% with uc=user_category_votes|get_item:cat_key %}
+          <div class="cat-row {% if uc %}voted{% endif %}" data-category="{{ cat_key }}" data-battle="{{ battle.id }}">
+            <div class="cat-label">{{ cat_val.label }}</div>
+            <div class="cat-choice cat-a1 {% if uc == 1 %}selected-a1{% endif %}" data-side="1" style="grid-column:1">{{ battle.anime1.display_title|truncatechars:14 }}</div>
+            <div class="cat-choice cat-a2 {% if uc == 2 %}selected-a2{% endif %}" data-side="2" style="grid-column:3">{{ battle.anime2.display_title|truncatechars:14 }}</div>
+            <div class="cat-bar-wrap">
+              <div class="cat-bar-bg"><div class="cat-bar-fill a1" style="width:{{ cat_val.pct1 }}%"></div></div>
+              <div class="cat-pct" style="font-weight:700;color:var(--text)">{{ cat_val.total }}</div>
+              <div class="cat-bar-bg"><div class="cat-bar-fill a2" style="width:{{ cat_val.pct2 }}%"></div></div>
+            </div>
+            <div style="grid-column:1;font-size:0.55rem;color:var(--text-muted);text-align:center">{{ cat_val.votes1 }}</div>
+            <div style="grid-column:3;font-size:0.55rem;color:var(--text-muted);text-align:center">{{ cat_val.votes2 }}</div>
+          </div>
+          {% endwith %}
+          {% endfor %}
+        </div>
+      </div>
+
+      {# Community Arguments #}
+      <div class="card-block">
+        <div class="card-block-title"><span class="icon">💬</span> Community Arguments <span class="count">— why each side wins</span></div>
+        <div class="argument-section">
+          <div class="arg-column">
+            <div class="arg-column-title a1">{{ battle.anime1.display_title|truncatechars:18 }}</div>
+            <div id="args-side-1">
+              {% for arg in arguments1 %}
+              <div class="arg-card" data-arg-id="{{ arg.id }}">
+                <div class="arg-body">{{ arg.body }}</div>
+                <div class="arg-meta">
+                  <span>{{ arg.user.username }} · {{ arg.created_at|timesince }} ago</span>
+                  <button class="arg-vote-btn {% for k,v in user_arg_votes.items %}{% if k == arg.id %}{% if v == 1 %}upvoted{% else %}downvoted{% endif %}{% endif %}{% endfor %}" data-arg-id="{{ arg.id }}" data-side="1" onclick="voteArgument(this)">
+                    <span>▲</span> <span class="arg-score">{{ arg.votes }}</span>
+                  </button>
+                </div>
+              </div>
+              {% empty %}
+              <div class="text-muted" style="font-size:0.72rem;padding:8px 0">No arguments yet. Make your case!</div>
+              {% endfor %}
+            </div>
+            {% if user.is_authenticated %}
+            <div class="arg-form-wrap">
+              <textarea class="arg-textarea" placeholder="Why does this anime win?" maxlength="500" data-side="1"></textarea>
+              <button class="btn btn-sm mt-1 arg-submit" data-side="1" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:0.7rem">Submit</button>
+            </div>
             {% endif %}
           </div>
-          <div class="comp-value right">{{ p2 }}</div>
-        </div>
-        {% endwith %}
-
-        {% with m1=battle.anime1.mean_score|default:battle.anime1.average_score|default:0 m2=battle.anime2.mean_score|default:battle.anime2.average_score|default:0 %}
-        <div class="comp-row">
-          <div class="comp-label">Mean Score</div>
-          <div class="comp-value left">{{ m1|floatformat:1 }}</div>
-          <div class="comp-bar-bg">
-            {% if m1 or m2 %}
-            <div class="comp-bar-fill" style="width:{% widthratio m1|floatformat:0 m1|add:m2|floatformat:0 100 %}%;background:var(--primary)"></div>
+          <div class="arg-column">
+            <div class="arg-column-title a2">{{ battle.anime2.display_title|truncatechars:18 }}</div>
+            <div id="args-side-2">
+              {% for arg in arguments2 %}
+              <div class="arg-card" data-arg-id="{{ arg.id }}">
+                <div class="arg-body">{{ arg.body }}</div>
+                <div class="arg-meta">
+                  <span>{{ arg.user.username }} · {{ arg.created_at|timesince }} ago</span>
+                  <button class="arg-vote-btn {% for k,v in user_arg_votes.items %}{% if k == arg.id %}{% if v == 1 %}upvoted{% else %}downvoted{% endif %}{% endif %}{% endfor %}" data-arg-id="{{ arg.id }}" data-side="2" onclick="voteArgument(this)">
+                    <span>▲</span> <span class="arg-score">{{ arg.votes }}</span>
+                  </button>
+                </div>
+              </div>
+              {% empty %}
+              <div class="text-muted" style="font-size:0.72rem;padding:8px 0">No arguments yet. Make your case!</div>
+              {% endfor %}
+            </div>
+            {% if user.is_authenticated %}
+            <div class="arg-form-wrap">
+              <textarea class="arg-textarea" placeholder="Why does this anime win?" maxlength="500" data-side="2"></textarea>
+              <button class="btn btn-sm mt-1 arg-submit" data-side="2" style="background:#A259FF;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:0.7rem">Submit</button>
+            </div>
             {% endif %}
-          </div>
-          <div class="comp-value right">{{ m2|floatformat:1 }}</div>
-        </div>
-        {% endwith %}
-
-        <div class="comp-row">
-          <div class="comp-label">Format</div>
-          <div class="comp-value left" style="font-size:0.7rem;font-weight:400">{{ battle.anime1.format|default:"?" }}</div>
-          <div style="flex:1;text-align:center;font-size:0.7rem;color:var(--text-muted)">vs</div>
-          <div class="comp-value right" style="font-size:0.7rem;font-weight:400">{{ battle.anime2.format|default:"?" }}</div>
-        </div>
-
-        <div class="comp-row">
-          <div class="comp-label">Status</div>
-          <div class="comp-value left" style="font-size:0.7rem;font-weight:400">{{ battle.anime1.status|default:"?" }}</div>
-          <div style="flex:1;text-align:center;font-size:0.7rem;color:var(--text-muted)">vs</div>
-          <div class="comp-value right" style="font-size:0.7rem;font-weight:400">{{ battle.anime2.status|default:"?" }}</div>
-        </div>
-
-        <div class="comp-row">
-          <div class="comp-label">Year</div>
-          <div class="comp-value left" style="font-size:0.7rem;font-weight:400">{{ battle.anime1.season_year|default:"?" }}</div>
-          <div style="flex:1;text-align:center;font-size:0.7rem;color:var(--text-muted)">vs</div>
-          <div class="comp-value right" style="font-size:0.7rem;font-weight:400">{{ battle.anime2.season_year|default:"?" }}</div>
-        </div>
-
-        <div class="mt-3">
-          <div class="comp-label mb-2">Genres</div>
-          <div class="d-flex flex-wrap gap-1">
-            {% for g in battle.anime1.genres.all %}<span class="genre-tag" style="background:rgba(232,54,93,0.1);color:var(--primary)">{{ g.name }}</span>{% endfor %}
-            {% for g in battle.anime2.genres.all %}<span class="genre-tag" style="background:rgba(162,89,255,0.1);color:#A259FF">{{ g.name }}</span>{% endfor %}
           </div>
         </div>
       </div>
 
-      <div class="card mt-3" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px">
-        <h6 class="fw-bold mb-1">🏆 Result</h6>
-        {% if battle.total_votes > 0 %}
-          {% if battle.pct1 > battle.pct2 %}
-          <p class="mb-0" style="font-size:1.1rem"><strong style="color:var(--primary)">{{ battle.anime1.display_title }}</strong> is winning with <strong>{{ battle.pct1 }}%</strong> of {{ battle.total_votes }} votes</p>
-          {% elif battle.pct2 > battle.pct1 %}
-          <p class="mb-0" style="font-size:1.1rem"><strong style="color:var(--primary)">{{ battle.anime2.display_title }}</strong> is winning with <strong>{{ battle.pct2 }}%</strong> of {{ battle.total_votes }} votes</p>
-          {% else %}
-          <p class="mb-0" style="font-size:1.1rem">It's a <strong>tie!</strong> Both at {{ battle.pct1 }}% with {{ battle.total_votes }} votes</p>
-          {% endif %}
-        {% else %}
-          <p class="text-muted mb-0">No votes yet. Be the first!</p>
-        {% endif %}
-      </div>
-
-      <div class="card mt-3" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px">
+      {# Comments #}
+      <div class="card-block">
         {% include 'includes/comment_thread.html' with ctype="anime.battle" oid=battle.id %}
       </div>
     </div>
 
+    {# ── Right Column — Stats & Share ── #}
     <div class="col-md-5">
-      <div class="card" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px">
-        <h6 class="fw-bold mb-3">📋 Battle Info</h6>
-        <div class="row g-3">
-          <div class="col-6"><div class="detail-label">Category</div><div class="detail-value">{{ battle.category|title }}</div></div>
-          <div class="col-6"><div class="detail-label">Created</div><div class="detail-value">{{ battle.created_at|date:"M j, Y" }}</div></div>
-          {% if battle.is_daily_featured %}
-          <div class="col-6"><div class="detail-label">Status</div><div class="detail-value" style="color:var(--primary)">🔥 Daily Featured</div></div>
-          {% endif %}
-          {% if battle.expires_at %}
-          <div class="col-6"><div class="detail-label">Expires</div><div class="detail-value">{{ battle.expires_at|timeuntil }} left</div></div>
-          {% endif %}
-          <div class="col-6"><div class="detail-label">Created by</div><div class="detail-value">{% if battle.created_by %}{{ battle.created_by.username }}{% else %}AniPulse{% endif %}</div></div>
-          <div class="col-6"><div class="detail-label">Total votes</div><div class="detail-value">{{ battle.total_votes }}</div></div>
+
+      {# Battle Stats #}
+      <div class="card-block">
+        <div class="card-block-title"><span class="icon">📊</span> Battle Statistics</div>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="num">{{ battle.total_votes }}</div>
+            <div class="label">Total Votes</div>
+          </div>
+          <div class="stat-item">
+            <div class="num">{{ daily_votes }}</div>
+            <div class="label">Today's Votes</div>
+          </div>
+          <div class="stat-item">
+            <div class="num">{% if battle.pct1 > battle.pct2 %}{{ battle.pct1 }}%{% elif battle.pct2 > battle.pct1 %}{{ battle.pct2 }}%{% else %}TIE{% endif %}</div>
+            <div class="label">Leader %</div>
+          </div>
+          <div class="stat-item">
+            <div class="num">{{ battle.created_at|date:"M j" }}</div>
+            <div class="label">Battle Age</div>
+          </div>
+          <div class="stat-item">
+            <div class="num">{{ battle.category|title|truncatechars:8 }}</div>
+            <div class="label">Category</div>
+          </div>
+          <div class="stat-item">
+            <div class="num">{% if battle.expires_at %}{{ battle.expires_at|timeuntil }}{% else %}∞{% endif %}</div>
+            <div class="label">Time Left</div>
+          </div>
         </div>
       </div>
 
-      <div class="card mt-3" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px">
-        <h6 class="fw-bold mb-3">🕐 Recent Votes</h6>
+      {# Share #}
+      <div class="card-block">
+        <div class="card-block-title"><span class="icon">🔗</span> Share This Battle</div>
+        <div class="share-actions">
+          {% with share_url=request.build_absolute_uri share_text="⚔️ "|add:battle.anime1.display_title|add:" vs "|add:battle.anime2.display_title|add:" — who wins?" %}
+          <a href="https://twitter.com/intent/tweet?text={{ share_text|urlencode }}&url={{ share_url|urlencode }}" target="_blank" rel="noopener" class="share-btn twitter">🐦 Tweet</a>
+          <a href="https://www.facebook.com/sharer/sharer.php?u={{ share_url|urlencode }}" target="_blank" rel="noopener" class="share-btn facebook">📘 Share</a>
+          <button class="share-btn copy" onclick="copyBattleLink('{{ share_url|escapejs }}')">📋 Copy Link</button>
+          {% if user.is_authenticated %}
+          <a href="{% url 'share_battle' battle_id=battle.id %}" class="share-btn internal">💬 Share to Feed</a>
+          {% endif %}
+          {% endwith %}
+        </div>
+      </div>
+
+      {% if battle.is_daily_featured %}
+      <div class="card-block" style="border-color:var(--primary);background:rgba(232,54,93,.04)">
+        <div class="card-block-title"><span class="icon">🔥</span> Daily Featured</div>
+        <p class="small text-muted mb-0">This battle was hand-picked by the AniPulse community as today's featured matchup!</p>
+      </div>
+      {% endif %}
+
+      {# Recent Votes #}
+      <div class="card-block">
+        <div class="card-block-title"><span class="icon">🕐</span> Recent Votes</div>
         {% if recent_votes %}
+        <div class="voter-list">
           {% for v in recent_votes %}
-          <div class="recent-voter">
+          <div class="voter-item">
             {% if v.user.avatar and v.user.avatar.url %}
-            <img src="{{ v.user.avatar.url }}" class="av" alt="" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 36 36%22><rect fill=%22%23333%22 width=%2236%22 height=%2236%22 rx=%2218%22/><text x=%2218%22 y=%2222%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2216%22>?</text></svg>'">
+            <img src="{{ v.user.avatar.url }}" class="av" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <div class="av rounded-circle bg-secondary flex-shrink-0 d-flex align-items-center justify-content-center" style="width:24px;height:24px;font-size:10px;color:#fff;display:none">{{ v.user.username|first|upper }}</div>
             {% else %}
-            <div class="av rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white fw-bold" style="font-size:12px">{{ v.user.username|first|upper }}</div>
+            <div class="av rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white fw-bold" style="font-size:10px;width:24px;height:24px">{{ v.user.username|first|upper }}</div>
             {% endif %}
-            <div class="flex-grow-1 min-w-0">
-              <div class="fw-medium small text-truncate">{{ v.user.username }}</div>
-              <div class="text-muted" style="font-size:0.65rem">voted for <span style="color:var(--primary)">{% if v.choice == 1 %}{{ battle.anime1.display_title|truncatechars:20 }}{% else %}{{ battle.anime2.display_title|truncatechars:20 }}{% endif %}</span></div>
-            </div>
-            <span class="text-muted flex-shrink-0" style="font-size:0.65rem">{{ v.created_at|timesince }} ago</span>
+            <span class="voter-name">{{ v.user.username }}</span>
+            <span class="voter-choice" style="color:{% if v.choice == 1 %}var(--primary){% else %}#A259FF{% endif %}">
+              {% if v.choice == 1 %}{{ battle.anime1.display_title|truncatechars:12 }}{% else %}{{ battle.anime2.display_title|truncatechars:12 }}{% endif %}
+            </span>
+            <span class="voter-time">{{ v.created_at|timesince }} ago</span>
           </div>
           {% endfor %}
+        </div>
         {% else %}
-          <p class="text-muted small mb-0">No votes yet. Be the first!</p>
+        <p class="text-muted small mb-0">No votes yet. Be the first!</p>
         {% endif %}
       </div>
     </div>
@@ -255,26 +402,131 @@
 </div>
 
 <script>
-document.querySelectorAll('.vote-action:not(:disabled)').forEach(btn => {
-  btn.addEventListener('click', async function() {
-    const choice = this.dataset.choice;
-    const battleId = this.dataset.battle;
-    const btns = document.querySelectorAll('.vote-action');
-    btns.forEach(b => b.style.pointerEvents = 'none');
-    try {
-      const resp = await fetch(`/battles/${battleId}/vote/json/`, {
-        method: 'POST',
-        headers: {'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/x-www-form-urlencoded'},
-        body: `choice=${choice}`
-      });
-      const data = await resp.json();
-      if (data.error) { btns.forEach(b => b.style.pointerEvents = ''); return alert(data.error); }
-      btns.forEach(b => b.disabled = true);
-      this.classList.add('active');
-      this.innerHTML = '<img src="' + (choice === '1' ? '{{ battle.anime1.cover_image_medium|default:battle.anime1.cover_image_large }}' : '{{ battle.anime2.cover_image_medium|default:battle.anime2.cover_image_large }}') + '" class="mini-cover" alt="" onerror="this.src=\'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 56%22><rect fill=%22%23333%22 width=%2240%22 height=%2256%22/><text x=%2220%22 y=%2230%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2214%22>📺</text></svg>\'"> <span>✓ Voted</span>';
-      location.reload();
-    } catch(e) { btns.forEach(b => b.style.pointerEvents = ''); alert('Vote failed'); }
+(function(){
+  const battleId = {{ battle.id }};
+  const csrf = '{{ csrf_token }}';
+
+  // ─── Main Vote ───
+  document.querySelectorAll('.bh-vote-btn:not(:disabled)').forEach(btn => {
+    btn.addEventListener('click', async function() {
+      const choice = this.dataset.choice;
+      const btns = document.querySelectorAll('.bh-vote-btn');
+      btns.forEach(b => b.style.pointerEvents = 'none');
+      try {
+        const resp = await fetch(`/battles/${battleId}/vote/json/`, {
+          method: 'POST',
+          headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded'},
+          body: `choice=${choice}`
+        });
+        const data = await resp.json();
+        if (data.error) { btns.forEach(b => b.style.pointerEvents = ''); return alert(data.error); }
+        btns.forEach(b => b.disabled = true);
+        this.classList.add('active');
+        this.innerHTML = '<span>✓ Voted</span>';
+        document.getElementById('bh-bar-fill').style.width = data.pct1 + '%';
+        document.getElementById('bh-bar-fill').innerHTML = '<span class="bh-bar-label">' + data.pct1 + '%</span>';
+        location.reload();
+      } catch(e) { btns.forEach(b => b.style.pointerEvents = ''); alert('Vote failed'); }
+    });
   });
-});
+
+  // ─── Category Voting ───
+  {% if user.is_authenticated %}
+  document.querySelectorAll('.cat-choice').forEach(el => {
+    el.addEventListener('click', async function() {
+      const row = this.closest('.cat-row');
+      const category = row.dataset.category;
+      const side = this.dataset.side;
+      try {
+        const resp = await fetch(`/battles/${battleId}/category-vote/json/`, {
+          method: 'POST',
+          headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded'},
+          body: `category=${category}&choice=${side}`
+        });
+        const data = await resp.json();
+        if (data.error) return alert(data.error);
+        // Update UI
+        row.querySelectorAll('.cat-choice').forEach(c => {
+          c.classList.remove('selected-a1', 'selected-a2');
+          if (c.dataset.side === data.choice) {
+            c.classList.add(data.choice === '1' ? 'selected-a1' : 'selected-a2');
+          }
+        });
+        row.classList.add('voted');
+        const bars = row.querySelectorAll('.cat-bar-fill');
+        bars[0].style.width = data.pct1 + '%';
+        bars[1].style.width = data.pct2 + '%';
+        row.querySelectorAll('.cat-pct')[0].textContent = data.total;
+      } catch(e) { /* ignore */ }
+    });
+  });
+  {% endif %}
+
+  // ─── Arguments ───
+  {% if user.is_authenticated %}
+  document.querySelectorAll('.arg-submit').forEach(btn => {
+    btn.addEventListener('click', async function() {
+      const side = this.dataset.side;
+      const textarea = this.parentElement.querySelector('.arg-textarea');
+      const body = textarea.value.trim();
+      if (!body) return;
+      textarea.disabled = true;
+      try {
+        const resp = await fetch(`/battles/${battleId}/argument/create/`, {
+          method: 'POST',
+          headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded'},
+          body: `side=${side}&body=${encodeURIComponent(body)}`
+        });
+        const data = await resp.json();
+        if (data.error) return alert(data.error);
+        const container = document.getElementById('args-side-' + side);
+        const empty = container.querySelector('.text-muted');
+        if (empty) empty.remove();
+        const card = document.createElement('div');
+        card.className = 'arg-card';
+        card.dataset.argId = data.id;
+        card.innerHTML = '<div class="arg-body">' + escHtml(data.body) + '</div>'
+          + '<div class="arg-meta"><span>' + escHtml(data.user.username) + ' · just now</span>'
+          + '<button class="arg-vote-btn" data-arg-id="' + data.id + '" data-side="' + side + '" onclick="voteArgument(this)">'
+          + '<span>▲</span> <span class="arg-score">0</span></button></div>';
+        container.prepend(card);
+        textarea.value = '';
+        textarea.disabled = false;
+      } catch(e) { textarea.disabled = false; }
+    });
+  });
+  {% endif %}
+})();
+
+function voteArgument(btn) {
+  const argId = btn.dataset.argId;
+  const csrf = '{{ csrf_token }}';
+  const currentVal = btn.classList.contains('upvoted') ? '-1' : '1';
+  fetch('/battles/argument/' + argId + '/vote/json/', {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded'},
+    body: 'value=' + currentVal
+  }).then(r => r.json()).then(d => {
+    if (d.error) return;
+    btn.querySelector('.arg-score').textContent = d.votes;
+    btn.classList.toggle('upvoted', d.value === 1);
+    btn.classList.toggle('downvoted', d.value === -1);
+  }).catch(() => {});
+}
+
+function copyBattleLink(url) {
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => btn.textContent = orig, 2000);
+  }).catch(() => {});
+}
+
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
 </script>
 {% endblock %}

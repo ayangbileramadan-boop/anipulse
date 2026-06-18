@@ -293,6 +293,47 @@ class BattleVote(models.Model):
         unique_together = ('battle', 'user')
 
 
+class BattleCategoryVote(models.Model):
+    CATEGORIES = [
+        ('story', 'Story'),
+        ('characters', 'Characters'),
+        ('animation', 'Animation'),
+        ('villains', 'Villains'),
+        ('world_building', 'World Building'),
+        ('emotional_impact', 'Emotional Impact'),
+    ]
+    battle = models.ForeignKey(Battle, on_delete=models.CASCADE, related_name='category_votes')
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE)
+    category = models.CharField(max_length=30, choices=CATEGORIES)
+    choice = models.IntegerField(help_text='1 for anime1, 2 for anime2')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('battle', 'user', 'category')
+
+
+class BattleArgument(models.Model):
+    battle = models.ForeignKey(Battle, on_delete=models.CASCADE, related_name='arguments')
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE)
+    side = models.IntegerField(help_text='1 for anime1, 2 for anime2')
+    body = models.TextField(max_length=500)
+    votes = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-votes', '-created_at']
+
+
+class BattleArgumentVote(models.Model):
+    argument = models.ForeignKey(BattleArgument, on_delete=models.CASCADE, related_name='user_votes')
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE)
+    value = models.IntegerField(default=1, help_text='1 for upvote, -1 for downvote')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('argument', 'user')
+
+
 class TierList(models.Model):
     TIERS = [
         ('S', 'S Tier'),

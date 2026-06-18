@@ -106,6 +106,54 @@
 .bbar .bb-title{font-size:0.78rem;font-weight:500;min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bbar .bb-meta{font-size:0.62rem;color:var(--text-muted);flex-shrink:0}
 
+/* ─── Section Blocks ─── */
+.section-block{margin-bottom:20px}
+.section-header{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.section-icon{font-size:1rem;line-height:1}
+.section-title{font-size:0.78rem;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.4px}
+.discussion-strip{display:flex;flex-direction:column;gap:6px}
+.discussion-card{display:block;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;text-decoration:none;transition:all .15s}
+.discussion-card:hover{background:var(--surface-2);border-color:var(--primary-transparent, rgba(232,54,93,.2))}
+.dc-title{font-size:0.82rem;font-weight:500;color:var(--text);line-height:1.4;margin-bottom:4px}
+.dc-meta{display:flex;gap:12px;font-size:0.65rem;color:var(--text-muted)}
+.featured-battle-card{display:block;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;text-decoration:none;transition:all .15s}
+.featured-battle-card:hover{background:var(--surface-2);border-color:var(--primary-transparent, rgba(232,54,93,.2));transform:translateY(-1px)}
+.fb-row{display:flex;align-items:center;gap:10px}
+.fb-anime{flex:1;text-align:center;min-width:0}
+.fb-anime img{width:60px;height:85px;object-fit:cover;border-radius:8px;background:var(--surface-2);display:block;margin:0 auto 6px}
+.fb-name{font-size:0.75rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fb-stat{font-size:0.65rem;color:var(--text-muted);margin-top:2px}
+.fb-vs{font-size:1rem;font-weight:800;color:var(--primary);flex-shrink:0;width:32px;text-align:center}
+.fb-bar{height:8px;border-radius:4px;background:var(--surface-2);margin-top:12px;overflow:hidden}
+.fb-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--primary),#A259FF);transition:width .3s}
+.fb-bar-labels{display:flex;justify-content:space-between;font-size:0.6rem;color:var(--text-muted);margin-top:4px;padding:0 2px}
+.fb-cta{display:block;text-align:center;padding:8px;margin-top:12px;border-radius:8px;background:var(--primary);color:#fff;font-size:0.78rem;font-weight:600;transition:opacity .15s}
+.featured-battle-card:hover .fb-cta{opacity:.9}
+.tierlist-strip{display:flex;flex-direction:column;gap:6px}
+.tierlist-mini-card{display:flex;flex-direction:column;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;text-decoration:none;transition:all .15s}
+.tierlist-mini-card:hover{background:var(--surface-2);border-color:rgba(241,196,15,.2)}
+.tlc-title{font-size:0.8rem;font-weight:500;color:var(--text);line-height:1.4}
+.tlc-meta{display:flex;gap:12px;font-size:0.65rem;color:var(--text-muted);margin-top:4px}
+.tlc-user{font-weight:500;color:var(--primary)}
+.trending-anime-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ta-card{display:block;background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;text-decoration:none;transition:all .15s}
+.ta-card:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.12)}
+.ta-img-wrap{width:100%;aspect-ratio:7/10;overflow:hidden;background:var(--surface-2)}
+.ta-img-wrap img{width:100%;height:100%;object-fit:cover;display:block}
+.ta-info{padding:6px 8px 8px}
+.ta-title{font-size:0.68rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.ta-stats{display:flex;gap:6px;margin-top:2px;font-size:0.58rem;color:var(--text-muted)}
+.ta-stats span{display:flex;align-items:center;gap:2px}
+
+@media(max-width:576px){
+  .trending-anime-grid{grid-template-columns:repeat(3,1fr);gap:6px}
+  .ta-info{padding:4px 6px 6px}
+  .ta-title{font-size:0.6rem}
+  .ta-stats{font-size:0.52rem}
+  .fb-anime img{width:50px;height:70px}
+  .featured-battle-card{padding:12px}
+}
+
 /* ─── Bookmark ─── */
 .feed-action-btn.bookmarked{color:#f1c40f}
 
@@ -154,33 +202,102 @@
   </div>
   {% endif %}
 
-  {# ── Trending Bar ── #}
-  <div class="trending-bar">
-    {% if top_battle %}
-    <a href="{% url 'battle_detail' battle_id=top_battle.id %}" class="trending-pill" style="background:rgba(232,54,93,.12);border-color:transparent">
-      ⚔️ {{ top_battle.anime1.display_title|truncatechars:12 }} vs {{ top_battle.anime2.display_title|truncatechars:12 }}
-    </a>
-    {% endif %}
-    {% for d in trending_discussions %}
-    <a href="#post-{{ d.id }}" class="trending-pill" onclick="document.querySelector('[data-post-id={{ d.id }}]').scrollIntoView({behavior:'smooth'});return false">
-      {% if d.post_type == 'trending' %}🔥{% elif d.post_type == 'episode_discussion' %}📺{% else %}💬{% endif %}
-      {{ d.title|truncatechars:24 }}
-    </a>
-    {% endfor %}
-  </div>
-
-  {# ── Most Active ── #}
-  {% if most_active %}
-  <div style="margin-bottom:16px">
-    <div class="d-flex align-items-center gap-2 mb-2">
-      <span style="font-size:0.7rem;font-weight:600;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase">Most Active 🔥</span>
+  {# ── Trending Discussions ── #}
+  {% if trending_discussions %}
+  <div class="section-block">
+    <div class="section-header">
+      <span class="section-icon">🔥</span>
+      <span class="section-title">Trending Discussions</span>
     </div>
-    <div class="d-flex flex-column gap-1">
-      {% for p in most_active %}
-      <a href="#post-{{ p.id }}" class="bbar" onclick="document.querySelector('[data-post-id={{ p.id }}]').scrollIntoView({behavior:'smooth'});return false">
-        <span class="num" style="color:var(--text-muted);font-size:0.7rem">#{{ forloop.counter }}</span>
-        <span class="bb-title">{{ p.title|default:p.body|truncatechars:40 }}</span>
-        <span class="bb-meta">💬 {{ p.comment_count }}</span>
+    <div class="discussion-strip">
+      {% for d in trending_discussions %}
+      <a href="#post-{{ d.id }}" class="discussion-card" onclick="document.querySelector('[data-post-id={{ d.id }}]').scrollIntoView({behavior:'smooth'});return false">
+        <div class="dc-title">{{ d.title|default:d.body|truncatechars:50 }}</div>
+        <div class="dc-meta">
+          <span>💬 {{ d.comment_count|default:0 }}</span>
+          <span>🕐 {{ d.created_at|timesince }} ago</span>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Featured Battle ── #}
+  {% if top_battle %}
+  <div class="section-block">
+    <div class="section-header">
+      <span class="section-icon">⚔️</span>
+      <span class="section-title">Featured Battle</span>
+    </div>
+    <a href="{% url 'battle_detail' battle_id=top_battle.id %}" class="featured-battle-card">
+      <div class="fb-row">
+        <div class="fb-anime">
+          <img src="{{ top_battle.anime1.cover_image_medium }}" alt="" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 60 85%22><rect fill=%22%23222%22 width=%2260%22 height=%2285%22/><text x=%2230%22 y=%2245%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2220%22>?</text></svg>'">
+          <div class="fb-name">{{ top_battle.anime1.display_title|truncatechars:18 }}</div>
+          <div class="fb-stat">⭐ {{ top_battle.anime1.average_score|default:"?" }}</div>
+        </div>
+        <div class="fb-vs">VS</div>
+        <div class="fb-anime">
+          <img src="{{ top_battle.anime2.cover_image_medium }}" alt="" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 60 85%22><rect fill=%22%23222%22 width=%2260%22 height=%2285%22/><text x=%2230%22 y=%2245%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2220%22>?</text></svg>'">
+          <div class="fb-name">{{ top_battle.anime2.display_title|truncatechars:18 }}</div>
+          <div class="fb-stat">⭐ {{ top_battle.anime2.average_score|default:"?" }}</div>
+        </div>
+      </div>
+      <div class="fb-bar">
+        <div class="fb-bar-fill" style="width:{{ top_battle.pct1 }}%"></div>
+      </div>
+      <div class="fb-bar-labels">
+        <span>{{ top_battle.pct1 }}%</span>
+        <span>{{ top_battle.total_votes }} votes</span>
+        <span>{{ top_battle.pct2 }}%</span>
+      </div>
+      <div class="fb-cta">Cast Your Vote →</div>
+    </a>
+  </div>
+  {% endif %}
+
+  {# ── Community Tier Lists ── #}
+  {% if top_tier_lists %}
+  <div class="section-block">
+    <div class="section-header">
+      <span class="section-icon">🏆</span>
+      <span class="section-title">Community Tier Lists</span>
+    </div>
+    <div class="tierlist-strip">
+      {% for tl in top_tier_lists %}
+      <a href="{% url 'tier_list_view' slug=tl.slug %}" class="tierlist-mini-card">
+        <div class="tlc-title">{{ tl.title|truncatechars:22 }}</div>
+        <div class="tlc-meta">
+          <span class="tlc-user">{{ tl.user.username }}</span>
+          <span>❤️ {{ tl.like_count|default:0 }}</span>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Trending Anime ── #}
+  {% if trending_anime %}
+  <div class="section-block">
+    <div class="section-header">
+      <span class="section-icon">📈</span>
+      <span class="section-title">Trending Anime</span>
+    </div>
+    <div class="trending-anime-grid">
+      {% for a in trending_anime %}
+      <a href="{% url 'anime_detail' pk=a.anilist_id slug=a.slug %}" class="ta-card">
+        <div class="ta-img-wrap">
+          <img src="{{ a.cover_image_medium }}" alt="" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 70 100%22><rect fill=%22%23222%22 width=%2270%22 height=%22100%22/><text x=%2235%22 y=%2255%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2224%22>?</text></svg>'">
+        </div>
+        <div class="ta-info">
+          <div class="ta-title">{{ a.display_title|truncatechars:20 }}</div>
+          <div class="ta-stats">
+            <span>⭐ {{ a.average_score|default:"?" }}</span>
+            <span>👥 {{ a.popularity|default:"?" }}</span>
+          </div>
+        </div>
       </a>
       {% endfor %}
     </div>
