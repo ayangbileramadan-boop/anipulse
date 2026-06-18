@@ -17,8 +17,6 @@ CSRF_COOKIE_SECURE = True
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
 import dj_database_url
 DATABASES = {
     'default': dj_database_url.config(conn_max_age=600),
@@ -47,4 +45,8 @@ cloudinary.config(
     secure=True,
 )
 
-DEFAULT_FILE_STORAGE = 'apps.core.storage.CloudinaryImageStorage'
+# Django 6 only respects STORAGES — DEFAULT_FILE_STORAGE / STATICFILES_STORAGE are ignored
+STORAGES = {
+    'default': {'BACKEND': 'apps.core.storage.CloudinaryImageStorage'},
+    'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
+}
