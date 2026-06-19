@@ -45,7 +45,7 @@
                         <p class="text-secondary small mb-0">Used to schedule notifications at convenient times</p>
                     </div>
                     <select name="timezone" class="form-select form-select-sm bg-dark text-light border-secondary" style="width:auto;min-width:150px">
-                        {% for tz in "UTC,Africa/Lagos,America/New_York,America/Chicago,America/Denver,America/Los_Angeles,Asia/Tokyo,Asia/Shanghai,Asia/Kolkata,Europe/London,Europe/Paris,Europe/Berlin,Australia/Sydney,Pacific/Auckland".split"," %}
+                        {% for tz in timezones %}
                         <option value="{{ tz }}" {% if user.timezone == tz %}selected{% endif %}>{{ tz }}</option>
                         {% endfor %}
                     </select>

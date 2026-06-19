@@ -721,7 +721,8 @@ def notification_settings(request):
         messages.success(request, 'Notification settings updated!')
         return redirect('notification_settings')
 
-    return render(request, 'notification_settings.html', {'user': user})
+    TIMEZONES = ['UTC', 'Africa/Lagos', 'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Kolkata', 'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Australia/Sydney', 'Pacific/Auckland']
+    return render(request, 'notification_settings.html', {'user': user, 'timezones': TIMEZONES})
 
 
 def my_profile_redirect(request):
