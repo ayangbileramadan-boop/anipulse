@@ -1381,11 +1381,16 @@ def battle_data_json(request, battle_id):
 
 def battle_detail(request, battle_id):
     from django.utils import timezone
-    from django.db.models import Count, Q
-    from django.contrib.contenttypes.models import ContentType
+    from django.db.models import Count, Q, Case, When, IntegerField, Sum
 
-    battle = get_object_or_404(Battle.objects.select_related('anime1', 'anime2', 'created_by'), id=battle_id)
-    recent_votes = BattleVote.objects.filter(battle=battle).select_related('user').order_by('-created_at')[:20]
+    battle = get_object_or_404(
+        Battle.objects.select_related('anime1', 'anime2', 'created_by').prefetch_related(
+            'anime1__genres', 'anime2__genres', 'anime1__studios', 'anime2__studios',
+        ),
+        id=battle_id,
+    )
+
+    recent_votes = list(BattleVote.objects.filter(battle=battle).select_related('user').order_by('-created_at')[:20])
     user_vote = None
     user_category_votes = {}
     if request.user.is_authenticated:
@@ -1394,12 +1399,22 @@ def battle_detail(request, battle_id):
         for cv in BattleCategoryVote.objects.filter(battle=battle, user=request.user):
             user_category_votes[cv.category] = cv.choice
 
-    # Category vote aggregation
+    # Batch category aggregation — 1 query instead of 6
+    raw = BattleCategoryVote.objects.filter(battle=battle).values('category', 'choice').annotate(cnt=Count('id'))
+    agg = {}
+    for r in raw:
+        cat = r['category']
+        if cat not in agg:
+            agg[cat] = {'votes1': 0, 'votes2': 0}
+        if r['choice'] == 1:
+            agg[cat]['votes1'] = r['cnt']
+        else:
+            agg[cat]['votes2'] = r['cnt']
+
     category_data = {}
     for cat, label in BattleCategoryVote.CATEGORIES:
-        cat_votes = BattleCategoryVote.objects.filter(battle=battle, category=cat)
-        v1 = cat_votes.filter(choice=1).count()
-        v2 = cat_votes.filter(choice=2).count()
+        v1 = agg.get(cat, {}).get('votes1', 0)
+        v2 = agg.get(cat, {}).get('votes2', 0)
         total = v1 + v2
         category_data[cat] = {
             'label': label,
@@ -1420,11 +1435,13 @@ def battle_detail(request, battle_id):
 
     # Battle stats
     now = timezone.now()
-    age = now - battle.created_at if battle.created_at else None
+    age_days = (now - battle.created_at).days + 1 if battle.created_at else 0
     daily_votes = BattleVote.objects.filter(battle=battle, created_at__gte=now - timezone.timedelta(days=1)).count()
 
     return render(request, 'battle_detail.html', {
         'battle': battle,
+        'anime1': anime1,
+        'anime2': anime2,
         'recent_votes': recent_votes,
         'user_vote': user_vote,
         'user_category_votes': user_category_votes,
@@ -1433,7 +1450,7 @@ def battle_detail(request, battle_id):
         'arguments2': arguments2,
         'user_arg_votes': user_arg_votes,
         'daily_votes': daily_votes,
-        'battle_age': age,
+        'age_days': age_days,
     })
 
 
@@ -1442,6 +1459,8 @@ def battle_category_vote_json(request, battle_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
     battle = get_object_or_404(Battle, id=battle_id)
+    if battle.created_by == request.user:
+        return JsonResponse({'error': 'Cannot vote on your own battle'}, status=403)
     category = request.POST.get('category', '')
     choice = request.POST.get('choice')
     valid_categories = [c[0] for c in BattleCategoryVote.CATEGORIES]
