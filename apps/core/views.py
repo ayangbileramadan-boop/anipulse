@@ -1389,6 +1389,8 @@ def battle_detail(request, battle_id):
         ),
         id=battle_id,
     )
+    anime1 = battle.anime1
+    anime2 = battle.anime2
 
     recent_votes = list(BattleVote.objects.filter(battle=battle).select_related('user').order_by('-created_at')[:20])
     user_vote = None
