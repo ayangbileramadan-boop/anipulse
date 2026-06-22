@@ -54,3 +54,12 @@ def url_replace(context, **kwargs):
 @register.filter
 def dictlookup(d, key):
     return d.get(key)
+
+
+@register.filter
+def range(value):
+    """Generate a range of integers (1 to value) for iteration."""
+    try:
+        return list(range(1, int(value) + 1))
+    except (ValueError, TypeError):
+        return []

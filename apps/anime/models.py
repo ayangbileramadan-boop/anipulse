@@ -164,6 +164,20 @@ class Episode(TimeStampedModel):
         return f"{self.anime} — Ep {self.number}"
 
 
+class WatchedEpisode(models.Model):
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='watched_episodes')
+    anime = models.ForeignKey(Anime, on_delete=models.CASCADE, related_name='watched_episodes')
+    episode_number = models.IntegerField()
+    watched_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'anime', 'episode_number')
+        ordering = ['episode_number']
+
+    def __str__(self):
+        return f"{self.user} — {self.anime} Ep {self.episode_number}"
+
+
 class ExternalLink(models.Model):
     anime = models.ForeignKey(Anime, on_delete=models.CASCADE, related_name='external_links')
     site = models.CharField(max_length=100)

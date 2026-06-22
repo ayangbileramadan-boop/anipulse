@@ -81,6 +81,14 @@
         .character-img { width:48px !important; height:48px !important; }
     }
     button, a, .btn, .action-btn, .stream-btn, .download-btn { touch-action: manipulation; }
+    .ep-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:6px;max-height:320px;overflow-y:auto;padding:4px}
+    .ep-item{cursor:pointer;border-radius:8px;background:var(--surface-2);border:1px solid var(--border);text-align:center;padding:6px 4px;transition:all 0.15s;min-width:0}
+    .ep-item:hover{border-color:var(--primary)}
+    .ep-item .ep-num{font-size:0.72rem;font-weight:600;color:var(--text);line-height:1.2}
+    .ep-item .ep-check{font-size:0.6rem;height:14px;line-height:14px;color:var(--text-muted)}
+    .ep-item .ep-check.checked{color:#22c55e;font-weight:700}
+    .ep-item.watched{border-color:rgba(34,197,94,0.3);background:rgba(34,197,94,0.08)}
+    @media(max-width:480px){.ep-grid{grid-template-columns:repeat(auto-fill,minmax(36px,1fr));gap:4px}.ep-item{padding:4px 2px}.ep-item .ep-num{font-size:0.65rem}}
 </style>
 {% endblock %}
 
@@ -260,6 +268,30 @@
                     {% for s in studios %}
                     <span class="studio-link"><span class="theme-badge">{{ s.name|default:s }}</span></span>
                     {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if user.is_authenticated and episodes %}
+            <div class="mb-4">
+                <div class="detail-section-title">
+                    <span class="dot bg-primary"></span> Episodes
+                    <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size:0.65rem" id="epProgress">{{ watched_episodes|length }}/{{ episodes }}</span>
+                    <button class="btn btn-sm ms-auto" style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;font-size:0.7rem;padding:4px 12px" onclick="toggleEpList()" type="button" id="epToggleBtn">Show</button>
+                </div>
+                <div id="epList" style="display:none">
+                    <div class="ep-grid">
+                        {% for n in episodes|range %}
+                        <div class="ep-item" data-ep="{{ n }}" onclick="toggleEp({{ anilist_id }}, {{ n }}, this)">
+                            <div class="ep-num">{{ n }}</div>
+                            {% if n in watched_episodes %}
+                            <div class="ep-check checked">✓</div>
+                            {% else %}
+                            <div class="ep-check"></div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
             {% endif %}
@@ -574,8 +606,9 @@
 </div>
 {% endblock %}
 {% block extra_js %}
-{% if next_airing_ts %}
 <script>
+var csrf = '{{ csrf_token }}';
+{% if next_airing_ts %}
 (function(){
   var ts = {{ next_airing_ts }};
   var el = document.getElementById('countdown');
@@ -596,6 +629,27 @@
   tick();
   setInterval(tick, 1000);
 })();
-</script>
 {% endif %}
+
+function toggleEpList() {
+  var el = document.getElementById('epList');
+  var btn = document.getElementById('epToggleBtn');
+  if (el.style.display === 'none') { el.style.display = 'block'; btn.textContent = 'Hide'; }
+  else { el.style.display = 'none'; btn.textContent = 'Show'; }
+}
+
+function toggleEp(animeId, ep, el) {
+  fetch('/anime/' + animeId + '/episode/toggle/', {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded'},
+    body: 'episode=' + ep
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if (d.error) return;
+    el.classList.toggle('watched', d.watched);
+    var ck = el.querySelector('.ep-check');
+    if (ck) { ck.classList.toggle('checked', d.watched); ck.textContent = d.watched ? '✓' : ''; }
+    document.getElementById('epProgress').textContent = d.count + '/' + {{ episodes|default:'0' }};
+  }).catch(function(e){ console.error('Episode toggle error:', e); });
+}
+</script>
 {% endblock %}

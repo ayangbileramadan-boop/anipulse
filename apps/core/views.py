@@ -469,7 +469,7 @@ def anime_detail(request, anime_id):
     # Fetch local theme songs
     themes = local_anime.themes.all() if local_anime else []
 
-    return render(request, 'anime_detail.html', {
+    context = {
         'anilist_id': anime_id,
         'title': title_english or title_romaji,
         'title_native': title_native,
@@ -514,7 +514,46 @@ def anime_detail(request, anime_id):
         'romaji_title': title_romaji,
         'themes': themes,
         'isAdult': media.get('isAdult', False),
-    })
+    }
+    if request.user.is_authenticated and local_anime:
+        context['watched_episodes'] = set(
+            local_anime.watched_episodes.filter(user=request.user).values_list('episode_number', flat=True)
+        )
+    else:
+        context['watched_episodes'] = set()
+    return render(request, 'anime_detail.html', context)
+
+
+@login_required
+def episode_toggle_json(request, anime_id):
+    from django.http import JsonResponse
+    from apps.anime.models import Anime, WatchedEpisode
+    from apps.watchlist.models import WatchlistEntry
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    ep = request.POST.get('episode')
+    if not ep:
+        return JsonResponse({'error': 'Missing episode'}, status=400)
+    anime = get_object_or_404(Anime, anilist_id=anime_id)
+    obj, created = WatchedEpisode.objects.get_or_create(
+        user=request.user, anime=anime, episode_number=int(ep)
+    )
+    if not created:
+        obj.delete()
+    count = WatchedEpisode.objects.filter(user=request.user, anime=anime).count()
+    WatchlistEntry.objects.filter(user=request.user, anime=anime).update(episodes_watched=count)
+    return JsonResponse({'watched': created, 'count': count, 'episode': int(ep)})
+
+
+@login_required
+def episode_list_json(request, anime_id):
+    from django.http import JsonResponse
+    from apps.anime.models import Anime, WatchedEpisode
+    anime = get_object_or_404(Anime, anilist_id=anime_id)
+    watched = set(WatchedEpisode.objects.filter(
+        user=request.user, anime=anime
+    ).values_list('episode_number', flat=True))
+    return JsonResponse({'watched': list(watched)})
 
 
 def _get_score_distribution(media):
