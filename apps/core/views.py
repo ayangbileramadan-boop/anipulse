@@ -1458,6 +1458,7 @@ def battle_detail(request, battle_id):
 
 @login_required
 def battle_category_vote_json(request, battle_id):
+    from django.http import JsonResponse
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
     battle = get_object_or_404(Battle, id=battle_id)
@@ -1493,6 +1494,7 @@ def battle_category_vote_json(request, battle_id):
 
 @login_required
 def battle_argument_create(request, battle_id):
+    from django.http import JsonResponse
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
     battle = get_object_or_404(Battle, id=battle_id)
@@ -1518,6 +1520,7 @@ def battle_argument_create(request, battle_id):
 
 @login_required
 def battle_argument_vote_json(request, argument_id):
+    from django.http import JsonResponse
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
     arg = get_object_or_404(BattleArgument, id=argument_id)
