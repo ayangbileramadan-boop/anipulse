@@ -595,7 +595,8 @@
         ta.disabled = false;
       } catch(e) { ta.disabled = false; console.error('Arg submit error:', e); }
     });
-  })();
+  });
+})();
 
 function voteArg(btn) {
   const argId = btn.dataset.arg;
