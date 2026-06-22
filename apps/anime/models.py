@@ -95,6 +95,16 @@ class Anime(TimeStampedModel):
     tags = models.ManyToManyField(Tag, blank=True, related_name='anime', through='AnimeTag')
     studios = models.ManyToManyField(Studio, blank=True, related_name='anime')
 
+    @property
+    def released_episodes(self):
+        if self.status == 'FINISHED':
+            return self.episodes
+        if self.next_airing_episode:
+            return self.next_airing_episode - 1
+        if self.status == 'NOT_YET_RELEASED':
+            return 0
+        return self.episodes
+
     # Links
     is_adult = models.BooleanField(default=False, db_index=True)
     site_url = models.URLField(blank=True)

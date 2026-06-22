@@ -8,6 +8,13 @@
         {% if anime.format %}
         <span class="badge-format">{{ anime.format }}</span>
         {% endif %}
+        {% if anime.status == 'RELEASING' %}
+        <span class="badge" style="position:absolute;top:8px;left:8px;background:rgba(34,197,94,0.9);color:#fff;font-size:0.6rem;padding:2px 8px;border-radius:4px;font-weight:600">● AIRING</span>
+        {% elif anime.status == 'FINISHED' %}
+        <span class="badge" style="position:absolute;top:8px;left:8px;background:rgba(59,130,246,0.9);color:#fff;font-size:0.6rem;padding:2px 8px;border-radius:4px;font-weight:600">FINISHED</span>
+        {% elif anime.status == 'NOT_YET_RELEASED' %}
+        <span class="badge" style="position:absolute;top:8px;left:8px;background:rgba(251,191,36,0.9);color:#000;font-size:0.6rem;padding:2px 8px;border-radius:4px;font-weight:600">UPCOMING</span>
+        {% endif %}
         {% if anime.averageScore %}
         <div class="score-ring"><svg viewBox="0 0 36 36" style="width:36px;height:36px"><path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="3"/><path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#fbbf24" stroke-width="3" stroke-dasharray="{{ anime.averageScore|div:10|floatformat:1 }}, 10" stroke-linecap="round"/></svg></div>
         {% endif %}

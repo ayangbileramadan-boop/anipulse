@@ -211,7 +211,32 @@
                 {% if start_date %}<div class="info-card"><div class="num">{{ start_date|slice:":3" }}</div><div class="lbl">Started</div></div>{% endif %}
                 {% if average_score %}<div class="info-card"><div class="num" style="color:#fbbf24">{{ average_score|div:10|floatformat:1 }}</div><div class="lbl">Score</div></div>{% endif %}
                 {% if format %}<div class="info-card"><div class="num" style="font-size:1rem">{{ format|cut:"_"|title }}</div><div class="lbl">Format</div></div>{% endif %}
-                {% if next_airing_date %}<div class="info-card" style="border-color:rgba(232,54,93,0.2)"><div class="num text-danger" style="font-size:1rem">⚡ Live</div><div class="lbl">{{ next_airing_episode.episode|default:'' }}/{{ episodes|default:'?' }}</div></div>{% endif %}
+                {% if status == 'RELEASING' or status == 'NOT_YET_RELEASED' or released_episodes is not None %}
+                <div class="info-card" style="border-color:rgba(34,197,94,0.2);grid-column:span 2">
+                    <div class="d-flex align-items-center justify-content-center gap-3 flex-wrap">
+                        {% if status == 'RELEASING' %}
+                        <span class="badge" style="background:rgba(34,197,94,0.15);color:#22c55e;font-size:0.75rem">● AIRING NOW</span>
+                        {% elif status == 'NOT_YET_RELEASED' %}
+                        <span class="badge" style="background:rgba(251,191,36,0.15);color:#fbbf24;font-size:0.75rem">● UPCOMING</span>
+                        {% elif status == 'FINISHED' %}
+                        <span class="badge" style="background:rgba(59,130,246,0.15);color:#3b82f6;font-size:0.75rem">● FINISHED</span>
+                        {% endif %}
+                        <span class="text-light small fw-medium">
+                            Ep <strong>{{ released_episodes|default:'?' }}</strong>{% if episodes %} / {{ episodes }}{% endif %}
+                        </span>
+                        {% if episodes and released_episodes %}
+                        <span class="small text-secondary">({% widthratio released_episodes episodes 100 %}%)</span>
+                        {% endif %}
+                    </div>
+                    {% if next_airing_date and next_ep_num %}
+                    <div class="mt-2 text-center">
+                        <div class="small text-secondary">Next: <strong>Episode {{ next_ep_num }}</strong></div>
+                        <div class="small text-secondary">{{ next_airing_date }}</div>
+                        <div id="countdown" class="small fw-medium mt-1" style="color:#22c55e" data-ts="{{ next_airing_ts }}"></div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
                 {% if popularity %}<div class="info-card"><div class="num" style="font-size:1rem">#{{ popularity|floatformat:0 }}</div><div class="lbl">Popularity</div></div>{% endif %}
             </div>
 
@@ -547,4 +572,30 @@
         {% include 'includes/comment_thread.html' with ctype="anime.anime" oid=anilist_id %}
     </section>
 </div>
+{% endblock %}
+{% block extra_js %}
+{% if next_airing_ts %}
+<script>
+(function(){
+  var ts = {{ next_airing_ts }};
+  var el = document.getElementById('countdown');
+  if (!el) return;
+  function tick() {
+    var now = Math.floor(Date.now() / 1000);
+    var diff = ts - now;
+    if (diff <= 0) { el.textContent = 'Airing now!'; return; }
+    var d = Math.floor(diff / 86400);
+    var h = Math.floor((diff % 86400) / 3600);
+    var m = Math.floor((diff % 3600) / 60);
+    var s = diff % 60;
+    var parts = [];
+    if (d > 0) parts.push(d + 'd');
+    parts.push(h + 'h ' + m + 'm ' + s + 's');
+    el.textContent = parts.join(' ');
+  }
+  tick();
+  setInterval(tick, 1000);
+})();
+</script>
+{% endif %}
 {% endblock %}

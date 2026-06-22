@@ -350,9 +350,19 @@ def anime_detail(request, anime_id):
         end_date = ' '.join(parts)
 
     next_airing_date = ''
+    next_airing_ts = None
+    released_episodes = None
+    next_ep_num = None
     if media.get('nextAiringEpisode') and media['nextAiringEpisode'].get('airingAt'):
         ts = media['nextAiringEpisode']['airingAt']
         next_airing_date = datetime.fromtimestamp(ts, tz=timezone.utc).strftime('%b %d, %Y at %I:%M %p UTC')
+        next_airing_ts = ts
+        next_ep_num = media['nextAiringEpisode'].get('episode')
+        released_episodes = next_ep_num - 1 if next_ep_num else None
+    elif media.get('status') == 'FINISHED':
+        released_episodes = media.get('episodes')
+    elif media.get('status') == 'NOT_YET_RELEASED':
+        released_episodes = 0
 
     status_map = {
         'RELEASING': 'Currently Airing',
@@ -489,6 +499,9 @@ def anime_detail(request, anime_id):
         'site_url': media.get('siteUrl', ''),
         'next_airing_episode': media.get('nextAiringEpisode'),
         'next_airing_date': next_airing_date,
+        'next_airing_ts': next_airing_ts,
+        'released_episodes': released_episodes,
+        'next_ep_num': next_ep_num,
         'characters': characters,
         'trailer': trailer,
         'streaming_links': streaming_links,
@@ -616,6 +629,16 @@ def dashboard_view(request):
     except AniListError:
         my_airing = []
 
+    # Upcoming episodes from local DB (fallback / supplement)
+    from django.utils import timezone as tz_utils
+    upcoming_entries = WatchlistEntry.objects.filter(
+        user=request.user,
+        status__in=['WATCHING', 'PLANNING'],
+        anime__status='RELEASING',
+        anime__next_airing_at__gte=tz_utils.now(),
+        anime__next_airing_at__lte=tz_utils.now() + tz_utils.timedelta(days=7),
+    ).select_related('anime').order_by('anime__next_airing_at')[:10]
+
     return render(request, 'dashboard.html', {
         'stats': stats,
         'recent_entries': recent_entries,
@@ -624,6 +647,7 @@ def dashboard_view(request):
         'my_airing': my_airing,
         'genre_chart': genre_chart,
         'score_chart': score_counts,
+        'upcoming_entries': upcoming_entries,
     })
 
 

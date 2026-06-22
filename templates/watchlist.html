@@ -16,6 +16,11 @@
 .entry-actions input{width:50px}
 .entry-actions button{background:var(--primary);border:none;color:#fff;padding:4px 12px;border-radius:8px;font-size:0.75rem;cursor:pointer;transition:opacity 0.2s}
 .entry-actions button:hover{opacity:0.85}
+.entry-progress{margin:6px 0;height:4px;border-radius:2px;background:var(--surface-2);overflow:hidden}
+.entry-progress .bar{height:100%;border-radius:2px;transition:width 0.4s}
+.entry-airing{font-size:0.7rem;color:var(--text-muted);margin-top:2px}
+.inc-btn{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:var(--primary);color:#fff;border:none;font-size:0.85rem;cursor:pointer;transition:opacity 0.2s;line-height:1;padding:0;margin-left:4px;vertical-align:middle}
+.inc-btn:hover{opacity:0.8}
 .edit-score{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:4px 8px;font-size:0.75rem;width:60px;outline:none}
 .edit-score:focus{border-color:var(--primary)}
 .bulk-bar{background:var(--primary);color:#fff;padding:10px 16px;border-radius:12px;display:none;align-items:center;gap:12px;margin-bottom:16px}
@@ -24,6 +29,7 @@
 .bulk-bar option{color:#000}
 .bulk-bar button{background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 14px;border-radius:8px;font-size:0.8rem;cursor:pointer}
 .bulk-bar button:hover{background:rgba(255,255,255,0.3)}
+@media(max-width:480px){.entry-cover{width:56px;height:80px}}
 </style>
 {% endblock %}
 {% block content %}
@@ -75,9 +81,23 @@
             <a href="{% url 'anime_detail' entry.anime.anilist_id %}" class="entry-title">{{ entry.anime.title_english|default:entry.anime.title_romaji }}</a>
             <div class="entry-meta">
               <span class="badge {% if entry.status == 'WATCHING' %}bg-primary{% elif entry.status == 'COMPLETED' %}bg-success{% elif entry.status == 'PLANNING' %}bg-warning text-dark{% elif entry.status == 'PAUSED' %}bg-danger{% else %}bg-secondary{% endif %} me-2" style="font-size:0.65rem">{{ entry.get_status_display }}</span>
-              Ep {{ entry.episodes_watched }}/{{ entry.anime.episodes|default:"?" }}
+              {% with rel=entry.anime.released_episodes %}
+              Ep <strong>{{ entry.episodes_watched }}</strong>/{{ entry.anime.episodes|default:"?" }}
+              {% if rel is not None and entry.anime.episodes %} &middot; {{ rel }}/{{ entry.anime.episodes }} released{% endif %}
+              {% endwith %}
               {% if entry.score %}&middot; ★ {{ entry.score }}/10{% endif %}
             </div>
+            {% if entry.anime.episodes %}
+            <div class="entry-progress">
+              {% widthratio entry.episodes_watched entry.anime.episodes 100 as pct %}
+              <div class="bar {% if pct|add:'0' == 100 %}bg-success{% elif pct|add:'0' > 50 %}bg-primary{% else %}bg-warning{% endif %}" style="width:{{ pct }}%"></div>
+            </div>
+            {% endif %}
+            {% if entry.status == 'WATCHING' and entry.anime.status == 'RELEASING' and entry.anime.next_airing_at %}
+            <div class="entry-airing">
+              Next: Ep {{ entry.anime.next_airing_episode }} — {{ entry.anime.next_airing_at|timeuntil }}
+            </div>
+            {% endif %}
             <form class="entry-actions" method="post" action="{% url 'update_watchlist_entry' entry.id %}">
               {% csrf_token %}
               <select name="status" onchange="this.form.submit()">
@@ -85,7 +105,10 @@
                 <option value="{{ s_code }}" {% if entry.status == s_code %}selected{% endif %}>{{ s_label }}</option>
                 {% endfor %}
               </select>
-              <input type="number" name="episodes_watched" value="{{ entry.episodes_watched }}" min="0" max="{{ entry.anime.episodes|default:'9999' }}" class="text-center" onchange="this.form.submit()">
+              <div class="d-flex align-items-center gap-1">
+                <input type="number" name="episodes_watched" value="{{ entry.episodes_watched }}" min="0" max="{{ entry.anime.episodes|default:'9999' }}" class="text-center" onchange="this.form.submit()" style="width:46px">
+                <button type="button" class="inc-btn" title="+1 episode" onclick="var inp=this.parentElement.querySelector('input');inp.value=Math.min(parseInt(inp.value)+1,{{ entry.anime.episodes|default:'9999' }});inp.form.submit()">+</button>
+              </div>
               <input type="number" name="score" value="{{ entry.score|default:'' }}" min="0" max="10" step="0.5" class="edit-score text-center" placeholder="★" onchange="this.form.submit()">
               <button type="submit" class="d-none">Save</button>
             </form>
