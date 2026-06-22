@@ -345,8 +345,13 @@
           {% with uc=user_category_votes|get_item:cat_key %}
           <div class="cat-item {% if uc %}voted{% endif %}" data-category="{{ cat_key }}">
             <div class="cat-label">{{ cat_val.label }}</div>
+            {% if user.is_authenticated %}
             <div class="cat-side s1 {% if uc == 1 %}sel{% endif %}" data-side="1">{{ anime1.display_title|truncatechars:14 }}</div>
             <div class="cat-side s2 {% if uc == 2 %}sel{% endif %}" data-side="2">{{ anime2.display_title|truncatechars:14 }}</div>
+            {% else %}
+            <div class="cat-side s1" style="cursor:default;opacity:.5" title="Log in to vote">{{ anime1.display_title|truncatechars:14 }}</div>
+            <div class="cat-side s2" style="cursor:default;opacity:.5" title="Log in to vote">{{ anime2.display_title|truncatechars:14 }}</div>
+            {% endif %}
             <div class="cat-bar-row">
               <div class="cat-bar-bg"><div class="cat-bar-fill c1" style="width:{{ cat_val.pct1 }}%"></div></div>
               <span class="cat-total">{{ cat_val.total }}</span>
@@ -358,6 +363,11 @@
           {% endwith %}
           {% endfor %}
         </div>
+        {% if not user.is_authenticated %}
+        <div class="text-center mt-2">
+          <a href="{% url 'login' %}" style="color:var(--primary);font-size:0.72rem;font-weight:500">Log in to vote per category</a>
+        </div>
+        {% endif %}
       </div>
 
       {# ── Community Arguments ── #}
@@ -525,11 +535,12 @@
         fill.style.width = d.pct1 + '%';
         fill.innerHTML = '<span class="bh-bar-label">' + d.pct1 + '%</span>';
         setTimeout(() => location.reload(), 800);
-      } catch(e) { btns.forEach(b => b.style.pointerEvents = ''); }
+      } catch(e) { btns.forEach(b => b.style.pointerEvents = ''); console.error('Main vote error:', e); }
     });
   });
 
-  // ─── Category Voting (fixed: int vs string comparison) ───
+  // ─── Category Voting ───
+  {% if user.is_authenticated %}
   document.querySelectorAll('.cat-side').forEach(el => {
     el.addEventListener('click', async function() {
       const item = this.closest('.cat-item');
@@ -550,9 +561,10 @@
         const fills = item.querySelectorAll('.cat-bar-fill');
         fills[0].style.width = d.pct1 + '%';
         fills[1].style.width = d.pct2 + '%';
-      } catch(e) {}
+      } catch(e) { console.error('Category vote error:', e); }
     });
   });
+  {% endif %}
 
   // ─── Arguments ───
   document.querySelectorAll('.arg-sub').forEach(btn => {
@@ -581,10 +593,9 @@
         container.prepend(card);
         ta.value = '';
         ta.disabled = false;
-      } catch(e) { ta.disabled = false; }
+      } catch(e) { ta.disabled = false; console.error('Arg submit error:', e); }
     });
-  });
-})();
+  })();
 
 function voteArg(btn) {
   const argId = btn.dataset.arg;
@@ -599,7 +610,7 @@ function voteArg(btn) {
     btn.querySelector('.as').textContent = d.votes;
     btn.classList.toggle('up', d.value === 1);
     btn.classList.toggle('down', d.value === -1);
-  }).catch(() => {});
+  }).catch(e => console.error('Arg vote error:', e));
 }
 
 function copyLink(url, btn) {
