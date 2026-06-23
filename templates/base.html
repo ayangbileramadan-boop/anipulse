@@ -99,6 +99,7 @@
                                 <li><a class="dropdown-item" href="{% url 'user_settings' %}"><i class="fas fa-cog me-2"></i>Settings</a></li>
                                 <li><a class="dropdown-item" href="{% url 'my_lists' %}"><i class="fas fa-list me-2"></i>My Lists</a></li>
                                 <li><a class="dropdown-item" href="{% url 'recommendations' %}"><i class="fas fa-star me-2"></i>Recs</a></li>
+                                {% if user.is_staff %}<li><a class="dropdown-item" href="{% url 'founder_dashboard' %}"><i class="fas fa-chart-line me-2"></i>Founder Dashboard</a></li>{% endif %}
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <form method="post" action="{% url 'logout' %}">{% csrf_token %}

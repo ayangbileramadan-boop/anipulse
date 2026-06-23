@@ -104,4 +104,5 @@ urlpatterns = [
     path('favorite/character/<int:character_id>/check/', views.check_character_favorite, name='check_character_favorite'),
     path('favorite/staff/<int:staff_id>/toggle/', views.toggle_staff_favorite, name='toggle_staff_favorite'),
     path('favorite/staff/<int:staff_id>/check/', views.check_staff_favorite, name='check_staff_favorite'),
+    path('founder-dashboard/', views.founder_dashboard, name='founder_dashboard'),
 ]

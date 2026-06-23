@@ -272,16 +272,16 @@
             </div>
             {% endif %}
 
-            {% if user.is_authenticated and episodes %}
+            {% if user.is_authenticated and released_episodes is not None and released_episodes > 0 %}
             <div class="mb-4">
                 <div class="detail-section-title">
                     <span class="dot bg-primary"></span> Episodes
-                    <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size:0.65rem" id="epProgress">{{ watched_episodes|length }}/{{ episodes }}</span>
+                    <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size:0.65rem" id="epProgress">{{ watched_episodes|length }}/{{ released_episodes }}</span>
                     <button class="btn btn-sm ms-auto" style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;font-size:0.7rem;padding:4px 12px" onclick="toggleEpList()" type="button" id="epToggleBtn">Show</button>
                 </div>
                 <div id="epList" style="display:none">
                     <div class="ep-grid">
-                        {% for n in episodes|range %}
+                        {% for n in released_episodes|range %}
                         <div class="ep-item" data-ep="{{ n }}" onclick="toggleEp({{ anilist_id }}, {{ n }}, this)">
                             <div class="ep-num">{{ n }}</div>
                             {% if n in watched_episodes %}
@@ -648,7 +648,7 @@ function toggleEp(animeId, ep, el) {
     el.classList.toggle('watched', d.watched);
     var ck = el.querySelector('.ep-check');
     if (ck) { ck.classList.toggle('checked', d.watched); ck.textContent = d.watched ? '✓' : ''; }
-    document.getElementById('epProgress').textContent = d.count + '/' + {{ episodes|default:'0' }};
+    document.getElementById('epProgress').textContent = d.count + '/' + {{ released_episodes|default:'0' }};
   }).catch(function(e){ console.error('Episode toggle error:', e); });
 }
 </script>

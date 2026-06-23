@@ -6,6 +6,7 @@ from datetime import datetime, timezone, timedelta
 from django.shortcuts import redirect, get_object_or_404
 from apps.core.utils import safe_render as render
 from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -20,7 +21,7 @@ from apps.anime.services.sync import sync_anime_from_anilist
 from apps.watchlist.models import WatchlistEntry
 from apps.watchlist.models import ACHIEVEMENT_DEFS
 from apps.core.models import UserFollow, Streak
-from apps.anime.models import Anime, Battle, BattleVote, BattleCategoryVote, BattleArgument, BattleArgumentVote, TierList, TierListItem, TierListLike, SocialPost, SocialLike, UserActivity, Comment, CommentLike, FavoriteAnime
+from apps.anime.models import Anime, Battle, BattleVote, BattleCategoryVote, BattleArgument, BattleArgumentVote, TierList, TierListItem, TierListLike, SocialPost, SocialLike, UserActivity, Comment, CommentLike, FavoriteAnime, Review
 from apps.recommendations.engine import get_recommendations_for_user
 from apps.core.services.personalization import PersonalizationEngine
 from apps.core.services.gamification import GamificationEngine
@@ -3525,4 +3526,142 @@ def check_staff_favorite(request, staff_id):
     from apps.anime.models import StaffFavorite
     exists = StaffFavorite.objects.filter(user=request.user, staff_id=staff_id).exists()
     return JsonResponse({'favorited': exists})
+
+
+@staff_member_required
+def founder_dashboard(request):
+    from django.db.models.functions import TruncDate
+    from django.utils import timezone as tz_utils
+
+    User = get_user_model()
+    CACHE_TTL = 300
+    now = tz_utils.now()
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_ago = today - timedelta(days=7)
+    month_ago = today - timedelta(days=30)
+
+    # ── User Analytics ──
+    user_stats = cache.get('founder_user_stats')
+    if user_stats is None:
+        user_stats = {
+            'total': User.objects.count(),
+            'new_today': User.objects.filter(date_joined__gte=today).count(),
+            'new_week': User.objects.filter(date_joined__gte=week_ago).count(),
+            'active_7d': User.objects.filter(last_login__gte=week_ago).count(),
+            'active_30d': User.objects.filter(last_login__gte=month_ago).count(),
+        }
+        cache.set('founder_user_stats', user_stats, CACHE_TTL)
+
+    recent_signups = User.objects.order_by('-date_joined')[:10]
+
+    # ── Community Analytics ──
+    comm_stats = cache.get('founder_comm_stats')
+    if comm_stats is None:
+        comm_stats = {
+            'posts': SocialPost.objects.count(),
+            'comments': Comment.objects.count(),
+            'likes': SocialLike.objects.count() + CommentLike.objects.count(),
+            'reviews': Review.objects.count(),
+            'battles': Battle.objects.count(),
+            'tierlists': TierList.objects.count(),
+        }
+        cache.set('founder_comm_stats', comm_stats, CACHE_TTL)
+
+    # ── Anime Analytics ──
+    anime_stats = cache.get('founder_anime_stats')
+    if anime_stats is None:
+        anime_stats = {
+            'watchlist_total': WatchlistEntry.objects.count(),
+            'completed_total': WatchlistEntry.objects.filter(status='COMPLETED').count(),
+        }
+        cache.set('founder_anime_stats', anime_stats, CACHE_TTL)
+
+    most_watched = WatchlistEntry.objects.values(
+        anime_title=F('anime__title_romaji'), anime_aid=F('anime__anilist_id')
+    ).annotate(count=Count('id')).order_by('-count')[:10]
+
+    most_reviewed = Review.objects.values(
+        anime_title=F('anime__title_romaji'), anime_aid=F('anime__anilist_id')
+    ).annotate(count=Count('id')).order_by('-count')[:10]
+
+    most_favorited = FavoriteAnime.objects.values(
+        anime_title=F('anime__title_romaji'), anime_aid=F('anime__anilist_id')
+    ).annotate(count=Count('id')).order_by('-count')[:10]
+
+    # ── Growth Charts ──
+    growth_data = cache.get('founder_growth_data')
+    if growth_data is None:
+        fourteen_days_ago = today - timedelta(days=13)
+
+        reg_daily = User.objects.filter(date_joined__gte=fourteen_days_ago) \
+            .annotate(day=TruncDate('date_joined')) \
+            .values('day') \
+            .annotate(count=Count('id')) \
+            .order_by('day')
+        reg_map = {r['day']: r['count'] for r in reg_daily}
+
+        post_daily = SocialPost.objects.filter(created_at__gte=fourteen_days_ago) \
+            .annotate(day=TruncDate('created_at')) \
+            .values('day') \
+            .annotate(count=Count('id')) \
+            .order_by('day')
+        post_map = {p['day']: p['count'] for p in post_daily}
+
+        wl_daily = WatchlistEntry.objects.filter(created_at__gte=fourteen_days_ago) \
+            .annotate(day=TruncDate('created_at')) \
+            .values('day') \
+            .annotate(count=Count('id')) \
+            .order_by('day')
+        wl_map = {w['day']: w['count'] for w in wl_daily}
+
+        days = [(today - timedelta(days=i)) for i in range(13, -1, -1)]
+        growth_labels = [d.strftime('%b %d') for d in days]
+        growth_reg = [reg_map.get(d.date() if hasattr(d, 'date') else d, 0) for d in days]
+        growth_posts = [post_map.get(d.date() if hasattr(d, 'date') else d, 0) for d in days]
+        growth_wl = [wl_map.get(d.date() if hasattr(d, 'date') else d, 0) for d in days]
+
+        growth_data = {
+            'labels': growth_labels,
+            'registrations': growth_reg,
+            'posts': growth_posts,
+            'watchlist': growth_wl,
+        }
+        cache.set('founder_growth_data', growth_data, CACHE_TTL)
+
+    # ── Site Health ──
+    health_stats = cache.get('founder_health_stats')
+    if health_stats is None:
+        missing_avatars = User.objects.filter(
+            Q(avatar='') | Q(avatar__isnull=True)
+        ).count()
+        missing_covers = User.objects.filter(
+            Q(cover_image='') | Q(cover_image__isnull=True)
+        ).count()
+        health_stats = {
+            'missing_avatars': missing_avatars,
+            'missing_covers': missing_covers,
+        }
+        cache.set('founder_health_stats', health_stats, CACHE_TTL)
+
+    # ── Recent Activity ──
+    recent_users = User.objects.order_by('-date_joined')[:8]
+    recent_posts = SocialPost.objects.select_related('user').order_by('-created_at')[:8]
+    recent_comments = Comment.objects.select_related('user').order_by('-created_at')[:8]
+    recent_reviews = Review.objects.select_related('user', 'anime').order_by('-created_at')[:8]
+
+    return render(request, 'founder_dashboard.html', {
+        'user_stats': user_stats,
+        'recent_signups': recent_signups,
+        'comm_stats': comm_stats,
+        'anime_stats': anime_stats,
+        'most_watched': most_watched,
+        'most_reviewed': most_reviewed,
+        'most_favorited': most_favorited,
+        'growth_data': growth_data,
+        'health_stats': health_stats,
+        'recent_users': recent_users,
+        'recent_posts': recent_posts,
+        'recent_comments': recent_comments,
+        'recent_reviews': recent_reviews,
+    })
 

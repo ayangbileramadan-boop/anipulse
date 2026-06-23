@@ -1,0 +1,381 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Founder Dashboard — AniPulse{% endblock %}
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+.dash-grid { display: grid; gap: 1.25rem; }
+.dash-grid-2 { grid-template-columns: 1fr 1fr; }
+.dash-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+.dash-grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+.stat-value { font-size: 1.75rem; font-weight: 700; line-height: 1.2; }
+.stat-label { font-size: 0.75rem; color: var(--text-secondary, #888); text-transform: uppercase; letter-spacing: 0.04em; }
+.stat-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+.stat-icon.primary { background: rgba(232,54,93,0.15); color: var(--primary); }
+.stat-icon.green { background: rgba(40,200,120,0.15); color: #28c878; }
+.stat-icon.purple { background: rgba(162,89,255,0.15); color: var(--accent); }
+.stat-icon.blue { background: rgba(54,162,235,0.15); color: #36a2eb; }
+.stat-icon.orange { background: rgba(255,159,64,0.15); color: #ff9f40; }
+.stat-icon.yellow { background: rgba(255,205,86,0.15); color: #ffcd56; }
+.stat-icon.pink { background: rgba(255,99,132,0.15); color: #ff6384; }
+.dash-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem; }
+.dash-card-header { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); margin-bottom: 1rem; }
+.dash-table { width: 100%; font-size: 0.85rem; }
+.dash-table th { text-align: left; padding: 0.5rem 0.75rem; color: var(--text-secondary); font-weight: 500; border-bottom: 1px solid var(--border); }
+.dash-table td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.dash-table tr:last-child td { border-bottom: none; }
+.dash-table tr:hover td { background: rgba(255,255,255,0.02); }
+.health-ok { color: #28c878; }
+.health-warn { color: #ffcd56; }
+.health-bad { color: #ff6384; }
+.chart-container { position: relative; height: 220px; }
+.chart-card canvas { max-height: 200px; }
+.top-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.35rem 0; }
+.top-item .rank { width: 20px; text-align: center; font-weight: 700; color: var(--text-secondary); font-size: 0.8rem; }
+.top-item .title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.top-item .count { font-weight: 600; color: var(--primary); font-size: 0.8rem; }
+.dash-section { margin-bottom: 1.5rem; }
+.dash-section:last-child { margin-bottom: 0; }
+@media (max-width: 992px) {
+  .dash-grid-2, .dash-grid-4 { grid-template-columns: 1fr; }
+  .dash-grid-3 { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 576px) {
+  .dash-grid-3 { grid-template-columns: 1fr; }
+  .stat-value { font-size: 1.4rem; }
+  .dash-card { padding: 1rem; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <div class="stat-icon purple" style="width:48px;height:48px;border-radius:12px;font-size:1.4rem;">
+      <i class="fas fa-chart-line"></i>
+    </div>
+    <div>
+      <h1 class="fs-3 fw-bold mb-0">Founder Dashboard</h1>
+      <p class="text-secondary mb-0 small">Site analytics &amp; health overview</p>
+    </div>
+  </div>
+
+  {% comment %}── User Analytics ──{% endcomment %}
+  <div class="dash-section">
+    <h2 class="section-title fs-5"><span class="dot" style="background:var(--primary)"></span>User Analytics</h2>
+    <div class="dash-grid dash-grid-5" style="grid-template-columns:repeat(5,1fr)">
+      <div class="dash-card d-flex align-items-center gap-3">
+        <div class="stat-icon primary"><i class="fas fa-users"></i></div>
+        <div><div class="stat-value">{{ user_stats.total }}</div><div class="stat-label">Total Users</div></div>
+      </div>
+      <div class="dash-card d-flex align-items-center gap-3">
+        <div class="stat-icon green"><i class="fas fa-user-plus"></i></div>
+        <div><div class="stat-value">{{ user_stats.new_today }}</div><div class="stat-label">New Today</div></div>
+      </div>
+      <div class="dash-card d-flex align-items-center gap-3">
+        <div class="stat-icon blue"><i class="fas fa-calendar-week"></i></div>
+        <div><div class="stat-value">{{ user_stats.new_week }}</div><div class="stat-label">New This Week</div></div>
+      </div>
+      <div class="dash-card d-flex align-items-center gap-3">
+        <div class="stat-icon orange"><i class="fas fa-bolt"></i></div>
+        <div><div class="stat-value">{{ user_stats.active_7d }}</div><div class="stat-label">Active 7d</div></div>
+      </div>
+      <div class="dash-card d-flex align-items-center gap-3">
+        <div class="stat-icon purple"><i class="fas fa-fire"></i></div>
+        <div><div class="stat-value">{{ user_stats.active_30d }}</div><div class="stat-label">Active 30d</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    {% comment %}── Community Analytics ──{% endcomment %}
+    <div class="col-lg-6">
+      <div class="dash-section">
+        <h2 class="section-title fs-5"><span class="dot" style="background:var(--accent)"></span>Community</h2>
+        <div class="dash-grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+          <div class="dash-card d-flex align-items-center gap-3">
+            <div class="stat-icon primary"><i class="fas fa-newspaper"></i></div>
+            <div><div class="stat-value">{{ comm_stats.posts }}</div><div class="stat-label">Feed Posts</div></div>
+          </div>
+          <div class="dash-card d-flex align-items-center gap-3">
+            <div class="stat-icon green"><i class="fas fa-comment"></i></div>
+            <div><div class="stat-value">{{ comm_stats.comments }}</div><div class="stat-label">Comments</div></div>
+          </div>
+          <div class="dash-card d-flex align-items-center gap-3">
+            <div class="stat-icon pink"><i class="fas fa-heart"></i></div>
+            <div><div class="stat-value">{{ comm_stats.likes }}</div><div class="stat-label">Likes</div></div>
+          </div>
+          <div class="dash-card d-flex align-items-center gap-3">
+            <div class="stat-icon yellow"><i class="fas fa-star"></i></div>
+            <div><div class="stat-value">{{ comm_stats.reviews }}</div><div class="stat-label">Reviews</div></div>
+          </div>
+          <div class="dash-card d-flex align-items-center gap-3">
+            <div class="stat-icon orange"><i class="fas fa-sword"></i></div>
+            <div><div class="stat-value">{{ comm_stats.battles }}</div><div class="stat-label">Battles</div></div>
+          </div>
+          <div class="dash-card d-flex align-items-center gap-3">
+            <div class="stat-icon purple"><i class="fas fa-layer-group"></i></div>
+            <div><div class="stat-value">{{ comm_stats.tierlists }}</div><div class="stat-label">Tier Lists</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% comment %}── Anime Analytics ──{% endcomment %}
+    <div class="col-lg-6">
+      <div class="dash-section">
+        <h2 class="section-title fs-5"><span class="dot" style="background:#28c878"></span>Anime</h2>
+        <div class="dash-grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+          <div class="dash-card d-flex align-items-center gap-3">
+            <div class="stat-icon blue"><i class="fas fa-bookmark"></i></div>
+            <div><div class="stat-value">{{ anime_stats.watchlist_total }}</div><div class="stat-label">Watchlist Entries</div></div>
+          </div>
+          <div class="dash-card d-flex align-items-center gap-3">
+            <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+            <div><div class="stat-value">{{ anime_stats.completed_total }}</div><div class="stat-label">Completed</div></div>
+          </div>
+        </div>
+      </div>
+
+      {% comment %}── Most Rankings ──{% endcomment %}
+      <div class="dash-section">
+        <h2 class="section-title fs-5"><span class="dot" style="background:#36a2eb"></span>Top Anime Rankings</h2>
+        <div class="row g-2">
+          <div class="col-md-4">
+            <div class="dash-card">
+              <div class="dash-card-header"><i class="fas fa-eye me-1"></i> Most Watched</div>
+              {% for item in most_watched %}
+              <div class="top-item">
+                <span class="rank">{{ forloop.counter }}</span>
+                <a href="{% url 'anime_detail' item.anime_aid %}" class="title text-decoration-none text-reset">{{ item.anime_title|truncatechars:28 }}</a>
+                <span class="count">{{ item.count }}</span>
+              </div>
+              {% empty %}<p class="text-secondary small mb-0">No data</p>{% endfor %}
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="dash-card">
+              <div class="dash-card-header"><i class="fas fa-star me-1"></i> Most Reviewed</div>
+              {% for item in most_reviewed %}
+              <div class="top-item">
+                <span class="rank">{{ forloop.counter }}</span>
+                <a href="{% url 'anime_detail' item.anime_aid %}" class="title text-decoration-none text-reset">{{ item.anime_title|truncatechars:28 }}</a>
+                <span class="count">{{ item.count }}</span>
+              </div>
+              {% empty %}<p class="text-secondary small mb-0">No data</p>{% endfor %}
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="dash-card">
+              <div class="dash-card-header"><i class="fas fa-heart me-1"></i> Most Favorited</div>
+              {% for item in most_favorited %}
+              <div class="top-item">
+                <span class="rank">{{ forloop.counter }}</span>
+                <a href="{% url 'anime_detail' item.anime_aid %}" class="title text-decoration-none text-reset">{{ item.anime_title|truncatechars:28 }}</a>
+                <span class="count">{{ item.count }}</span>
+              </div>
+              {% empty %}<p class="text-secondary small mb-0">No data</p>{% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% comment %}── Growth Charts ──{% endcomment %}
+  <div class="dash-section">
+    <h2 class="section-title fs-5"><span class="dot" style="background:#ff9f40"></span>Growth (Last 14 Days)</h2>
+    <div class="row g-3">
+      <div class="col-md-4">
+        <div class="dash-card chart-card">
+          <div class="dash-card-header"><i class="fas fa-user-plus me-1"></i> Registrations</div>
+          <div class="chart-container"><canvas id="chartRegistrations"></canvas></div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="dash-card chart-card">
+          <div class="dash-card-header"><i class="fas fa-newspaper me-1"></i> Feed Posts</div>
+          <div class="chart-container"><canvas id="chartPosts"></canvas></div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="dash-card chart-card">
+          <div class="dash-card-header"><i class="fas fa-bookmark me-1"></i> Watchlist Adds</div>
+          <div class="chart-container"><canvas id="chartWatchlist"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% comment %}── Site Health ──{% endcomment %}
+  <div class="dash-section">
+    <h2 class="section-title fs-5"><span class="dot" style="background:#ff6384"></span>Site Health</h2>
+    <div class="dash-grid dash-grid-4">
+      <div class="dash-card d-flex align-items-center gap-3">
+        <div class="stat-icon orange"><i class="fas fa-exclamation-triangle"></i></div>
+        <div>
+          <div class="stat-value">N/A</div>
+          <div class="stat-label">Failed AniList Reqs</div>
+          <div class="text-secondary" style="font-size:0.65rem;">requires log infra</div>
+        </div>
+      </div>
+      <div class="dash-card d-flex align-items-center gap-3">
+        <div class="stat-icon {% if health_stats.missing_avatars > 0 %}yellow{% else %}green{% endif %}"><i class="fas fa-user"></i></div>
+        <div>
+          <div class="stat-value">{{ health_stats.missing_avatars }}</div>
+          <div class="stat-label">Missing Avatars</div>
+        </div>
+      </div>
+      <div class="dash-card d-flex align-items-center gap-3">
+        <div class="stat-icon {% if health_stats.missing_covers > 0 %}yellow{% else %}green{% endif %}"><i class="fas fa-image"></i></div>
+        <div>
+          <div class="stat-value">{{ health_stats.missing_covers }}</div>
+          <div class="stat-label">Missing Covers</div>
+        </div>
+      </div>
+      <div class="dash-card d-flex align-items-center gap-3">
+        <div class="stat-icon primary"><i class="fas fa-tachometer-alt"></i></div>
+        <div>
+          <div class="stat-value">N/A</div>
+          <div class="stat-label">500 Errors / Rate Limit</div>
+          <div class="text-secondary" style="font-size:0.65rem;">requires log infra</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% comment %}── Recent Activity ──{% endcomment %}
+  <div class="dash-section">
+    <h2 class="section-title fs-5"><span class="dot" style="background:var(--primary)"></span>Recent Activity</h2>
+    <div class="row g-3">
+      <div class="col-md-3">
+        <div class="dash-card">
+          <div class="dash-card-header"><i class="fas fa-user-plus me-1"></i> Newest Users</div>
+          <table class="dash-table">
+            <thead><tr><th>User</th><th>Joined</th></tr></thead>
+            <tbody>
+              {% for u in recent_users %}
+              <tr>
+                <td><a href="{% url 'profile' u.username %}" class="text-decoration-none text-reset fw-medium">{{ u.username }}</a></td>
+                <td class="text-secondary">{{ u.date_joined|date:"M d" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="dash-card">
+          <div class="dash-card-header"><i class="fas fa-newspaper me-1"></i> Latest Posts</div>
+          <table class="dash-table">
+            <thead><tr><th>User</th><th>Preview</th></tr></thead>
+            <tbody>
+              {% for p in recent_posts %}
+              <tr>
+                <td><a href="{% url 'profile' p.user.username %}" class="text-decoration-none text-reset fw-medium">{{ p.user.username }}</a></td>
+                <td class="text-secondary">{{ p.title|default:p.body|truncatechars:20 }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="2" class="text-secondary">No posts</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="dash-card">
+          <div class="dash-card-header"><i class="fas fa-comment me-1"></i> Latest Comments</div>
+          <table class="dash-table">
+            <thead><tr><th>User</th><th>Comment</th></tr></thead>
+            <tbody>
+              {% for c in recent_comments %}
+              <tr>
+                <td><a href="{% url 'profile' c.user.username %}" class="text-decoration-none text-reset fw-medium">{{ c.user.username }}</a></td>
+                <td class="text-secondary">{{ c.body|truncatechars:20 }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="2" class="text-secondary">No comments</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="dash-card">
+          <div class="dash-card-header"><i class="fas fa-star me-1"></i> Latest Reviews</div>
+          <table class="dash-table">
+            <thead><tr><th>User</th><th>Anime</th></tr></thead>
+            <tbody>
+              {% for r in recent_reviews %}
+              <tr>
+                <td><a href="{% url 'profile' r.user.username %}" class="text-decoration-none text-reset fw-medium">{{ r.user.username }}</a></td>
+                <td class="text-secondary">{{ r.anime.title_romaji|truncatechars:18 }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="2" class="text-secondary">No reviews</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% comment %}── Recent Signups Table ──{% endcomment %}
+  <div class="dash-section">
+    <h2 class="section-title fs-5"><span class="dot" style="background:var(--accent)"></span>Recent Signups (All)</h2>
+    <div class="dash-card">
+      <div class="table-responsive">
+        <table class="dash-table">
+          <thead><tr><th>#</th><th>Username</th><th>Email</th><th>Joined</th><th>Last Login</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for u in recent_signups %}
+            <tr>
+              <td class="text-secondary">{{ forloop.counter }}</td>
+              <td><a href="{% url 'profile' u.username %}" class="text-decoration-none text-reset fw-medium">{{ u.username }}</a></td>
+              <td class="text-secondary">{{ u.email|default:"—" }}</td>
+              <td class="text-secondary">{{ u.date_joined|date:"M d, Y H:i" }}</td>
+              <td class="text-secondary">{{ u.last_login|date:"M d, Y H:i"|default:"Never" }}</td>
+              <td>{% if u.is_active %}<span class="health-ok">●</span> Active{% else %}<span class="health-bad">●</span> Inactive{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var theme = localStorage.getItem('anipulse-theme') || 'dark';
+var gridColor = theme === 'light' ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)';
+var textColor = theme === 'light' ? '#666' : '#aaa';
+var chartDefaults = {
+  responsive: true, maintainAspectRatio: false,
+  plugins: { legend: { display: false } },
+  scales: {
+    x: { ticks: { color: textColor, maxTicksLimit: 7, font: { size: 10 } }, grid: { color: gridColor } },
+    y: { beginAtZero: true, ticks: { color: textColor, font: { size: 10 }, stepSize: 1, precision: 0 }, grid: { color: gridColor } }
+  }
+};
+
+function makeChart(id, data, color) {
+  var ctx = document.getElementById(id);
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: {{ growth_data.labels|safe }},
+      datasets: [{ data: data, backgroundColor: color, borderRadius: 4, borderSkipped: false }]
+    },
+    options: chartDefaults
+  });
+}
+
+makeChart('chartRegistrations', {{ growth_data.registrations|safe }}, 'rgba(232,54,93,0.7)');
+makeChart('chartPosts', {{ growth_data.posts|safe }}, 'rgba(162,89,255,0.7)');
+makeChart('chartWatchlist', {{ growth_data.watchlist|safe }}, 'rgba(54,162,235,0.7)');
+</script>
+{% endblock %}
